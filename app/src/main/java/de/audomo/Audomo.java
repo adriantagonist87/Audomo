@@ -3,7 +3,6 @@ package de.audomo;
 import android.app.Application;
 import android.content.*;
 import android.os.*;
-import android.provider.Settings;
 
 import java.io.*;
 import java.time.Instant;
@@ -82,20 +81,17 @@ public final class Audomo extends Application {
 
     void vibrate(String event) {
         SharedPreferences prefs = getSharedPreferences("options", MODE_PRIVATE);
-        if (!prefs.getBoolean("haptic", true)
-                || Settings.System.getInt(
-                                getContentResolver(), Settings.System.HAPTIC_FEEDBACK_ENABLED, 1)
-                        == 0) return;
+        if (!prefs.getBoolean("haptic", true)) return;
         int preset =
                 prefs.getInt(
                         "pattern." + event,
                         event.equals("start") ? 0 : event.equals("stop") ? 1 : 2);
-        long[][] patterns = {{0, 45, 65, 45}, {0, 190}, {0, 45, 65, 45, 65, 45}};
+        long[][] patterns = {{0, 300, 200, 300}, {0, 500}, {0, 300, 200, 300, 200, 300}};
         getSystemService(VibratorManager.class)
                 .getDefaultVibrator()
                 .vibrate(
                         VibrationEffect.createWaveform(patterns[preset], -1),
-                        VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH));
+                        VibrationAttributes.createForUsage(VibrationAttributes.USAGE_NOTIFICATION));
     }
 
     static String cause(Throwable e) {

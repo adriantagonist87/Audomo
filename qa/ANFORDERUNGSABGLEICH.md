@@ -1,4 +1,4 @@
-# Funktionsabgleich · Audomo 0.1
+# Funktionsabgleich · Audomo 0.1.3
 
 Der Abgleich enthält alle 122 IDs der ursprünglichen Matrix. „Vorhanden“ bezeichnet einen erreichbaren Codepfad. Die Spalte Nachweis nennt den tatsächlich geprüften Umfang. Der Abnahmeplan für das physische Samsung Galaxy S24 Ultra bleibt maßgeblich.
 
@@ -8,7 +8,7 @@ Beim Kandidaten bedeutet „ohne Nachweis“, dass die Prüfung der Builddateien
 
 | ID | Priorität, Anforderung | Beschlüsse / Tests | Kandidat | Audomo und Modul | Nachweis | Einschränkung |
 |---|---|---|---|---|---|---|
-| a01 | MUSS · Aufnahme starten und stoppen | 5, 6, 8, 23, 24 / T01, T04 | vorhanden · AudioRecordingService / RecorderV2 | vorhanden · CaptureService, CaptureEngine, SessionStore | AVD · T01 | Hardwareabnahme steht aus |
+| a01 | MUSS · Aufnahme starten und stoppen | 5, 6, 8, 23, 24 / T01, T04 | vorhanden · AudioRecordingService / RecorderV2 | vorhanden · CaptureService, CaptureEngine, SessionStore | AVD · T01. S24 · eine 5,8-s-Aufnahme mit bestätigter Wiedergabe | Serienprüfung und doppelte Befehle am S24 offen |
 | a02 | MUSS · Aufnahme pausieren und fortsetzen | 6, 7, 24 / T02, T04 | vorhanden · AudioRecordingService / RecorderV2 | vorhanden · CaptureEngine | AVD · T02 teilweise | Timerprüfung und Stopp aus Pause; weitere Pausenfolgen am Gerät |
 | a03 | MUSS · Mehrstündige Aufnahmen ohne Zeitlimit | 6, 35, 36, 46 / T03 | teilweise · MediaRecorderBase / NotEnoughSpaceException | vorhanden · CaptureService, CaptureEngine | AVD · kurzer Hintergrundlauf | Sechs Stunden, Zeitmarker und Samsung-Energiesparwechsel offen |
 | a04 | MUSS · Hintergrundaufnahme bei ausgeschaltetem Bildschirm | 6, 23, 24 / T03 | vorhanden · AudioRecordingService / RecorderV2 | vorhanden · CaptureService, CaptureEngine | AVD · kurzer Hintergrundlauf | Sechs Stunden, Zeitmarker und Samsung-Energiesparwechsel offen |
@@ -73,9 +73,9 @@ Beim Kandidaten bedeutet „ohne Nachweis“, dass die Prüfung der Builddateien
 | d02 | MUSS · Aufnahme mit einem Tipp starten | 23 / T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
 | d03 | MUSS · Aufnahme über dieselbe Kachel stoppen | 23 / T04, T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
 | d04 | MUSS · Aktuellen Aufnahmezustand in Kachel anzeigen | 23 / T04, T19, T43 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
-| d05 | MUSS · Vibration nach erfolgreichem Start | 23, 31 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | Code | Drei konfigurierbare Muster und globaler Schalter; fühlbare Impulse und DND am Gerät prüfen |
-| d06 | MUSS · Vibration nach erfolgreichem Stopp | 23, 31 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | Code | Drei konfigurierbare Muster und globaler Schalter; fühlbare Impulse und DND am Gerät prüfen |
-| d07 | MUSS · Anderes Vibrationsmuster bei Fehler | 31, 35 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | Code | Drei konfigurierbare Muster und globaler Schalter; fühlbare Impulse und DND am Gerät prüfen |
+| d05 | MUSS · Vibration nach erfolgreichem Start | 23, 31 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | S24 · Vorschau nach Freigabe fühlbar. Mit 0.1.3 Startvorschau 500 ms im Systemprotokoll | Start nach bestätigten Frames sowie DND am S24 mit den neuen Dauern prüfen |
+| d06 | MUSS · Vibration nach erfolgreichem Stopp | 23, 31 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | AVD · Stoppvorschau 500 ms im Systemprotokoll | Impuls nach gesichertem Stopp und globales Aus am S24 prüfen |
+| d07 | MUSS · Anderes Vibrationsmuster bei Fehler | 31, 35 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | AVD · Fehlervorschau dreimal 300 ms mit 200 ms Pause | Fehlstart mit getrennt gewähltem Muster am S24 prüfen |
 | d08 | MUSS · Nach Start zur vorherigen App zurückkehren | 23 / T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
 | d09 | MUSS · Aufnahmesteuerung über Benachrichtigung | 24 / T21, T44 | teilweise · AudioRecordingService | teilweise · CaptureService | T21 · Pause und Fortsetzen über die Notification | Pause, Fortsetzen und Stopp ohne Dateinamen; Sperrbildschirm und spätere Uploadmeldungen prüfen |
 | d10 | MUSS · Vertrauliche Sperrbildschirminformationen verbergen | 24, 41 / T21 | teilweise · AudioRecordingService | teilweise · CaptureService | T21 · Pause und Fortsetzen über die Notification | Pause, Fortsetzen und Stopp ohne Dateinamen; Sperrbildschirm und spätere Uploadmeldungen prüfen |

@@ -1,6 +1,6 @@
-# Audomo 0.1 · Teststand vom 22.11.2026
+# Audomo · Teststand vom 22.11.2026
 
-## Gerät und Build
+## AVD-Serie mit Version 0.1
 
 | Merkmal | Beobachtung |
 |---|---|
@@ -41,6 +41,23 @@ Das [synthetische Ogg-Testsignal](api34/testsignal-440hz.ogg) aus dem Plattforme
 
 Screenshots der laufenden App liegen unter [Bereit](api34/bereit.png), [Aufnahme](api34/aufnahme.png), [Pause](api34/pause.png), [Gespeichert](api34/gespeichert.png), [Wiederherstellung](api34/wiederherstellung.png), [Dateiliste](api34/dateiliste.png) und [Listenplayer](api34/listenplayer.png). Das Übergabepaket enthält die unabhängigen Designreferenzen.
 
+## Aufnahme und Vibration am physischen Galaxy S24 Ultra
+
+Das Testgerät war ein Samsung SM-S928B mit Android 14 (API 34) und One UI 6.1. Der Nutzer nahm mit Version 0.1 auf und bestätigte die Wiedergabe. Die zuletzt geprüfte Datei enthält Ogg/Opus mit 5,8 s Dauer. Die Sitzungsdaten nennen 48 kHz und das interne Mikrofon. Die gewünschte Ausrichtung nach hinten blieb unbestätigt.
+
+Bei 0.1 spürte der Nutzer keine Vibration. Audomo übersprang die Rückmeldung, weil die Berührungsvibration im System ausgeschaltet war. Ab 0.1.1 verwendet Audomo für die Aufnahmeereignisse die Benachrichtigungsvibration. Der Vibrationsdienst von One UI verwarf zunächst auch diese Aufrufe, weil Benachrichtigungen für Audomo gesperrt waren. Nach der Freigabe durch den Nutzer protokollierte der Dienst drei abgeschlossene Impulse. Der Nutzer bestätigte, dass sie fühlbar, aber zu kurz waren. Seit 0.1.2 zeigt das Vibrationsmenü bei gesperrten Benachrichtigungen einen Hinweis mit direktem Zugang zur Android-Freigabe.
+
+Version 0.1.3 (4) wurde als Update auf dem S24 und dem API-34-AVD installiert. Die drei Vorschauen verwenden dieselben Vibrationsmuster wie die Aufnahmeereignisse. Die Nutzerentscheidung vom 22.11.2026 legt den langen Impuls auf 500 ms, die kurzen auf je 300 ms und die Pause zwischen ihnen auf 200 ms fest. Das Zweiermuster verwendet entsprechend die Zeitwerte des Dreiermusters.
+
+| Prüfung mit 0.1.3 | Ergebnis |
+|---|---|
+| Drei Vorschauen am AVD | Android protokollierte bei jedem Aufruf den Status `finished`. Die Segmente dauerten 300/200/300 ms, 500 ms bzw. 300/200/300/200/300 ms. Jeder Zwischenwert von 200 ms ist eine Pause. [Vibrationsmenü](api34/vibration.png) |
+| Gespeicherte Startvorschau am S24 | Der Vibrationsdienst protokollierte einen 500-ms-Impuls und `finished`. Die Vorschau löste keine Mikrofonaufnahme aus. Die Dauern sind Sollwerte des Treibers. |
+| Build | minSdk und targetSdk 34, APK-Signatur v2 geprüft. Neun JVM-Tests erfolgreich. Android Lint meldete 0 Fehler und 20 Warnungen. |
+| APK-SHA-256 | `a080b0badbccd7e085e6a501273cdf0fb1d7449398f47a287c847f0d5e9484a6` |
+
+Für T20 bleiben eine Aufnahme samt gesichertem Stopp mit den verlängerten Mustern, ein provozierter Fehlstart sowie die Fälle mit ausgeschalteter App-Vibration und mit „Nicht stören“ am S24 offen.
+
 ## Offene Abnahme
 
-Für den Aufnahmeblock fehlen insbesondere der sechsstündige Zeitmarkerlauf auf One UI 6.1, Verhalten bei Anrufen und Mikrofonkonkurrenz, voller Speicher, unterbrochene Finalisierung beim Geräteneustart, reale Hintermikrofon-/Effektmessungen, Haptik und DND-Wechsel. Ein physisches S24 Ultra war bei der Prüfung nicht mit ADB verbunden. Beim Oberflächenabgleich bleibt unter anderem die Ausblendzeit des Speicherhinweises offen. Für die späteren Blöcke sind unter anderem dauerhafte SAF-Zielwahl, Import, Mehrfachaktionen, Papierkorb, Cloudziele und verifizierte Uploads offen. Der [Funktionsabgleich](ANFORDERUNGSABGLEICH.md) führt den Status pro ID.
+Für den Aufnahmeblock fehlen insbesondere der sechsstündige Zeitmarkerlauf auf One UI 6.1, Verhalten bei Anrufen und Mikrofonkonkurrenz, voller Speicher, unterbrochene Finalisierung beim Geräteneustart, reale Hintermikrofon-/Effektmessungen und DND-Wechsel. Beim Oberflächenabgleich bleibt unter anderem die Ausblendzeit des Speicherhinweises offen. Für die späteren Blöcke sind unter anderem dauerhafte SAF-Zielwahl, Import, Mehrfachaktionen, Papierkorb, Cloudziele und verifizierte Uploads offen. Der [Funktionsabgleich](ANFORDERUNGSABGLEICH.md) führt den Status pro ID.

@@ -29,6 +29,8 @@ Die drei Standardprofile verwenden Opus/Ogg, Mono, 48 kHz, +5 dB und 48, 80 oder
 
 Im Kopfmenü lassen sich Benachrichtigungen erlauben, die Systemabfrage für die Kachel öffnen, die Haptik einstellen und Kalender für die Benennung auswählen. Bei der ersten Verwendung der Kachel muss der Mikrofonzugriff bereits erteilt sein. Der optionale Nicht-stören-Zugriff erlaubt Audomo die Steuerung einer eigenen Aufnahmeregel.
 
+Unter „Vibration“ hat jedes Ereignis eine Taste „Testen“. Ein langer Impuls dauert 500 ms. Zwei oder drei kurze Impulse dauern jeweils 300 ms mit 200 ms Pause dazwischen. Auf dem Galaxy S24 müssen Benachrichtigungen für Audomo erlaubt sein, damit diese Muster fühlbar sind. Bei gesperrter Freigabe führt „Freigabe öffnen“ zur Android-Einstellung.
+
 „Wiedergeben“ öffnet die lokale Liste. Einen Eintrag auswählen und anschließend Play drücken. Die Dateiaktionen ermöglichen Teilen, externes Öffnen und Exportieren über den Android-Dateidialog. Originale liegen im privaten dauerhaften App-Speicher. Eine Deinstallation entfernt diesen Speicher. Zum Aufbewahren außerhalb der App „Datei exportieren“ verwenden.
 
 ## Entwicklung und Nachweise

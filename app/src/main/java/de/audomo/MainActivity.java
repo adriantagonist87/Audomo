@@ -375,7 +375,7 @@ public final class MainActivity extends Activity {
                                                                 .TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED)
                                             toast(
                                                     "Schnelleinstellungen öffnen, Bearbeiten wählen"
-                                                        + " und Audomo hinzufügen.");
+                                                            + " und Audomo hinzufügen.");
                                     });
                     return true;
                 });
@@ -436,15 +436,35 @@ public final class MainActivity extends Activity {
         enabled.setMinHeight(dp(48));
         enabled.setChecked(prefs().getBoolean("haptic", true));
         settings.addView(enabled);
-        enabled.setOnCheckedChangeListener(
-                (b, on) -> prefs().edit().putBoolean("haptic", on).apply());
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this).setTitle("Vibration");
+        if (!getSystemService(NotificationManager.class).areNotificationsEnabled()) {
+            settings.addView(
+                    text(
+                            "Benachrichtigungen für Audomo sind ausgeschaltet. Auf dem Galaxy S24"
+                                    + " blockiert das die Vibrationsmuster.",
+                            14,
+                            INK));
+            dialog.setNeutralButton(
+                    "Freigabe öffnen",
+                    (ignored, which) ->
+                            startActivity(
+                                    new Intent(
+                                                    android.provider.Settings
+                                                            .ACTION_APP_NOTIFICATION_SETTINGS)
+                                            .putExtra(
+                                                    android.provider.Settings.EXTRA_APP_PACKAGE,
+                                                    getPackageName())));
+        }
+        List<Button> previews = new ArrayList<>();
         String[] events = {"start", "stop", "error"}, labels = {"Start", "Stopp", "Fehler"};
         String[] options = {"Zwei kurze Impulse", "Ein langer Impuls", "Drei kurze Impulse"};
         for (int i = 0; i < events.length; i++) {
             String event = events[i];
             String title = labels[i];
             int defaultValue = i;
-            settings.addView(
+            LinearLayout actions = row();
+            settings.addView(actions);
+            actions.addView(
                     button(
                             title + " · Muster wählen",
                             v ->
@@ -455,20 +475,28 @@ public final class MainActivity extends Activity {
                                                     prefs().getInt(
                                                                     "pattern." + event,
                                                                     defaultValue),
-                                                    (dialog, k) -> {
+                                                    (choice, k) -> {
                                                         prefs().edit()
                                                                 .putInt("pattern." + event, k)
                                                                 .apply();
                                                         app.vibrate(event);
-                                                        dialog.dismiss();
+                                                        choice.dismiss();
                                                     })
-                                            .show()));
+                                            .show()),
+                    weight());
+            Button preview = button("Testen", v -> app.vibrate(event));
+            preview.setContentDescription(title + " testen");
+            preview.setEnabled(enabled.isChecked());
+            actions.addView(preview);
+            previews.add(preview);
         }
-        new AlertDialog.Builder(this)
-                .setTitle("Vibration")
-                .setView(settings)
-                .setPositiveButton("Schließen", null)
-                .show();
+        enabled.setOnCheckedChangeListener((b, on) -> {
+            prefs().edit().putBoolean("haptic", on).apply();
+            for (Button preview : previews) preview.setEnabled(on);
+        });
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(settings);
+        dialog.setView(scroll).setPositiveButton("Schließen", null).show();
     }
 
     private void showLibrary() {
