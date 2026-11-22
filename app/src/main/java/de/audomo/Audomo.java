@@ -4,7 +4,6 @@ import android.app.Application;
 import android.content.*;
 import android.os.*;
 import android.provider.Settings;
-import android.service.quicksettings.TileService;
 
 import java.io.*;
 import java.time.Instant;
@@ -64,9 +63,13 @@ public final class Audomo extends Application {
         return state == State.RECORDING || state == State.PAUSED;
     }
 
+    // TileService registers only while SystemUI is listening. Both callbacks run on the main
+    // looper.
+    Runnable tileChanged;
+
     void change(State next) {
         state = next;
-        TileService.requestListeningState(this, new ComponentName(this, CaptureTile.class));
+        if (tileChanged != null) tileChanged.run();
     }
 
     void diagnostic(String event) {

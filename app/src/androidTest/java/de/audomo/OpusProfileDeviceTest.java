@@ -64,6 +64,12 @@ public class OpusProfileDeviceTest {
                     assertArrayEquals(
                             Files.readAllBytes(original.toPath()),
                             Files.readAllBytes(checked.toPath()));
+                    if (rate == 48000 && kbps == 48) {
+                        Files.copy(
+                                original.toPath(),
+                                new File(cache, "audomo-440hz.ogg").toPath(),
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    }
                 } catch (Exception e) {
                     throw new AssertionError("Profil " + rate + " Hz / " + kbps + " kbit/s", e);
                 } finally {

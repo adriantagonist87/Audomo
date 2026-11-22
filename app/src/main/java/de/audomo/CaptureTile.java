@@ -5,9 +5,23 @@ import android.content.Intent;
 import android.service.quicksettings.*;
 
 public final class CaptureTile extends TileService {
+    private final Runnable refresh = this::refreshTile;
+
     @Override
     public void onStartListening() {
         super.onStartListening();
+        ((Audomo) getApplication()).tileChanged = refresh;
+        refreshTile();
+    }
+
+    @Override
+    public void onStopListening() {
+        Audomo app = (Audomo) getApplication();
+        if (app.tileChanged == refresh) app.tileChanged = null;
+        super.onStopListening();
+    }
+
+    private void refreshTile() {
         Audomo app = (Audomo) getApplication();
         Tile tile = getQsTile();
         if (tile == null) return;
