@@ -1,0 +1,146 @@
+[
+  {
+    "input_hz": 16000,
+    "kbps": 16,
+    "frames_48k": 48951,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 16000,
+    "kbps": 24,
+    "frames_48k": 48951,
+    "tone_hz": 439.976
+  },
+  {
+    "input_hz": 16000,
+    "kbps": 32,
+    "frames_48k": 48951,
+    "tone_hz": 439.976
+  },
+  {
+    "input_hz": 16000,
+    "kbps": 48,
+    "frames_48k": 48951,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 16000,
+    "kbps": 64,
+    "frames_48k": 48951,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 16000,
+    "kbps": 80,
+    "frames_48k": 48951,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 16000,
+    "kbps": 96,
+    "frames_48k": 48951,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 16000,
+    "kbps": 128,
+    "frames_48k": 48951,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 24000,
+    "kbps": 16,
+    "frames_48k": 48634,
+    "tone_hz": 439.964
+  },
+  {
+    "input_hz": 24000,
+    "kbps": 24,
+    "frames_48k": 48634,
+    "tone_hz": 439.976
+  },
+  {
+    "input_hz": 24000,
+    "kbps": 32,
+    "frames_48k": 48634,
+    "tone_hz": 439.976
+  },
+  {
+    "input_hz": 24000,
+    "kbps": 48,
+    "frames_48k": 48634,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 24000,
+    "kbps": 64,
+    "frames_48k": 48634,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 24000,
+    "kbps": 80,
+    "frames_48k": 48634,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 24000,
+    "kbps": 96,
+    "frames_48k": 48634,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 24000,
+    "kbps": 128,
+    "frames_48k": 48634,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 48000,
+    "kbps": 16,
+    "frames_48k": 48317,
+    "tone_hz": 439.963
+  },
+  {
+    "input_hz": 48000,
+    "kbps": 24,
+    "frames_48k": 48317,
+    "tone_hz": 439.975
+  },
+  {
+    "input_hz": 48000,
+    "kbps": 32,
+    "frames_48k": 48317,
+    "tone_hz": 439.975
+  },
+  {
+    "input_hz": 48000,
+    "kbps": 48,
+    "frames_48k": 48317,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 48000,
+    "kbps": 64,
+    "frames_48k": 48317,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 48000,
+    "kbps": 80,
+    "frames_48k": 48317,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 48000,
+    "kbps": 96,
+    "frames_48k": 48317,
+    "tone_hz": 439.999
+  },
+  {
+    "input_hz": 48000,
+    "kbps": 128,
+    "frames_48k": 48317,
+    "tone_hz": 439.999
+  }
+]

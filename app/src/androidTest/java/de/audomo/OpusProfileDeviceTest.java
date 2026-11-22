@@ -40,17 +40,10 @@ public class OpusProfileDeviceTest {
                         short[] buffer = new short[rate / 50];
                         for (int offset = 0; offset < frames; offset += buffer.length) {
                             int count = Math.min(buffer.length, frames - offset);
-                            for (int i = 0; i < count; i++)
-                                buffer[i] =
-                                        (short)
-                                                Math.round(
-                                                        6000
-                                                                * Math.sin(
-                                                                        2
-                                                                                * Math.PI
-                                                                                * 440
-                                                                                * (offset + i)
-                                                                                / rate));
+                            for (int i = 0; i < count; i++) {
+                                double phase = (offset + i) * (440.0 * 2 * Math.PI / rate);
+                                buffer[i] = (short) Math.round(6000 * Math.sin(phase));
+                            }
                             encoder.write(buffer, count);
                         }
                         encoder.finish();
@@ -64,10 +57,15 @@ public class OpusProfileDeviceTest {
                     assertArrayEquals(
                             Files.readAllBytes(original.toPath()),
                             Files.readAllBytes(checked.toPath()));
-                    if (rate == 48000 && kbps == 48) {
+                    if ("true"
+                            .equals(
+                                    InstrumentationRegistry.getArguments()
+                                            .getString("keepSamples"))) {
+                        File signals = new File(cache, "qa-encoder");
+                        Files.createDirectories(signals.toPath());
                         Files.copy(
                                 original.toPath(),
-                                new File(cache, "audomo-440hz.ogg").toPath(),
+                                new File(signals, rate + "-" + kbps + ".ogg").toPath(),
                                 java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                     }
                 } catch (Exception e) {

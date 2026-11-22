@@ -13,3 +13,5 @@ Der neu geschriebene Audomo-Quellcode steht unter Apache License 2.0. Der geprü
 | UI-Symbole | Android-Vektorpfade nach den Material-Icons für Aufnahme-, Such-, Sortier- und Wiedergabehandlungen. | Apache-2.0 |
 
 Die benutzte Schriftdatei und ihre Lizenz stammen aus derselben Veröffentlichung. [Inter 4.1](https://github.com/rsms/inter/releases/tag/v4.1) · [Schriftlizenz](app/src/main/assets/licenses/Inter-OFL.txt)
+
+Die [Liste aller aufgelösten Module](licenses/Laufzeitabhaengigkeiten.md) dokumentiert auch die transitiven Laufzeitabhängigkeiten dieser APK.

@@ -43,3 +43,11 @@ Für die wiederholbare Kurzserie muss der Test-AVD entsperrt sein. Audomo einmal
 ```sh
 python3 qa/avd_recording.py emulator-5556 /tmp/audomo-api34-messung
 ```
+
+Der Instrumentierungstest verwendet ausschließlich synthetische PCM-Prüftöne. Für die Codec-Matrix auf demselben AVD gelten die folgenden Befehle.
+
+```sh
+./gradlew :app:assembleDebugAndroidTest
+"$ANDROID_HOME/platform-tools/adb" -s emulator-5556 install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+python3 qa/codec_matrix.py emulator-5556 /tmp/audomo-api34-codecs
+```

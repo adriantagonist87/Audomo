@@ -37,8 +37,8 @@ Beim Kandidaten bedeutet „ohne Nachweis“, dass die Prüfung der Builddateien
 | b08 | NICHT BENÖTIGT · WAV/PCM-Aufnahmeformat | ∅ / ∅ | vorhanden · RecordingFormat / FormatConfig | abgewählt | Featurematrix | Kein Implementierungsauftrag |
 | b09 | NICHT BENÖTIGT · FLAC-Aufnahmeformat | ∅ / ∅ | ohne Nachweis | abgewählt | Featurematrix | Kein Implementierungsauftrag |
 | b10 | OPTIONAL · Mono und Stereo auswählen | 26, 28 / ∅ | vorhanden · RecordingFormat / FormatConfig | fehlt · Audio und Profile | Offen | Optional |
-| b11 | MUSS · Abtastrate einstellen | 26, 28 / T10 | vorhanden · RecordingFormat / FormatConfig | vorhanden · Profile, OpusEncoder, AudioInput | Code; Codec-Test vorgesehen | Eingang und Codec konfigurierbar; Hardware-Raten und akustische Wirkung prüfen |
-| b12 | MUSS · Bitrate einstellen | 26, 28 / T10 | vorhanden · RecordingFormat / FormatConfig | vorhanden · Profile, OpusEncoder, AudioInput | Code; Codec-Test vorgesehen | Eingang und Codec konfigurierbar; Hardware-Raten und akustische Wirkung prüfen |
+| b11 | MUSS · Abtastrate einstellen | 26, 28 / T10 | vorhanden · RecordingFormat / FormatConfig | vorhanden · Profile, OpusEncoder, AudioInput | T10 · 24 Encoderkombinationen auf API 34 | Eingang und Codec konfigurierbar; Hardware-Raten und akustische Wirkung prüfen |
+| b12 | MUSS · Bitrate einstellen | 26, 28 / T10 | vorhanden · RecordingFormat / FormatConfig | vorhanden · Profile, OpusEncoder, AudioInput | T10 · 24 Encoderkombinationen auf API 34 | Eingang und Codec konfigurierbar; Hardware-Raten und akustische Wirkung prüfen |
 | b13 | OPTIONAL · Variable Bitrate (VBR) | 26 / ∅ | ohne Nachweis | fehlt · Audio und Profile | Offen | Optional |
 | b14 | MUSS · Echounterdrückung ein/aus/Gerätestandard | 26, 28 / T11 | ohne Nachweis | vorhanden · AudioInput, ProfileDialog | Code | Alle drei Zustände; Verfügbarkeit und akustische Wirkung auf Samsung messen |
 | b15 | MUSS · Rauschunterdrückung ein/aus/Gerätestandard | 26, 28 / T11 | ohne Nachweis | vorhanden · AudioInput, ProfileDialog | Code | Alle drei Zustände; Verfügbarkeit und akustische Wirkung auf Samsung messen |
@@ -69,16 +69,16 @@ Beim Kandidaten bedeutet „ohne Nachweis“, dass die Prüfung der Builddateien
 
 | ID | Priorität, Anforderung | Beschlüsse / Tests | Kandidat | Audomo und Modul | Nachweis | Einschränkung |
 |---|---|---|---|---|---|---|
-| d01 | MUSS · Eigene Quick-Settings-Kachel | 23, 40 / T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | Code | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
-| d02 | MUSS · Aufnahme mit einem Tipp starten | 23 / T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | Code | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
-| d03 | MUSS · Aufnahme über dieselbe Kachel stoppen | 23 / T04, T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | Code | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
-| d04 | MUSS · Aktuellen Aufnahmezustand in Kachel anzeigen | 23 / T04, T19, T43 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | Code | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
+| d01 | MUSS · Eigene Quick-Settings-Kachel | 23, 40 / T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
+| d02 | MUSS · Aufnahme mit einem Tipp starten | 23 / T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
+| d03 | MUSS · Aufnahme über dieselbe Kachel stoppen | 23 / T04, T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
+| d04 | MUSS · Aktuellen Aufnahmezustand in Kachel anzeigen | 23 / T04, T19, T43 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
 | d05 | MUSS · Vibration nach erfolgreichem Start | 23, 31 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | Code | Drei konfigurierbare Muster und globaler Schalter; fühlbare Impulse und DND am Gerät prüfen |
 | d06 | MUSS · Vibration nach erfolgreichem Stopp | 23, 31 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | Code | Drei konfigurierbare Muster und globaler Schalter; fühlbare Impulse und DND am Gerät prüfen |
 | d07 | MUSS · Anderes Vibrationsmuster bei Fehler | 31, 35 / T20 | ohne Nachweis | vorhanden · Audomo, CaptureService, MainActivity | Code | Drei konfigurierbare Muster und globaler Schalter; fühlbare Impulse und DND am Gerät prüfen |
-| d08 | MUSS · Nach Start zur vorherigen App zurückkehren | 23 / T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | Code | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
-| d09 | MUSS · Aufnahmesteuerung über Benachrichtigung | 24 / T21, T44 | teilweise · AudioRecordingService | teilweise · CaptureService | Code | Pause, Fortsetzen und Stopp ohne Dateinamen; Sperrbildschirm und spätere Uploadmeldungen prüfen |
-| d10 | MUSS · Vertrauliche Sperrbildschirminformationen verbergen | 24, 41 / T21 | teilweise · AudioRecordingService | teilweise · CaptureService | Code | Pause, Fortsetzen und Stopp ohne Dateinamen; Sperrbildschirm und spätere Uploadmeldungen prüfen |
+| d08 | MUSS · Nach Start zur vorherigen App zurückkehren | 23 / T19 | ohne Nachweis | vorhanden · CaptureTile, TileStartActivity | T19 · sichtbare Systemkachel auf AVD | Android-Systemkachel und sichtbare Start-Activity; Samsung-Systemoberfläche offen |
+| d09 | MUSS · Aufnahmesteuerung über Benachrichtigung | 24 / T21, T44 | teilweise · AudioRecordingService | teilweise · CaptureService | T21 · Pause und Fortsetzen über die Notification | Pause, Fortsetzen und Stopp ohne Dateinamen; Sperrbildschirm und spätere Uploadmeldungen prüfen |
+| d10 | MUSS · Vertrauliche Sperrbildschirminformationen verbergen | 24, 41 / T21 | teilweise · AudioRecordingService | teilweise · CaptureService | T21 · Pause und Fortsetzen über die Notification | Pause, Fortsetzen und Stopp ohne Dateinamen; Sperrbildschirm und spätere Uploadmeldungen prüfen |
 | d11 | NICHT BENÖTIGT · Start direkt vom gesperrten Bildschirm | ∅ / ∅ | ohne Nachweis | abgewählt | Featurematrix | Kein Implementierungsauftrag |
 | d12 | NICHT BENÖTIGT · Homescreen-Widget | ∅ / ∅ | ohne Nachweis | abgewählt | Featurematrix | Kein Implementierungsauftrag |
 | d13 | OPTIONAL · Erinnerungsbenachrichtigung | ∅ / ∅ | ohne Nachweis | fehlt · Android-Systemintegration | Offen | Optional |
@@ -90,7 +90,7 @@ Beim Kandidaten bedeutet „ohne Nachweis“, dass die Prüfung der Builddateien
 |---|---|---|---|---|---|---|
 | e01 | MUSS · Aufnahmeordner frei wählen | 15, 29, 39 / T22 | fehlt · FileDataSourceImpl, privates Aufnahmeziel | teilweise · SessionStore, MainActivity | Code | Einzelexport per Systemdialog; persistentes SAF-Ziel für laufende Aufnahmen fehlt |
 | e02 | MUSS · Unterordner verwalten | 15 / T22 | ohne Nachweis | fehlt · Dateiverwaltung | Offen | Für Endabnahme erforderlich |
-| e03 | MUSS · Aufnahmeliste mit Datum, Dauer und Größe | 9, 42 / T23, T43, T44 | teilweise · RecordEntity / SortOrder / RecordsViewModel | teilweise · LibraryView, SessionStore | Code | Name, Datum, Zeit, Größe, Dauer, Suche und fünf Sortierschlüssel; Ordner, Uploadstatus und 500-Dateien-Test offen |
+| e03 | MUSS · Aufnahmeliste mit Datum, Dauer und Größe | 9, 42 / T23, T43, T44 | teilweise · RecordEntity / SortOrder / RecordsViewModel | teilweise · LibraryView, SessionStore | AVD · Dateiliste mit 102 Testaufnahmen | Name, Datum, Zeit, Größe, Dauer, Suche und fünf Sortierschlüssel; Ordner, Uploadstatus und 500-Dateien-Test offen |
 | e04 | MUSS · Aufnahmen durchsuchen | 13 / T23 | ohne Nachweis | teilweise · LibraryView, SessionStore | Code | Name, Datum, Zeit, Größe, Dauer, Suche und fünf Sortierschlüssel; Ordner, Uploadstatus und 500-Dateien-Test offen |
 | e05 | MUSS · Sortieren nach Name, Datum, Dauer, Größe, Endung | 14 / T23 | teilweise · RecordEntity / SortOrder / RecordsViewModel | teilweise · LibraryView, SessionStore | Code | Name, Datum, Zeit, Größe, Dauer, Suche und fünf Sortierschlüssel; Ordner, Uploadstatus und 500-Dateien-Test offen |
 | e06 | MUSS · Dateien manuell umbenennen | 11, 44 / T24, T38 | vorhanden · RecordsViewModel / HomeViewModel | fehlt · Dateiverwaltung | Offen | Für Endabnahme erforderlich |
@@ -108,7 +108,7 @@ Beim Kandidaten bedeutet „ohne Nachweis“, dass die Prüfung der Builddateien
 
 | ID | Priorität, Anforderung | Beschlüsse / Tests | Kandidat | Audomo und Modul | Nachweis | Einschränkung |
 |---|---|---|---|---|---|---|
-| f01 | MUSS · Audioplayer mit Zeitleiste | 10, 10a, 10b / T31, T43, T44 | vorhanden · ExoAudioPlayer / AudioPlaybackService / PlaybackSpeed | vorhanden · LibraryView (Media3) | Code | Listenplayer mit Seek, einstellbarem Sprung, Tempo und Stille-Skip; vollständige T31-Abnahme offen |
+| f01 | MUSS · Audioplayer mit Zeitleiste | 10, 10a, 10b / T31, T43, T44 | vorhanden · ExoAudioPlayer / AudioPlaybackService / PlaybackSpeed | vorhanden · LibraryView (Media3) | AVD · laufende Wiedergabe im Listenplayer | Listenplayer mit Seek, einstellbarem Sprung, Tempo und Stille-Skip; vollständige T31-Abnahme offen |
 | f02 | MUSS · Wiedergabe pausieren/fortsetzen | 10, 10a / T31 | vorhanden · ExoAudioPlayer / AudioPlaybackService / PlaybackSpeed | vorhanden · LibraryView (Media3) | Code | Listenplayer mit Seek, einstellbarem Sprung, Tempo und Stille-Skip; vollständige T31-Abnahme offen |
 | f03 | MUSS · Vor- und Zurückspringen um 5 Sekunden | 10, 10a / T31 | teilweise · ExoAudioPlayer (Seek) | vorhanden · LibraryView (Media3) | Code | Listenplayer mit Seek, einstellbarem Sprung, Tempo und Stille-Skip; vollständige T31-Abnahme offen |
 | f04 | MUSS · Sprungintervalle konfigurieren | 10b / T31 | teilweise · ExoAudioPlayer (Seek) | vorhanden · LibraryView (Media3) | Code | Listenplayer mit Seek, einstellbarem Sprung, Tempo und Stille-Skip; vollständige T31-Abnahme offen |

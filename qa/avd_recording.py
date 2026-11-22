@@ -44,7 +44,9 @@ def inventory():
 
 
 def ui():
-    shell("uiautomator", "dump", "/data/local/tmp/audomo-test-ui.xml")
+    result = shell("uiautomator", "dump", "/data/local/tmp/audomo-test-ui.xml")
+    if "dumped to:" not in result:
+        raise RuntimeError("UI-Zustand konnte nicht frisch gelesen werden: " + result)
     return list(ET.fromstring(shell("cat", "/data/local/tmp/audomo-test-ui.xml")).iter("node"))
 
 
