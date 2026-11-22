@@ -1,5 +1,9 @@
 # Audomo · Teststand vom 22.11.2026
 
+## Sortiermenü mit Version 0.2.2
+
+Im Referenzemulator prüfte `LibraryUiDeviceTest` mit 500 Testdateien die Reihenfolge aller 499 benachbarten Paare für fünf Sortierfelder in beiden Richtungen. Beim erneuten Öffnen der Bibliothek blieben Feld und Richtung ausgewählt. Das Menü enthielt keine ankreuzbaren Elemente. Beim Update des SM-S928B blieben die zuvor gespeicherten Sortierwerte erhalten. Auf dem S24 wurden beide aktiven Einträge über die Bedienoberfläche erkannt. Erneutes Antippen der aktiven Richtung behielt die Auswahl bei. [Menü auf API 34](api34/sortiermenue-0.2.2.png)
+
 ## Kachellangdruck mit Version 0.2.1
 
 Auf dem entsperrten Samsung SM-S928B mit API 34 holte ein über die Samsung-Systemkachel ausgelöster Langdruck dieselbe laufende Audomo-Activity aus dem Hintergrund zurück. Aufnahmezustand und Zahl der gespeicherten Sitzungen blieben gleich. Der Test `TileLongPressDeviceTest` lässt sich mit dem Instrumentierungsargument `-e tileGesture true` auf einem entsperrten Gerät mit bereits hinzugefügter Kachel wiederholen.

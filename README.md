@@ -1,6 +1,6 @@
 # Audomo für Android
 
-Der Entwicklungsstand 0.2.1 richtet sich an das Galaxy S24 Ultra mit Android 14 und One UI 6.1. Aufnehmen, Pausieren, Fortsetzen, Speichern und Wiederherstellen laufen auf dem eingerichteten ARM64-AVD. Der vollständige Lieferumfang und die offenen Geräteprüfungen stehen im [Funktionsabgleich](qa/ANFORDERUNGSABGLEICH.md).
+Der Entwicklungsstand 0.2.2 richtet sich an das Galaxy S24 Ultra mit Android 14 und One UI 6.1. Aufnehmen, Pausieren, Fortsetzen, Speichern und Wiederherstellen laufen auf dem eingerichteten ARM64-AVD. Der vollständige Lieferumfang und die offenen Geräteprüfungen stehen im [Funktionsabgleich](qa/ANFORDERUNGSABGLEICH.md).
 
 ## Bauen und installieren
 
@@ -31,7 +31,7 @@ Im Kopfmenü lassen sich Benachrichtigungen erlauben, die Systemabfrage für die
 
 Unter „Vibration“ hat jedes Ereignis eine Taste „Testen“. Ein langer Impuls dauert 500 ms. Zwei oder drei kurze Impulse dauern jeweils 300 ms mit 200 ms Pause dazwischen. Auf dem Galaxy S24 müssen Benachrichtigungen für Audomo erlaubt sein, damit diese Muster fühlbar sind. Bei gesperrter Freigabe führt „Freigabe öffnen“ zur Android-Einstellung.
 
-„Wiedergeben“ öffnet die lokale Liste. Einen Eintrag auswählen und anschließend Play drücken. Die Dateiaktionen ermöglichen Teilen, externes Öffnen und Exportieren über den Android-Dateidialog. Originale liegen im privaten dauerhaften App-Speicher. Eine Deinstallation entfernt diesen Speicher. Zum Aufbewahren außerhalb der App „Datei exportieren“ verwenden.
+„Wiedergeben“ öffnet die lokale Liste. Über das Sortiersymbol lassen sich Feld und Reihenfolge direkt wählen, etwa „Datum“ und „Neueste zuerst“. Die beiden aktiven Einträge sind hervorgehoben. Einen Eintrag auswählen und anschließend Play drücken. Die Dateiaktionen ermöglichen Teilen, externes Öffnen und Exportieren über den Android-Dateidialog. Originale liegen im privaten dauerhaften App-Speicher. Eine Deinstallation entfernt diesen Speicher. Zum Aufbewahren außerhalb der App „Datei exportieren“ verwenden.
 
 ## Einstellungen und Dateien
 

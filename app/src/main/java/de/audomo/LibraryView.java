@@ -2,9 +2,12 @@ package de.audomo;
 
 import android.app.*;
 import android.content.*;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.*;
 import android.text.*;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.view.*;
 import android.widget.*;
 
@@ -27,6 +30,7 @@ final class LibraryView {
     private Map<String, UploadQueue.Job> uploads = new HashMap<>();
     private final Set<String> marked = new LinkedHashSet<>();
     private final Button folderButton;
+    private final ImageButton sort;
     private final TextView count, empty;
     private final boolean trash;
     private boolean allFolders;
@@ -37,7 +41,44 @@ final class LibraryView {
     private SeekBar seek;
     private TextView elapsed, leftStep, rightStep;
     private int step;
-    private static final String[] SORT = {"Name", "Datum", "Dauer", "Größe", "Endung"};
+
+    private record SortField(
+            String label,
+            String ascending,
+            String descending,
+            Comparator<SessionStore.Entry> order) {}
+
+    // The indices are also used by existing preferences and settings backups.
+    private static final List<SortField> SORT =
+            List.of(
+                    new SortField(
+                            "Name",
+                            "A bis Z",
+                            "Z bis A",
+                            Comparator.comparing(
+                                    SessionStore.Entry::name, String.CASE_INSENSITIVE_ORDER)),
+                    new SortField(
+                            "Datum",
+                            "Älteste zuerst",
+                            "Neueste zuerst",
+                            Comparator.comparing(SessionStore.Entry::start)),
+                    new SortField(
+                            "Dauer",
+                            "Kürzeste zuerst",
+                            "Längste zuerst",
+                            Comparator.comparingLong(SessionStore.Entry::frames)),
+                    new SortField(
+                            "Größe",
+                            "Kleinste zuerst",
+                            "Größte zuerst",
+                            Comparator.comparingLong(e -> e.file().length())),
+                    new SortField(
+                            "Endung",
+                            "A bis Z",
+                            "Z bis A",
+                            Comparator.comparing(
+                                    e -> LibraryFiles.extension(e.name()),
+                                    String.CASE_INSENSITIVE_ORDER)));
 
     LibraryView(MainActivity screen, LinearLayout page, List<SessionStore.Entry> entries) {
         this.screen = screen;
@@ -55,7 +96,7 @@ final class LibraryView {
         titles.addView(count);
         heading.addView(titles, screen.weight());
         ImageButton search = screen.toolbarIcon("Aufnahmen durchsuchen", R.drawable.ic_search);
-        ImageButton sort = screen.toolbarIcon("Aufnahmen sortieren", R.drawable.ic_sort);
+        sort = screen.toolbarIcon("Aufnahmen sortieren", R.drawable.ic_sort);
         heading.addView(search, screen.lp(48, 48));
         heading.addView(sort, screen.lp(48, 48));
 
@@ -101,31 +142,7 @@ final class LibraryView {
                         .showSoftInput(field, 0);
             }
         });
-        sort.setOnClickListener(v -> {
-            PopupMenu menu = new PopupMenu(screen, sort);
-            for (int i = 0; i < SORT.length; i++) {
-                int key = i;
-                menu.getMenu()
-                        .add(SORT[i])
-                        .setCheckable(true)
-                        .setChecked(i == prefs.getInt("sort", 1))
-                        .setOnMenuItemClickListener(item -> {
-                            prefs.edit().putInt("sort", key).apply();
-                            filter();
-                            return true;
-                        });
-            }
-            menu.getMenu()
-                    .add("Absteigend")
-                    .setCheckable(true)
-                    .setChecked(prefs.getBoolean("descending", true))
-                    .setOnMenuItemClickListener(item -> {
-                        prefs.edit().putBoolean("descending", !item.isChecked()).apply();
-                        filter();
-                        return true;
-                    });
-            menu.show();
-        });
+        sort.setOnClickListener(v -> showSortMenu());
         ListView list = new ListView(screen);
         list.setDividerHeight(screen.dp(1));
         page.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -407,24 +424,77 @@ final class LibraryView {
         }
     }
 
+    private SortField currentSort() {
+        int key = prefs.getInt("sort", 1);
+        return SORT.get(key >= 0 && key < SORT.size() ? key : 1);
+    }
+
+    private void showSortMenu() {
+        PopupMenu popup = new PopupMenu(screen, sort, Gravity.END);
+        Menu menu = popup.getMenu();
+        menu.setGroupDividerEnabled(true);
+        SortField current = currentSort();
+        boolean descending = prefs.getBoolean("descending", true);
+        for (int i = 0; i < SORT.size(); i++) {
+            int key = i;
+            SortField field = SORT.get(i);
+            addSortOption(
+                    menu,
+                    0,
+                    field.label(),
+                    field == current,
+                    () -> prefs.edit().putInt("sort", key).apply());
+        }
+        addSortOption(
+                menu,
+                1,
+                current.ascending(),
+                !descending,
+                () -> prefs.edit().putBoolean("descending", false).apply());
+        addSortOption(
+                menu,
+                1,
+                current.descending(),
+                descending,
+                () -> prefs.edit().putBoolean("descending", true).apply());
+        popup.show();
+    }
+
+    private void addSortOption(
+            Menu menu, int group, String label, boolean active, Runnable select) {
+        SpannableString title = new SpannableString(label);
+        if (active) {
+            title.setSpan(
+                    new StyleSpan(Typeface.BOLD),
+                    0,
+                    title.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            title.setSpan(
+                    new ForegroundColorSpan(MainActivity.ACCENT),
+                    0,
+                    title.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        MenuItem item = menu.add(group, Menu.NONE, Menu.NONE, title);
+        if (active) item.setContentDescription(label + ", ausgewählt");
+        item.setOnMenuItemClickListener(clicked -> {
+            select.run();
+            filter();
+            return true;
+        });
+    }
+
     private void filter() {
         visible.clear();
         for (SessionStore.Entry entry : all)
             if ((entry.trashed() > 0) == trash
                     && (trash || allFolders || entry.folder().equals(folder()))
                     && entry.name().toLowerCase(Locale.ROOT).contains(query)) visible.add(entry);
-        Comparator<SessionStore.Entry> by =
-                switch (prefs.getInt("sort", 1)) {
-                    case 0 -> Comparator.comparing(e -> e.name(), String.CASE_INSENSITIVE_ORDER);
-                    case 2 -> Comparator.comparingLong(SessionStore.Entry::frames);
-                    case 3 -> Comparator.comparingLong(e -> e.file().length());
-                    case 4 ->
-                            Comparator.comparing(
-                                    e -> LibraryFiles.extension(e.name()),
-                                    String.CASE_INSENSITIVE_ORDER);
-                    default -> Comparator.comparing(SessionStore.Entry::start);
-                };
-        if (prefs.getBoolean("descending", true)) by = by.reversed();
+        SortField field = currentSort();
+        boolean descending = prefs.getBoolean("descending", true);
+        sort.setStateDescription(
+                field.label() + ", " + (descending ? field.descending() : field.ascending()));
+        Comparator<SessionStore.Entry> by = descending ? field.order().reversed() : field.order();
         visible.sort(by.thenComparing(e -> e.name()));
         if (selected != null && !visible.contains(selected)) {
             stop();

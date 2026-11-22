@@ -6,6 +6,7 @@ import android.app.Instrumentation;
 import android.content.*;
 import android.os.SystemClock;
 import android.view.*;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.*;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -61,7 +62,9 @@ public class LibraryUiDeviceTest {
             var window = inst.getUiAutomation().getRootInActiveWindow();
             if (window != null)
                 for (var node : window.findAccessibilityNodeInfosByText(text)) {
-                    if (!text.contentEquals(node.getText() == null ? "" : node.getText())) continue;
+                    if (!text.contentEquals(node.getText() == null ? "" : node.getText())
+                            && !(text + ", ausgewählt").equals(node.getContentDescription()))
+                        continue;
                     while (node != null && !node.isClickable()) node = node.getParent();
                     if (node != null
                             && node.performAction(
@@ -74,6 +77,28 @@ public class LibraryUiDeviceTest {
             Thread.sleep(80);
         }
         fail("Auswahl fehlt: " + text);
+    }
+
+    private void assertNoCheckableRows(AccessibilityNodeInfo node) {
+        assertFalse("Sortiermenü enthält ein ankreuzbares Element", node.isCheckable());
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) assertNoCheckableRows(child);
+        }
+    }
+
+    private void assertSortMenu(String key, String direction) {
+        inst.waitForIdleSync();
+        AccessibilityNodeInfo menu = inst.getUiAutomation().getRootInActiveWindow();
+        assertNotNull(menu);
+        assertNoCheckableRows(menu);
+        for (String active : List.of(key, direction)) {
+            String selected = active + ", ausgewählt";
+            assertTrue(
+                    selected,
+                    menu.findAccessibilityNodeInfosByText(active).stream()
+                            .anyMatch(node -> selected.equals(node.getContentDescription())));
+        }
     }
 
     void shot(Context ctx, String name) throws Exception {
@@ -182,6 +207,11 @@ public class LibraryUiDeviceTest {
                 assertNotNull(label.getCompoundDrawables()[0]);
             }
             shot(ctx, "liste-500");
+            ui(() -> find(root, ImageButton.class, "Aufnahmen sortieren").performClick());
+            assertSortMenu("Datum", "Neueste zuerst");
+            shot(ctx, "sortiermenue-0.2.2");
+            choice("Neueste zuerst");
+            assertTrue(prefs.getBoolean("descending", false));
             ui(() -> list.performItemClick(list.getChildAt(0), 0, 0));
             await(() -> find(root, Button.class, "Umbenennen") != null);
             assertNotNull(find(root, Button.class, "Upload"));
@@ -221,8 +251,18 @@ public class LibraryUiDeviceTest {
             for (String key : List.of("Name", "Datum", "Dauer", "Größe", "Endung")) {
                 ui(() -> find(root, ImageButton.class, "Aufnahmen sortieren").performClick());
                 choice(key);
-                for (int direction = 0; direction < 2; direction++) {
-                    boolean descending = prefs.getBoolean("descending", true);
+                List<String> directions =
+                        switch (key) {
+                            case "Datum" -> List.of("Älteste zuerst", "Neueste zuerst");
+                            case "Dauer" -> List.of("Kürzeste zuerst", "Längste zuerst");
+                            case "Größe" -> List.of("Kleinste zuerst", "Größte zuerst");
+                            default -> List.of("A bis Z", "Z bis A");
+                        };
+                for (int direction = 0; direction < directions.size(); direction++) {
+                    boolean descending = direction == 1;
+                    ui(() -> find(root, ImageButton.class, "Aufnahmen sortieren").performClick());
+                    choice(directions.get(direction));
+                    assertEquals(descending, prefs.getBoolean("descending", true));
                     Comparator<SessionStore.Entry> order =
                             switch (key) {
                                 case "Name" ->
@@ -249,11 +289,14 @@ public class LibraryUiDeviceTest {
                             prev = next;
                         }
                     });
-                    ui(() -> find(root, ImageButton.class, "Aufnahmen sortieren").performClick());
-                    choice("Absteigend");
-                    assertNotEquals(descending, prefs.getBoolean("descending", true));
                 }
             }
+            ui(() -> find(root, TextView.class, "Aufnehmen").performClick());
+            ui(() -> find(root, TextView.class, "Wiedergeben").performClick());
+            await(() -> find(root, ImageButton.class, "Aufnahmen sortieren") != null);
+            ui(() -> find(root, ImageButton.class, "Aufnahmen sortieren").performClick());
+            assertSortMenu("Endung", "Z bis A");
+            choice("Z bis A");
             assertEquals(500, fixtures.list().size());
         } finally {
             if (screen != null) {
