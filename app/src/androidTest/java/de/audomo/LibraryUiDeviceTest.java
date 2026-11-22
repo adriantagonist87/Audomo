@@ -92,7 +92,12 @@ public class LibraryUiDeviceTest {
     @Test
     public void fiveHundredRowsSearchSelectionPlayerAndSettings() throws Exception {
         Context ctx = inst.getTargetContext();
+        org.junit.Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
         Audomo app = (Audomo) ctx.getApplicationContext();
+        UploadQueue q = UploadQueue.get(ctx);
+        org.junit.Assume.assumeTrue("Isolierter Emulator ohne aktive Übertragung", !q.pending());
+        String syntheticTarget = "QA-UI-" + UUID.randomUUID();
+        List<String> states = List.of("Hochgeladen", "Upload läuft", "Wartet", "Fehler");
         SessionStore original = app.sessions;
         File temp = Files.createTempDirectory(ctx.getCacheDir().toPath(), "qa-library-").toFile();
         Context isolated =
@@ -130,6 +135,16 @@ public class LibraryUiDeviceTest {
                 if (ogg) name = name.replace(".mp3", ".ogg");
                 File dir = new File(fixtures.root, UUID.randomUUID().toString());
                 Files.createDirectory(dir.toPath());
+                if (i >= 496)
+                    q.getWritableDatabase()
+                            .execSQL(
+                                    "INSERT INTO jobs(rec,target,path,state) VALUES(?,?,?,?)",
+                                    new Object[] {
+                                        dir.getName(),
+                                        syntheticTarget,
+                                        "/QA/" + name,
+                                        states.get(499 - i)
+                                    });
                 String physical = ogg ? "audio.ogg" : "audio.mp3";
                 if (ogg) {
                     try (InputStream in = inst.getContext().getAssets().open("testsignal.ogg")) {
@@ -161,6 +176,11 @@ public class LibraryUiDeviceTest {
                     find(root, ListView.class, null) != null
                             && find(root, ListView.class, null).getCount() == 500);
             ListView list = find(root, ListView.class, null);
+            for (String state : states) {
+                TextView label = find(root, TextView.class, state);
+                assertNotNull(state, label);
+                assertNotNull(label.getCompoundDrawables()[0]);
+            }
             shot(ctx, "liste-500");
             ui(() -> list.performItemClick(list.getChildAt(0), 0, 0));
             await(() -> find(root, Button.class, "Umbenennen") != null);
@@ -241,6 +261,7 @@ public class LibraryUiDeviceTest {
                 ui(activity::finish);
                 inst.waitForIdleSync();
             }
+            q.getWritableDatabase().delete("jobs", "target=?", new String[] {syntheticTarget});
             app.sessions = original;
             prefs.edit()
                     .putString("folder", previousFolder)

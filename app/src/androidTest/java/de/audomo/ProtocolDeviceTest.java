@@ -40,7 +40,7 @@ public class ProtocolDeviceTest {
                 new CloudConfig(
                         UUID.randomUUID().toString(),
                         type,
-                        "10.0.2.2",
+                        j.optString("host", "10.0.2.2"),
                         j.getJSONObject("ports").getInt(type),
                         "qa",
                         "/",

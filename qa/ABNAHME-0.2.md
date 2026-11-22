@@ -48,7 +48,7 @@ Stand 22.11.2026. API 34, ARM64. Die normale Referenzinstanz war Galaxy_S24_Ultr
 | T40 Einstellungen | PASS Kernlogik | JSON-Rundlauf für Profil, Kalenderregeln und Schema, Ablehnung unbekannter Version, Kalenderzuordnung bei neuer Installation zurückgesetzt. |
 | T41 Diagnose | TEILPRÜFUNG | Inline-Aufnahmefehler bei Mikrofonsperre beobachtet. Uploadfehler-Notification samt manuellen Aktionen auf One UI offen. |
 | T42 Werbung und Tracking | TEILPRÜFUNG | Laufzeitabhängigkeiten und Manifest inventarisiert. Internetzugriff für ausdrücklich konfigurierte Uploads. Vollständiger Netzwerk-Mitschnitt bei Alltagsnutzung offen. |
-| T43 Visuelle Abnahme | TEILPRÜFUNG | H1, Liste mit 500 Einträgen, ausgeklappter Player, F2 und Mehrfachauswahl als reale Screenshots geprüft. Zuordnung aller 52 Beschlüsse liegt vor. |
+| T43 Visuelle Abnahme | TEILPRÜFUNG | [H1](api34/einstellungen.png), [Liste mit 500 Einträgen und vier Uploadzuständen](api34/liste-500.png), ausgeklappter Player, [F2](api34/dateiaktionen.png) und [Mehrfachauswahl](api34/mehrfachauswahl.png) als reale Screenshots geprüft. Zuordnung aller 52 Beschlüsse liegt vor. |
 | T44 Darstellung und Bedienbarkeit | TEILPRÜFUNG | Neun Einstellungswege über die Oberfläche aufgerufen, einschließlich Diagnosefilter und Protokollauswahl. H1 und Einstellungs-Export bei 150 % Systemschrift über Scrollen erreichbar. TalkBack, gesamte Oberfläche und lange Konflikttexte auf One UI offen. |
 
 ## Durchgeführte Läufe
@@ -66,18 +66,18 @@ Der 30-Minuten-Versuch lief vor der Aktualisierung mit Version 0.1.3. Die Aufnah
 
 ### Cloudprüfung
 
-Alle vier Testserver liefen auf der Loopbackadresse des Mac. Die App auf dem Emulator übertrug synthetische Daten. WebDAV und FTPS wurden einmal mit unbekannter und einmal mit der nur im Test eingesetzten Zertifizierungsstelle angesprochen. Der SFTP-Test verwendete den festgelegten öffentlichen Hostschlüssel. Zu den Prüfungen gehörten Ordner mit Umlaut, Erstübertragung, Auslesen, Namenskonflikt, überprüftes Ersetzen und Entfernen. Bei FTP und SFTP lassen sich konkurrierende Änderungen durch fremde Clients zwischen der letzten Prüfung und der Serveroperation nicht allgemein atomar ausschließen.
+Alle vier Testserver liefen auf der Loopbackadresse des Mac. Die App auf dem Emulator übertrug synthetische Daten. Beim Wiederholen über den NAT-Alias 10.0.2.2 traten auch Verbindungszeitüberschreitungen auf. Der abschließende Lauf nutzte deshalb ADB-Portweiterleitungen auf die Loopbackadresse des Emulators. Alle 15 Instrumentierungstests bestanden. Die temporären Weiterleitungen wurden anschließend entfernt. WebDAV und FTPS wurden einmal mit unbekannter und einmal mit der nur im Test eingesetzten Zertifizierungsstelle angesprochen. Der SFTP-Test verwendete den festgelegten öffentlichen Hostschlüssel. Zu den Prüfungen gehörten Ordner mit Umlaut, Erstübertragung, Auslesen, Namenskonflikt, überprüftes Ersetzen und Entfernen. Bei FTP und SFTP lassen sich konkurrierende Änderungen durch fremde Clients zwischen der letzten Prüfung und der Serveroperation nicht allgemein atomar ausschließen.
 
 Dropbox blieb ohne Kontoanmeldung. Auf dem S24 und im Emulator prüfte ein vollständig lokaler Transport den PKCE-Challenge, den Token-Refresh-Aufruf sowie Start, Offset und Abschluss einer mehrteiligen Upload-Anfrage über 16 MiB. Eine Zustimmung im Browser, der Austausch eines echten Codes und die Serverantworten von Dropbox sind offen. Die eingebundene API folgt der Anbieterdokumentation. [Dropbox OAuth](https://developers.dropbox.com/oauth-guide) · [Dropbox-Dateizugriff](https://developers.dropbox.com/dbx-file-access-guide)
 
 ### Reproduzieren
 
-Die Geräteklassen stehen unter `app/src/androidTest/java/de/audomo/`. Für die vier lokalen Protokolltests `qa/protocol_servers.py` in einer Python-Umgebung mit pyftpdlib, pyOpenSSL, cryptography und Paramiko mit einem neuen temporären Verzeichnis starten. Dessen synthetische Verbindungsdaten aus `client.json` nur ins private Cacheverzeichnis des QA-Emulators als `qa-protocols.json` übertragen. Die Instrumentierung für `ProtocolDeviceTest` und `UploadQueueDeviceTest` mit `-e localServers true` ausführen, anschließend den Cacheeintrag und das temporäre Serververzeichnis entfernen. `qa/upload_neustart.py` begrenzt den Neustarttest auf die separate Audomo-QA-AVD. Für den SAF-Test ist eine echte persistente Freigabe von `Documents/Audomo-QA-020` Voraussetzung. `RadioDeviceTest` benötigt eine ausdrücklich gestartete Messung mit `-e radioMinutes 30`.
+Die Geräteklassen stehen unter `app/src/androidTest/java/de/audomo/`. Für die vier lokalen Protokolltests `qa/protocol_servers.py` in einer Python-Umgebung mit pyftpdlib, pyOpenSSL, cryptography und Paramiko mit einem neuen temporären Verzeichnis starten. Dessen synthetische Verbindungsdaten aus `client.json` nur ins private Cacheverzeichnis des QA-Emulators als `qa-protocols.json` übertragen. Für die alternative Weiterleitung den Server mit `--adb-reverse` starten. Für jeden Kontrollport aus `ports` und jeden Datenport aus `passivePorts` des Testprofils auf dem Emulator `adb reverse tcp:PORT tcp:PORT` einrichten und nach dem Lauf mit `adb reverse --remove tcp:PORT` entfernen. Die Instrumentierung für `ProtocolDeviceTest` und `UploadQueueDeviceTest` mit `-e localServers true` ausführen, anschließend den Cacheeintrag und das temporäre Serververzeichnis entfernen. `qa/upload_neustart.py` begrenzt den Neustarttest auf die separate Audomo-QA-AVD. Für den SAF-Test ist eine echte persistente Freigabe von `Documents/Audomo-QA-020` Voraussetzung. `RadioDeviceTest` benötigt eine ausdrücklich gestartete Messung mit `-e radioMinutes 30`.
 
 ### Auslieferung
 
 `Audomo-0.2-API34-debug.apk`, Versionscode 5, Paket `de.audomo`, minSdk 34, targetSdk 34. Der Android-Signaturprüfer bestätigt Schema v2. Die installierte Basis-APK auf dem S24 und die ausgelieferte Datei sind bytegleich.
 
 ```text
-SHA-256  2bf5aff50a7a5f2a4c482a15190d82cb934a7fffac75629bf6e320e5408388cd
+SHA-256  503c9ada73bffd675349b2ee8c2fbc8253e3c1441c915c428e28b20976e0f83a
 ```

@@ -29,7 +29,18 @@ from pyftpdlib.servers import FTPServer
 
 parser = argparse.ArgumentParser()
 parser.add_argument("directory", type=Path)
-work = parser.parse_args().directory
+parser.add_argument("--adb-reverse", action="store_true", help="Use emulator loopback with adb reverse on all fixture ports")
+args=parser.parse_args()
+work=args.directory.resolve()
+client_host="127.0.0.1" if args.adb_reverse else "10.0.2.2"
+passive_ports=[]
+if args.adb_reverse:
+    reservations=[socket.socket() for _ in range(12)]
+    for reservation in reservations:
+        reservation.bind(("127.0.0.1",0))
+        passive_ports.append(reservation.getsockname()[1])
+    for reservation in reservations:
+        reservation.close()
 work.mkdir(mode=0o700, exist_ok=False)
 roots = {name: work / name for name in ("FTP", "FTPS", "SFTP", "WebDAV")}
 for path in roots.values():
@@ -113,7 +124,9 @@ ports["WebDAV"]=dav.server_port;threading.Thread(target=dav.serve_forever,daemon
 
 for name,handler in (("FTP",FTPHandler),("FTPS",TLS_FTPHandler)):
     auth=DummyAuthorizer();auth.add_user("qa",password,str(roots[name]),perm="elradfmwMT")
-    cls=type("PrivateFixture",(handler,),{"authorizer":auth,"masquerade_address":"10.0.2.2"})
+    cls=type("PrivateFixture",(handler,),{"authorizer":auth,"masquerade_address":client_host})
+    if passive_ports:
+        cls.passive_ports=passive_ports[:6] if name=="FTP" else passive_ports[6:]
     if name=="FTPS":
         cls.certfile=str(work/"server.pem");cls.keyfile=str(work/"key.pem");cls.tls_control_required=True;cls.tls_data_required=True
     service=FTPServer(("127.0.0.1",0),cls,ioloop=IOLoop());ports[name]=service.socket.getsockname()[1]
@@ -163,5 +176,5 @@ def serve_ssh():
             finally:transport.close()
         threading.Thread(target=run,args=(conn,),daemon=True).start()
 threading.Thread(target=serve_ssh,daemon=True).start()
-(work/"client.json").write_text(json.dumps({"password":password,"ports":ports,"ca":ca.public_bytes(pem).decode(),"hostKey":host_key.get_name()+" "+host_key.get_base64()}))
+(work/"client.json").write_text(json.dumps({"host":client_host,"passivePorts":passive_ports,"password":password,"ports":ports,"ca":ca.public_bytes(pem).decode(),"hostKey":host_key.get_name()+" "+host_key.get_base64()}))
 while True:time.sleep(5)

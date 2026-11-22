@@ -23,7 +23,13 @@ public class StorageProviderDeviceTest {
     @Test
     public void verifiedCopyMoveRestoreAndIndexMarker() throws Exception {
         Context ctx = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        String selected = Profile.prefs(ctx).getString("documentTree", "");
+        String selected =
+                ctx.getContentResolver().getPersistedUriPermissions().stream()
+                        .filter(grant -> grant.isReadPermission() && grant.isWritePermission())
+                        .map(grant -> grant.getUri().toString())
+                        .filter(uri -> uri.endsWith("Audomo-QA-020"))
+                        .findFirst()
+                        .orElse("");
         Assume.assumeTrue(
                 "Nur der im Emulator freigegebene QA-Ordner",
                 android.os.Build.MODEL.contains("sdk_gphone")

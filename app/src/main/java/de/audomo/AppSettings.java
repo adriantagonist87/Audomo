@@ -36,8 +36,8 @@ final class AppSettings {
             page.setPadding(screen.dp(16), 0, screen.dp(16), 0);
             LinearLayout header = screen.row();
             page.addView(header);
-            Button back = screen.button("‹", v -> dialog.dismiss());
-            back.setContentDescription("Zurück");
+            ImageButton back = screen.toolbarIcon("Zurück", R.drawable.ic_arrow_back);
+            back.setOnClickListener(v -> dialog.dismiss());
             header.addView(back, screen.lp(48, 48));
             header.addView(screen.text(title, 22, MainActivity.INK), screen.weight());
             ScrollView scroll = new ScrollView(screen);

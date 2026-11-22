@@ -140,7 +140,7 @@ public final class MainActivity extends Activity {
         brand.setPadding(dp(9), 0, 0, 0);
         brand.setTypeface(getResources().getFont(R.font.inter_display_light));
         header.addView(brand, weight());
-        ImageButton more = icon("Weitere Optionen", R.drawable.ic_more, INK, BG);
+        ImageButton more = toolbarIcon("Weitere Optionen", R.drawable.ic_more);
         more.setOnClickListener(v -> menu(more));
         header.addView(more, lp(48, 48));
         LinearLayout tabs = row();
@@ -399,6 +399,7 @@ public final class MainActivity extends Activity {
     private void menu(View anchor) {
         PopupMenu menu = new PopupMenu(this, anchor);
         LibraryActions.item(menu, "Einstellungen", () -> preferences.show());
+        if (library && recordings != null) recordings.addMenu(menu);
         LibraryActions.item(menu, "Einrichtung", () -> preferences.onboarding());
         LibraryActions.item(menu, "Uploads", () -> preferences.upload(null));
         menu.getMenu()
@@ -732,6 +733,15 @@ public final class MainActivity extends Activity {
         b.setBackground(surface(PANEL, 12));
         b.setOnClickListener(action);
         return b;
+    }
+
+    ImageButton toolbarIcon(String label, int resource) {
+        ImageButton button = icon(label, resource, INK, BG);
+        android.util.TypedValue ripple = new android.util.TypedValue();
+        if (getTheme()
+                .resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, ripple, true))
+            button.setBackgroundResource(ripple.resourceId);
+        return button;
     }
 
     ImageButton icon(String label, int res, int tint, int color) {

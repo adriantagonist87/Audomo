@@ -54,71 +54,11 @@ final class LibraryView {
         titles.addView(screen.text(trash ? "Papierkorb" : "Aufnahmen", 21, MainActivity.INK));
         titles.addView(count);
         heading.addView(titles, screen.weight());
-        ImageButton menuButton =
-                screen.icon(
-                        "Bibliotheksaktionen",
-                        R.drawable.ic_more,
-                        MainActivity.INK,
-                        MainActivity.BG);
-        menuButton.setOnClickListener(v -> {
-            PopupMenu menu = new PopupMenu(screen, menuButton);
-            if (!trash) LibraryActions.item(menu, "Aufnahmen importieren", screen::pickImport);
-            LibraryActions.item(
-                    menu,
-                    trash ? "Zur Bibliothek" : "Papierkorb",
-                    () -> {
-                        screen.trashView = !trash;
-                        screen.showLibrary();
-                    });
-            if (trash) {
-                menu.getMenu()
-                        .add("Nach 30 Tagen bereinigen")
-                        .setCheckable(true)
-                        .setChecked(prefs.getBoolean("cleanTrash", false))
-                        .setOnMenuItemClickListener(item -> {
-                            boolean on = !item.isChecked();
-                            if (on)
-                                new AlertDialog.Builder(screen)
-                                        .setTitle("Dateien nach 30 Tagen endgültig löschen?")
-                                        .setPositiveButton(
-                                                "Aktivieren",
-                                                (d, w) -> {
-                                                    prefs.edit()
-                                                            .putBoolean("cleanTrash", true)
-                                                            .apply();
-                                                    screen.runFiles(() -> {
-                                                        actions.files.cleanOld();
-                                                        return "Bereinigung aktiv";
-                                                    });
-                                                })
-                                        .setNegativeButton("Abbrechen", null)
-                                        .show();
-                            else prefs.edit().putBoolean("cleanTrash", false).apply();
-                            return true;
-                        });
-                if (!visible.isEmpty())
-                    LibraryActions.item(
-                            menu,
-                            "Papierkorb leeren",
-                            () -> actions.trash(List.copyOf(visible), true));
-            }
-            menu.show();
-        });
-        ImageButton search =
-                screen.icon(
-                        "Aufnahmen durchsuchen",
-                        R.drawable.ic_search,
-                        MainActivity.INK,
-                        MainActivity.BG);
-        ImageButton sort =
-                screen.icon(
-                        "Aufnahmen sortieren",
-                        R.drawable.ic_sort,
-                        MainActivity.INK,
-                        MainActivity.BG);
+        ImageButton search = screen.toolbarIcon("Aufnahmen durchsuchen", R.drawable.ic_search);
+        ImageButton sort = screen.toolbarIcon("Aufnahmen sortieren", R.drawable.ic_sort);
         heading.addView(search, screen.lp(48, 48));
         heading.addView(sort, screen.lp(48, 48));
-        heading.addView(menuButton, screen.lp(48, 48));
+
         folderButton =
                 screen.button(
                         "",
@@ -131,6 +71,7 @@ final class LibraryView {
                                         }));
         folderButton.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         folderButton.setPadding(screen.dp(12), 0, screen.dp(12), 0);
+        folderButton.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_expand, 0);
         folderButton.setContentDescription("Ordner wählen");
         if (!trash) page.addView(folderButton);
         CheckBox allScope = new CheckBox(screen);
@@ -248,21 +189,28 @@ final class LibraryView {
                                         MainActivity.DIM),
                                 screen.weight());
                         UploadQueue.Job job = uploads.get(e.id());
-                        TextView status =
-                                screen.text(
-                                        job == null ? "Lokal" : job.state(),
-                                        12,
-                                        MainActivity.ACCENT);
-                        int statusIcon =
-                                job == null
-                                        ? R.drawable.ic_folder
-                                        : "Hochgeladen".equals(job.state())
-                                                ? R.drawable.ic_check
-                                                : R.drawable.ic_upload;
+                        String state = job == null ? "Lokal" : job.state();
+                        int color =
+                                switch (state) {
+                                    case "Hochgeladen" -> 0xff82dcc3;
+                                    case "Wartet" -> 0xffffd38a;
+                                    case "Fehler", "Konflikt" -> 0xffff9a9d;
+                                    case "Upload läuft" -> MainActivity.ACCENT;
+                                    default -> MainActivity.DIM;
+                                };
+                        int icon =
+                                switch (state) {
+                                    case "Hochgeladen" -> R.drawable.ic_check;
+                                    case "Wartet" -> R.drawable.ic_wait;
+                                    case "Fehler", "Konflikt" -> R.drawable.ic_problem;
+                                    case "Upload läuft" -> R.drawable.ic_progress;
+                                    default -> R.drawable.ic_folder;
+                                };
+                        TextView status = screen.text(state, 12, color);
                         android.graphics.drawable.Drawable symbol =
-                                screen.getDrawable(statusIcon).mutate();
+                                screen.getDrawable(icon).mutate();
                         symbol.setBounds(0, 0, screen.dp(14), screen.dp(14));
-                        symbol.setTint(MainActivity.ACCENT);
+                        symbol.setTint(color);
                         status.setCompoundDrawables(symbol, null, null, null);
                         status.setCompoundDrawablePadding(screen.dp(3));
                         if (job != null)
@@ -345,6 +293,45 @@ final class LibraryView {
                     }
                 });
         if (page.isAttachedToWindow()) handler.post(refreshStatus);
+    }
+
+    void addMenu(PopupMenu menu) {
+        if (!trash) LibraryActions.item(menu, "Aufnahmen importieren", screen::pickImport);
+        LibraryActions.item(
+                menu,
+                trash ? "Zur Bibliothek" : "Papierkorb",
+                () -> {
+                    screen.trashView = !trash;
+                    screen.showLibrary();
+                });
+        if (trash) {
+            menu.getMenu()
+                    .add("Nach 30 Tagen bereinigen")
+                    .setCheckable(true)
+                    .setChecked(prefs.getBoolean("cleanTrash", false))
+                    .setOnMenuItemClickListener(item -> {
+                        boolean on = !item.isChecked();
+                        if (on)
+                            new AlertDialog.Builder(screen)
+                                    .setTitle("Dateien nach 30 Tagen endgültig löschen?")
+                                    .setPositiveButton(
+                                            "Aktivieren",
+                                            (d, w) -> {
+                                                prefs.edit().putBoolean("cleanTrash", true).apply();
+                                                screen.runFiles(() -> {
+                                                    actions.files.cleanOld();
+                                                    return "Bereinigung aktiv";
+                                                });
+                                            })
+                                    .setNegativeButton("Abbrechen", null)
+                                    .show();
+                        else prefs.edit().putBoolean("cleanTrash", false).apply();
+                        return true;
+                    });
+            if (!visible.isEmpty())
+                LibraryActions.item(
+                        menu, "Papierkorb leeren", () -> actions.trash(List.copyOf(visible), true));
+        }
     }
 
     private void refreshJobs() {

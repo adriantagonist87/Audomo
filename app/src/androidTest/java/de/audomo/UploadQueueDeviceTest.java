@@ -50,7 +50,7 @@ public class UploadQueueDeviceTest {
                 new CloudConfig(
                         UUID.randomUUID().toString(),
                         "FTP",
-                        "10.0.2.2",
+                        setup.optString("host", "10.0.2.2"),
                         setup.getJSONObject("ports").getInt("FTP"),
                         "qa",
                         "/",
