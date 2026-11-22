@@ -25,7 +25,7 @@ public final class Audomo extends Application {
     volatile State state = State.RECOVERING;
     volatile String token = UUID.randomUUID().toString();
     volatile String note = "", route = "", activeName = "", audioDetails = "", eventText = "";
-    volatile long frames;
+    volatile long frames, stateSince;
     volatile float peak;
     volatile boolean spaceLow, quietRequested;
     volatile String systemNote = "";
@@ -45,12 +45,29 @@ public final class Audomo extends Application {
             } catch (Exception e) {
                 notice = cause(e);
             }
+            try {
+                new LibraryFiles(sessions).cleanOld();
+                UploadQueue.get(this).reconcile();
+            } catch (Exception e) {
+                diagnostic("Warnung · Dateiverwaltung beim Start prüfen");
+            }
             String result = notice;
             if (!result.isEmpty()) diagnostic("Wiederherstellungsprüfung mit Hinweis");
             main.post(() -> {
                 note = result;
                 change(State.READY);
             });
+            try {
+                for (SessionStore.Entry e : sessions.list()) {
+                    try {
+                        if (e.trashed() == 0) UploadQueue.afterCapture(this, e.file());
+                    } catch (Exception issue) {
+                        diagnostic("Warnung · Uploadauftrag nach Neustart ausstehend");
+                    }
+                }
+            } catch (Exception issue) {
+                diagnostic("Warnung · Aufnahmeindex beim Neustart nicht lesbar");
+            }
         });
     }
 
@@ -67,6 +84,7 @@ public final class Audomo extends Application {
     Runnable tileChanged;
 
     void change(State next) {
+        stateSince = SystemClock.elapsedRealtime();
         state = next;
         if (tileChanged != null) tileChanged.run();
     }

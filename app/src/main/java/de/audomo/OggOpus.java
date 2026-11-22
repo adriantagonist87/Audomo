@@ -176,6 +176,22 @@ final class OggOpus implements Closeable {
         }
     }
 
+    static void verifyCompleteOgg(File file) throws IOException {
+        try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(file))) {
+            boolean ended = false;
+            while (true) {
+                in.mark(1);
+                int head = in.read();
+                if (head < 0) break;
+                in.reset();
+                byte[] page = readPage(in);
+                if (page == null) throw new IOException("Beschädigte Ogg-Seite");
+                ended = (page[5] & 4) != 0;
+            }
+            if (!ended) throw new IOException("Ogg-Dateiende unvollständig");
+        }
+    }
+
     // null denotes a truncated or invalid page. I/O errors still propagate to the caller.
     private static byte[] readPage(InputStream input) throws IOException {
         byte[] header = input.readNBytes(27);

@@ -85,6 +85,27 @@ final class AudioInput implements AutoCloseable {
         return type + " · " + profile.mic() + (directed ? " angefragt" : " unbestätigt");
     }
 
+    org.json.JSONArray activeMicrophones() {
+        org.json.JSONArray active = new org.json.JSONArray();
+        try {
+            for (MicrophoneInfo m : recorder.getActiveMicrophones()) {
+                var direction = m.getOrientation();
+                active.put(
+                        new org.json.JSONObject()
+                                .put("type", m.getType())
+                                .put("location", m.getLocation())
+                                .put("group", m.getGroup())
+                                .put("index", m.getIndexInTheGroup())
+                                .put("directionX", (double) direction.x)
+                                .put("directionY", (double) direction.y)
+                                .put("directionZ", (double) direction.z));
+            }
+        } catch (Exception unavailable) {
+            /* Some HALs do not expose individual physical capsules. */
+        }
+        return active;
+    }
+
     String effects() {
         return "Echo "
                 + effect(echo, profile.echo())

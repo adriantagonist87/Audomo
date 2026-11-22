@@ -1,0 +1,11 @@
+{
+  "reboot": {
+    "recovered": true,
+    "frames": 278088
+  },
+  "microphonePrivacy": {
+    "visibleError": true,
+    "recovered": true,
+    "frames": 86088
+  }
+}

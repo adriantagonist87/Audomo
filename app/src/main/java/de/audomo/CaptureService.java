@@ -102,7 +102,23 @@ public final class CaptureService extends Service {
         app.worker.execute(() -> {
             try {
                 File file = engine.run(name);
-                app.main.post(() -> complete(true, "Gespeichert · " + file.getName()));
+                String note = "Gespeichert · " + file.getName();
+                try {
+                    DocumentStorage.deliver(this, file);
+                } catch (Exception e) {
+                    note =
+                            "Im App-Speicher gesichert · Zielordner nicht bestätigt · "
+                                    + Audomo.cause(e);
+                    app.diagnostic("Warnung · Kopie im Zielordner ausstehend");
+                }
+                try {
+                    UploadQueue.afterCapture(app, file);
+                } catch (Exception e) {
+                    note += " · Uploadauftrag ausstehend";
+                    app.diagnostic("Uploadauftrag konnte nicht geplant werden");
+                }
+                String message = note;
+                app.main.post(() -> complete(true, message));
             } catch (Exception e) {
                 String text = "Aufnahme unterbrochen · " + Audomo.cause(e);
                 app.diagnostic("Aufnahmepfad unterbrochen (" + e.getClass().getSimpleName() + ")");
@@ -166,6 +182,11 @@ public final class CaptureService extends Service {
                         .setOngoing(true)
                         .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
         if (app.active()) {
+            if (paused) builder.setContentText(Audomo.duration(app.frames));
+            else
+                builder.setWhen(System.currentTimeMillis() - app.frames / 48)
+                        .setUsesChronometer(true)
+                        .setShowWhen(true);
             builder.addAction(
                     action(
                             paused ? "RESUME" : "PAUSE",

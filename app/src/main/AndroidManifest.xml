@@ -7,7 +7,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-feature android:name="android.hardware.microphone" android:required="true" />
     <application android:name=".Audomo" android:theme="@style/AudomoTheme" android:label="Audomo"
         android:allowBackup="false" android:icon="@mipmap/ic_launcher">
@@ -24,6 +26,8 @@
         <activity android:name=".CalendarSettings" android:exported="false"/>
         <activity android:name=".TileStartActivity" android:exported="false"
             android:taskAffinity="de.audomo.quick" android:excludeFromRecents="true" />
+        <service android:name=".UploadWorker" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true" />
+        <receiver android:name=".UploadRetry" android:exported="false" />
         <service android:name=".CaptureService" android:foregroundServiceType="microphone" android:exported="false" />
         <service android:name=".RecordingQuietMode" android:exported="true" android:label="Audomo-Aufnahme"
             android:permission="android.permission.BIND_CONDITION_PROVIDER_SERVICE">

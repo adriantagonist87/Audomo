@@ -1,5 +1,7 @@
 # Audomo · Teststand vom 22.11.2026
 
+Aktueller Entwicklungsstand und Testumfang für 0.2 im [Abnahmeprotokoll](ABNAHME-0.2.md). Die folgenden Messungen dokumentieren die Vorgängerversionen.
+
 ## AVD-Serie mit Version 0.1
 
 | Merkmal | Beobachtung |
@@ -58,6 +60,6 @@ Version 0.1.3 (4) wurde als Update auf dem S24 und dem API-34-AVD installiert. D
 
 Für T20 bleiben eine Aufnahme samt gesichertem Stopp mit den verlängerten Mustern, ein provozierter Fehlstart sowie die Fälle mit ausgeschalteter App-Vibration und mit „Nicht stören“ am S24 offen.
 
-## Offene Abnahme
+## Offener Stand zum Abschluss von 0.1.3
 
 Für den Aufnahmeblock fehlen insbesondere der sechsstündige Zeitmarkerlauf auf One UI 6.1, Verhalten bei Anrufen und Mikrofonkonkurrenz, voller Speicher, unterbrochene Finalisierung beim Geräteneustart, reale Hintermikrofon-/Effektmessungen und DND-Wechsel. Beim Oberflächenabgleich bleibt unter anderem die Ausblendzeit des Speicherhinweises offen. Für die späteren Blöcke sind unter anderem dauerhafte SAF-Zielwahl, Import, Mehrfachaktionen, Papierkorb, Cloudziele und verifizierte Uploads offen. Der [Funktionsabgleich](ANFORDERUNGSABGLEICH.md) führt den Status pro ID.

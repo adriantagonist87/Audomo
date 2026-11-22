@@ -1,0 +1,11 @@
+{
+  "avd": "Audomo_QA_API34",
+  "api": 34,
+  "source": "Synthetische Ogg-Datei",
+  "duplicateFinalization": "ein Auftrag",
+  "wifiDisabled": "wartet",
+  "persistedJobRequiresWifi": true,
+  "separateBootId": true,
+  "verifiedAfterWifiReturned": true,
+  "localAndRemoteSha256Equal": true
+}

@@ -39,6 +39,9 @@ public final class MainActivity extends Activity {
     private Audomo.State shown;
     private LibraryView recordings;
     private File export;
+    boolean trashView;
+    String importFolder;
+    private AppSettings preferences;
     private final Runnable refresh =
             new Runnable() {
                 public void run() {
@@ -59,7 +62,9 @@ public final class MainActivity extends Activity {
                     }
                     if (!library) {
                         boolean idle = app.ready();
-                        timer.setText(Audomo.duration(idle ? 0 : app.frames));
+                        timer.setText(
+                                Audomo.duration(
+                                        idle && app.state != Audomo.State.FAILED ? 0 : app.frames));
                         long now = SystemClock.elapsedRealtime();
                         if (idle && now >= nextPreview) {
                             nextPreview = now + 15000;
@@ -86,9 +91,13 @@ public final class MainActivity extends Activity {
                                     case STARTING -> "Mikrofon wird geöffnet";
                                     case FINALIZING -> "Aufnahme wird gesichert";
                                     case RECOVERING -> "Aufnahmen werden geprüft";
+                                    case FAILED -> "Aufnahme unterbrochen";
                                     default -> "Bereit zur Aufnahme";
                                 });
                         String info = idle ? app.note : app.systemNote;
+                        if (app.state == Audomo.State.SAVED
+                                && app.note.startsWith("Gespeichert ·")
+                                && now - app.stateSince > 4500) info = "";
                         if (app.spaceLow && !idle) info = "Wenig freier Speicherplatz";
                         note.setText(info);
                         note.setVisibility(info.isEmpty() ? View.GONE : View.VISIBLE);
@@ -108,10 +117,14 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         app = (Audomo) getApplication();
         currentProfile = Profile.selected(this);
+        preferences = new AppSettings(this);
         prefs().registerOnSharedPreferenceChangeListener(optionsChanged);
         if (state != null) {
             manualName = state.getString("name", "");
             library = state.getBoolean("library");
+            trashView = state.getBoolean("trashView");
+            if (state.getString("export") != null) export = new File(state.getString("export"));
+            importFolder = state.getString("importFolder");
             pendingStart = state.getBoolean("pending");
         }
         root = column();
@@ -146,6 +159,11 @@ public final class MainActivity extends Activity {
         root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
         if (library) showLibrary();
         else showRecorder();
+        if ("de.audomo.UPLOADS".equals(getIntent().getAction())) new CloudScreen(this).queue();
+        else if (state == null && !prefs().getBoolean("onboardingSeen", false)) {
+            prefs().edit().putBoolean("onboardingSeen", true).apply();
+            if (!permitted(Manifest.permission.RECORD_AUDIO)) preferences.onboarding();
+        }
     }
 
     private SharedPreferences prefs() {
@@ -247,6 +265,18 @@ public final class MainActivity extends Activity {
 
     private void updateControls() {
         controls.removeAllViews();
+        if (app.state == Audomo.State.FAILED) {
+            controls.addView(button("Erneut versuchen", v -> startCapture()), weight());
+            controls.addView(
+                    button(
+                            "Beenden",
+                            v -> {
+                                app.note = "";
+                                app.change(Audomo.State.READY);
+                            }),
+                    weight());
+            return;
+        }
         boolean recording = app.state == Audomo.State.RECORDING,
                 paused = app.state == Audomo.State.PAUSED;
         int surface = getColor(android.R.color.system_neutral1_800);
@@ -348,8 +378,29 @@ public final class MainActivity extends Activity {
         new ProfileDialog(this).choose();
     }
 
+    void addTile() {
+        getSystemService(StatusBarManager.class)
+                .requestAddTileService(
+                        new ComponentName(this, CaptureTile.class),
+                        "Audomo",
+                        android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_mic),
+                        getMainExecutor(),
+                        code -> {
+                            if (code != StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED
+                                    && code
+                                            != StatusBarManager
+                                                    .TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED)
+                                toast(
+                                        "Schnelleinstellungen öffnen, Bearbeiten wählen"
+                                                + " und Audomo hinzufügen.");
+                        });
+    }
+
     private void menu(View anchor) {
         PopupMenu menu = new PopupMenu(this, anchor);
+        LibraryActions.item(menu, "Einstellungen", () -> preferences.show());
+        LibraryActions.item(menu, "Einrichtung", () -> preferences.onboarding());
+        LibraryActions.item(menu, "Uploads", () -> preferences.upload(null));
         menu.getMenu()
                 .add("Kalender und Dateinamen")
                 .setOnMenuItemClickListener(item -> {
@@ -359,24 +410,7 @@ public final class MainActivity extends Activity {
         menu.getMenu()
                 .add("Kachel hinzufügen")
                 .setOnMenuItemClickListener(item -> {
-                    getSystemService(StatusBarManager.class)
-                            .requestAddTileService(
-                                    new ComponentName(this, CaptureTile.class),
-                                    "Audomo",
-                                    android.graphics.drawable.Icon.createWithResource(
-                                            this, R.drawable.ic_mic),
-                                    getMainExecutor(),
-                                    code -> {
-                                        if (code
-                                                        != StatusBarManager
-                                                                .TILE_ADD_REQUEST_RESULT_TILE_ADDED
-                                                && code
-                                                        != StatusBarManager
-                                                                .TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED)
-                                            toast(
-                                                    "Schnelleinstellungen öffnen, Bearbeiten wählen"
-                                                            + " und Audomo hinzufügen.");
-                                    });
+                    addTile();
                     return true;
                 });
         menu.getMenu()
@@ -406,29 +440,13 @@ public final class MainActivity extends Activity {
         menu.getMenu()
                 .add("Diagnose")
                 .setOnMenuItemClickListener(item -> {
-                    File log = new File(getFilesDir(), "diagnose.txt");
-                    String detail = app.route + "\n" + app.audioDetails;
-                    try {
-                        if (log.exists())
-                            detail +=
-                                    "\n"
-                                            + new String(
-                                                    java.nio.file.Files.readAllBytes(log.toPath()),
-                                                    java.nio.charset.StandardCharsets.UTF_8);
-                    } catch (IOException e) {
-                        detail += Audomo.cause(e);
-                    }
-                    new AlertDialog.Builder(this)
-                            .setTitle("Diagnose")
-                            .setMessage(detail.isBlank() ? "Keine Ereignisse" : detail)
-                            .setPositiveButton("Schließen", null)
-                            .show();
+                    preferences.diagnostics();
                     return true;
                 });
         menu.show();
     }
 
-    private void haptics() {
+    void haptics() {
         LinearLayout settings = column();
         settings.setPadding(dp(20), 0, dp(20), 0);
         Switch enabled = new Switch(this);
@@ -499,19 +517,17 @@ public final class MainActivity extends Activity {
         dialog.setView(scroll).setPositiveButton("Schließen", null).show();
     }
 
-    private void showLibrary() {
+    void showLibrary() {
         switchTab(true);
         LinearLayout page = column();
         body.addView(page, new LinearLayout.LayoutParams(-1, -1));
-        page.addView(label("Aufnahmen"));
+
         files.execute(() -> {
             try {
                 List<SessionStore.Entry> entries = app.sessions.list();
                 runOnUiThread(() -> {
                     if (!library || page.getParent() != body || isDestroyed()) return;
-                    if (entries.isEmpty())
-                        page.addView(text("Noch keine gespeicherten Aufnahmen", 16, DIM));
-                    else libraryRows(page, entries);
+                    libraryRows(page, entries);
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> toast(Audomo.cause(e)));
@@ -523,19 +539,44 @@ public final class MainActivity extends Activity {
         recordings = new LibraryView(this, page, entries);
     }
 
-    void export(File source) {
-        export = source;
+    void export(SessionStore.Entry entry) {
+        export = entry.file();
         startActivityForResult(
                 new Intent(Intent.ACTION_CREATE_DOCUMENT)
-                        .setType("audio/ogg")
+                        .setType(LibraryFiles.mime(entry.name()))
                         .addCategory(Intent.CATEGORY_OPENABLE)
-                        .putExtra(Intent.EXTRA_TITLE, source.getName()),
+                        .putExtra(Intent.EXTRA_TITLE, entry.name()),
                 3);
     }
 
     @Override
     protected void onActivityResult(int req, int result, Intent data) {
         super.onActivityResult(req, result, data);
+        if (result == RESULT_OK && data != null && preferences.result(req, data)) return;
+        if (req == 8 && result == RESULT_OK && data != null) {
+            List<android.net.Uri> uris = new ArrayList<>();
+            if (data.getClipData() != null)
+                for (int i = 0; i < data.getClipData().getItemCount(); i++)
+                    uris.add(data.getClipData().getItemAt(i).getUri());
+            else if (data.getData() != null) uris.add(data.getData());
+            String target = importFolder == null ? "" : importFolder;
+            runFiles(() -> {
+                LibraryFiles lib = new LibraryFiles(app.sessions);
+                List<String> problems = new ArrayList<>();
+                int count = 0;
+                for (android.net.Uri uri : uris)
+                    try {
+                        lib.importUri(uri, target);
+                        count++;
+                    } catch (Exception e) {
+                        problems.add(Audomo.cause(e));
+                    }
+                return count
+                        + " importiert"
+                        + (problems.isEmpty() ? "" : "\n" + String.join("\n", problems));
+            });
+            return;
+        }
         if (req != 3
                 || result != RESULT_OK
                 || data == null
@@ -554,6 +595,37 @@ public final class MainActivity extends Activity {
             }
             runOnUiThread(() -> toast("Exportiert"));
         });
+    }
+
+    void pickImport() {
+        importFolder = prefs().getString("folder", "");
+        startActivityForResult(
+                new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                        .addCategory(Intent.CATEGORY_OPENABLE)
+                        .setType("audio/*")
+                        .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true),
+                8);
+    }
+
+    void runFiles(Callable<String> work) {
+        files.execute(() -> {
+            String message;
+            try {
+                message = work.call();
+            } catch (Exception e) {
+                message = Audomo.cause(e);
+            }
+            String result = message;
+            runOnUiThread(() -> {
+                if (isDestroyed()) return;
+                if (library) showLibrary();
+                if (!result.isEmpty()) toast(result);
+            });
+        });
+    }
+
+    void upload(SessionStore.Entry e) {
+        preferences.upload(e);
     }
 
     private void stopPlayer() {
@@ -696,6 +768,9 @@ public final class MainActivity extends Activity {
     protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
         state.putString("name", manualName);
+        state.putBoolean("trashView", trashView);
+        if (export != null) state.putString("export", export.getAbsolutePath());
+        state.putString("importFolder", importFolder);
         state.putBoolean("library", library);
         state.putBoolean("pending", pendingStart);
     }

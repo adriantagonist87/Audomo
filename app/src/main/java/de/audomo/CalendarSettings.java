@@ -50,7 +50,7 @@ public final class CalendarSettings extends Activity {
         page.addView(access);
         title(
                 "Laufende Termine haben Vorrang. Bei Überschneidung entscheidet die Reihenfolge der"
-                    + " Kalender.",
+                        + " Kalender.",
                 14);
         LinearLayout times = new LinearLayout(this);
         page.addView(times);
@@ -87,6 +87,11 @@ public final class CalendarSettings extends Activity {
                 });
         page.addView(button("Speichern", v -> save()));
         load();
+        if (getIntent().getBooleanExtra("focusTemplate", false))
+            template.post(() -> {
+                template.requestFocus();
+                scroll.smoothScrollTo(0, template.getTop());
+            });
     }
 
     private boolean granted() {

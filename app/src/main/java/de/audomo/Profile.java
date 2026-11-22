@@ -65,14 +65,18 @@ record Profile(String name, int rate, int kbps, int gain, String mic, String ech
     }
 
     static List<Profile> profiles(Context context) {
-        List<Profile> all = new ArrayList<>(BUILTINS);
+        Map<String, Profile> all = new LinkedHashMap<>();
+        for (Profile p : BUILTINS) all.put(p.name(), p);
         try {
             JSONArray own = new JSONArray(prefs(context).getString("profiles", "[]"));
-            for (int i = 0; i < own.length(); i++) all.add(parse(own.getJSONObject(i)));
+            for (int i = 0; i < own.length(); i++) {
+                Profile p = parse(own.getJSONObject(i));
+                all.put(p.name(), p);
+            }
         } catch (JSONException e) {
             throw new IllegalStateException("Gespeicherte Profile nicht lesbar", e);
         }
-        return all;
+        return new ArrayList<>(all.values());
     }
 
     static Profile selected(Context context) {

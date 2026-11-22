@@ -82,7 +82,7 @@ def decoded_frames(wav):
 
 
 assert args.serial.startswith("emulator-")
-assert call("emu", "avd", "name").decode().splitlines()[0] == "Galaxy_S24_Ultra_API_34"
+assert call("emu", "avd", "name").decode().splitlines()[0] in {"Galaxy_S24_Ultra_API_34", "Audomo_QA_API34"}
 assert shell("getprop", "ro.build.version.sdk") == "34"
 assert "granted=true" in next(line for line in shell("dumpsys", "package", "de.audomo").splitlines()
                               if "android.permission.RECORD_AUDIO: granted=" in line)

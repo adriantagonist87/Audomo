@@ -49,7 +49,9 @@ final class CaptureEngine {
             SessionStore.syncDirectory(dir);
             input.start();
             app.route = input.route();
-            meta.put("route", app.route).put("effects", input.effects());
+            meta.put("route", app.route)
+                    .put("effects", input.effects())
+                    .put("activeMicrophones", input.activeMicrophones());
             android.media.AudioRecordingConfiguration config =
                     input.recorder.getActiveRecordingConfiguration();
             if (config != null)
@@ -85,6 +87,16 @@ final class CaptureEngine {
             naming.join();
         }
         return SessionStore.publish(dir, part, app.frames, false);
+    }
+
+    static int applyGain(short[] block, int n, double gain) {
+        int peak = 0;
+        for (int i = 0; i < n; i++) {
+            int value = (int) Math.round(block[i] * gain);
+            peak = Math.max(peak, Math.abs(value));
+            block[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, value));
+        }
+        return peak;
     }
 
     private void capture(
@@ -138,12 +150,7 @@ final class CaptureEngine {
                 continue;
             }
             lastFrame = now;
-            int peak = 0;
-            for (int i = 0; i < n; i++) {
-                int value = (int) Math.round(block[i] * gain);
-                peak = Math.max(peak, Math.abs(value));
-                block[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, value));
-            }
+            int peak = applyGain(block, n, gain);
             if (!clipping && peak > Short.MAX_VALUE) {
                 clipping = true;
                 app.diagnostic("Übersteuerung bei " + profile.gain() + " dB erkannt");

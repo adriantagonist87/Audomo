@@ -8,11 +8,9 @@ import android.text.*;
 import android.view.*;
 import android.widget.*;
 
-import androidx.core.content.FileProvider;
 import androidx.media3.common.*;
 import androidx.media3.exoplayer.ExoPlayer;
 
-import java.io.File;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -25,12 +23,19 @@ final class LibraryView {
     private final List<SessionStore.Entry> all, visible = new ArrayList<>();
     private final SharedPreferences prefs;
     private final BaseAdapter adapter;
+    private final LibraryActions actions;
+    private Map<String, UploadQueue.Job> uploads = new HashMap<>();
+    private final Set<String> marked = new LinkedHashSet<>();
+    private final Button folderButton;
+    private final TextView count, empty;
+    private final boolean trash;
+    private boolean allFolders;
     private SessionStore.Entry selected;
     private ExoPlayer player;
     private String query = "";
     private ImageButton play, back, forward;
     private SeekBar seek;
-    private TextView elapsed;
+    private TextView elapsed, leftStep, rightStep;
     private int step;
     private static final String[] SORT = {"Name", "Datum", "Dauer", "Größe", "Endung"};
 
@@ -39,11 +44,66 @@ final class LibraryView {
         app = (Audomo) screen.getApplication();
         all = entries;
         prefs = Profile.prefs(screen);
+        actions = new LibraryActions(screen, new LibraryFiles(app.sessions));
+        trash = screen.trashView;
         step = prefs.getInt("skipSeconds", 5);
         LinearLayout heading = screen.row();
         page.addView(heading);
-        heading.addView(
-                screen.text(entries.size() + " Aufnahmen", 14, MainActivity.DIM), screen.weight());
+        count = screen.text("", 14, MainActivity.DIM);
+        LinearLayout titles = screen.column();
+        titles.addView(screen.text(trash ? "Papierkorb" : "Aufnahmen", 21, MainActivity.INK));
+        titles.addView(count);
+        heading.addView(titles, screen.weight());
+        ImageButton menuButton =
+                screen.icon(
+                        "Bibliotheksaktionen",
+                        R.drawable.ic_more,
+                        MainActivity.INK,
+                        MainActivity.BG);
+        menuButton.setOnClickListener(v -> {
+            PopupMenu menu = new PopupMenu(screen, menuButton);
+            if (!trash) LibraryActions.item(menu, "Aufnahmen importieren", screen::pickImport);
+            LibraryActions.item(
+                    menu,
+                    trash ? "Zur Bibliothek" : "Papierkorb",
+                    () -> {
+                        screen.trashView = !trash;
+                        screen.showLibrary();
+                    });
+            if (trash) {
+                menu.getMenu()
+                        .add("Nach 30 Tagen bereinigen")
+                        .setCheckable(true)
+                        .setChecked(prefs.getBoolean("cleanTrash", false))
+                        .setOnMenuItemClickListener(item -> {
+                            boolean on = !item.isChecked();
+                            if (on)
+                                new AlertDialog.Builder(screen)
+                                        .setTitle("Dateien nach 30 Tagen endgültig löschen?")
+                                        .setPositiveButton(
+                                                "Aktivieren",
+                                                (d, w) -> {
+                                                    prefs.edit()
+                                                            .putBoolean("cleanTrash", true)
+                                                            .apply();
+                                                    screen.runFiles(() -> {
+                                                        actions.files.cleanOld();
+                                                        return "Bereinigung aktiv";
+                                                    });
+                                                })
+                                        .setNegativeButton("Abbrechen", null)
+                                        .show();
+                            else prefs.edit().putBoolean("cleanTrash", false).apply();
+                            return true;
+                        });
+                if (!visible.isEmpty())
+                    LibraryActions.item(
+                            menu,
+                            "Papierkorb leeren",
+                            () -> actions.trash(List.copyOf(visible), true));
+            }
+            menu.show();
+        });
         ImageButton search =
                 screen.icon(
                         "Aufnahmen durchsuchen",
@@ -58,17 +118,43 @@ final class LibraryView {
                         MainActivity.BG);
         heading.addView(search, screen.lp(48, 48));
         heading.addView(sort, screen.lp(48, 48));
+        heading.addView(menuButton, screen.lp(48, 48));
+        folderButton =
+                screen.button(
+                        "",
+                        v ->
+                                actions.folder(
+                                        folder(),
+                                        path -> {
+                                            prefs.edit().putString("folder", path).apply();
+                                            filter();
+                                        }));
+        folderButton.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        folderButton.setPadding(screen.dp(12), 0, screen.dp(12), 0);
+        folderButton.setContentDescription("Ordner wählen");
+        if (!trash) page.addView(folderButton);
+        CheckBox allScope = new CheckBox(screen);
+        allScope.setText("Alle Ordner");
+        allScope.setVisibility(View.GONE);
+        allScope.setOnCheckedChangeListener((v, on) -> {
+            allFolders = on;
+            filter();
+        });
         EditText field = new EditText(screen);
         field.setSingleLine();
         field.setHint("Aufnahmen suchen");
         field.setVisibility(View.GONE);
         page.addView(field);
+        page.addView(allScope);
         search.setOnClickListener(v -> {
             if (field.getVisibility() == View.VISIBLE) {
+                allScope.setChecked(false);
+                allScope.setVisibility(View.GONE);
                 field.setText("");
                 field.setVisibility(View.GONE);
             } else {
                 field.setVisibility(View.VISIBLE);
+                if (!trash) allScope.setVisibility(View.VISIBLE);
                 field.requestFocus();
                 screen.getSystemService(android.view.inputmethod.InputMethodManager.class)
                         .showSoftInput(field, 0);
@@ -102,6 +188,10 @@ final class LibraryView {
         ListView list = new ListView(screen);
         list.setDividerHeight(screen.dp(1));
         page.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
+        empty = screen.text("", 16, MainActivity.DIM);
+        empty.setGravity(Gravity.CENTER);
+        page.addView(empty, new LinearLayout.LayoutParams(-1, 0, 1));
+        list.setEmptyView(empty);
         panel = screen.column();
         page.addView(panel);
         adapter =
@@ -122,34 +212,114 @@ final class LibraryView {
                         SessionStore.Entry e = visible.get(i);
                         LinearLayout cell = screen.column();
                         cell.setGravity(Gravity.CENTER_VERTICAL);
-                        cell.setMinimumHeight(screen.dp(53));
+                        cell.setMinimumHeight(screen.dp(48));
+                        if (selected == e || marked.contains(e.id()))
+                            cell.setBackground(screen.surface(MainActivity.PANEL, 8));
                         LinearLayout top = screen.row();
-                        TextView title = screen.text(e.file().getName(), 15, MainActivity.INK);
+                        TextView title = screen.text(e.name(), 15, MainActivity.INK);
                         title.setSingleLine();
                         title.setEllipsize(TextUtils.TruncateAt.END);
+                        if (!marked.isEmpty()) {
+                            RadioButton circle = new RadioButton(screen);
+                            circle.setChecked(marked.contains(e.id()));
+                            circle.setClickable(false);
+                            circle.setFocusable(false);
+                            top.addView(circle);
+                        }
                         top.addView(title, screen.weight());
                         top.addView(screen.text(Audomo.duration(e.frames()), 14, MainActivity.INK));
                         cell.addView(top);
-                        cell.addView(
+                        LinearLayout info = screen.row();
+                        cell.addView(info);
+                        info.addView(
                                 screen.text(
                                         e.start()
-                                                        .format(
-                                                                DateTimeFormatter.ofPattern(
-                                                                        "dd.MM.yyyy  HH:mm"))
-                                                + "   ·   "
+                                                .format(
+                                                        DateTimeFormatter.ofPattern(
+                                                                "dd.MM.yyyy HH:mm")),
+                                        13,
+                                        MainActivity.INK));
+                        info.addView(
+                                screen.text(
+                                        "  "
                                                 + android.text.format.Formatter.formatShortFileSize(
-                                                        screen, e.file().length())
-                                                + "   ·   Lokal",
-                                        14,
-                                        MainActivity.DIM));
+                                                        screen, e.file().length()),
+                                        12,
+                                        MainActivity.DIM),
+                                screen.weight());
+                        UploadQueue.Job job = uploads.get(e.id());
+                        TextView status =
+                                screen.text(
+                                        job == null ? "Lokal" : job.state(),
+                                        12,
+                                        MainActivity.ACCENT);
+                        int statusIcon =
+                                job == null
+                                        ? R.drawable.ic_folder
+                                        : "Hochgeladen".equals(job.state())
+                                                ? R.drawable.ic_check
+                                                : R.drawable.ic_upload;
+                        android.graphics.drawable.Drawable symbol =
+                                screen.getDrawable(statusIcon).mutate();
+                        symbol.setBounds(0, 0, screen.dp(14), screen.dp(14));
+                        symbol.setTint(MainActivity.ACCENT);
+                        status.setCompoundDrawables(symbol, null, null, null);
+                        status.setCompoundDrawablePadding(screen.dp(3));
+                        if (job != null)
+                            status.setOnClickListener(v -> new CloudScreen(screen).details(job));
+                        info.addView(status);
+                        if (selected == e && marked.isEmpty()) {
+                            LinearLayout bar = screen.row();
+                            cell.addView(bar);
+                            if (trash) {
+                                action(
+                                        bar,
+                                        "Wiederherstellen",
+                                        R.drawable.ic_back,
+                                        v -> actions.restore(List.of(e)));
+                                action(
+                                        bar,
+                                        "Endgültig löschen",
+                                        R.drawable.ic_delete,
+                                        v -> actions.trash(List.of(e), true));
+                            } else {
+                                action(
+                                        bar,
+                                        "Teilen",
+                                        R.drawable.ic_share,
+                                        v -> actions.share(List.of(e), true));
+                                action(
+                                        bar,
+                                        "Umbenennen",
+                                        R.drawable.ic_edit,
+                                        v -> actions.rename(e));
+                                action(bar, "Upload", R.drawable.ic_upload, v -> screen.upload(e));
+                                action(
+                                        bar,
+                                        "Mehr",
+                                        R.drawable.ic_more,
+                                        v -> actions.more(v, List.of(e)));
+                            }
+                        }
                         return cell;
                     }
                 };
         list.setAdapter(adapter);
         list.setOnItemClickListener((p, v, pos, id) -> {
+            SessionStore.Entry e = visible.get(pos);
+            if (!marked.isEmpty()) {
+                mark(e);
+                return;
+            }
             stop();
-            selected = visible.get(pos);
-            showPlayer();
+            selected = selected == e ? null : e;
+            panel.removeAllViews();
+            if (selected != null && !trash) showPlayer();
+            adapter.notifyDataSetChanged();
+        });
+        list.setOnItemLongClickListener((p, v, pos, id) -> {
+            mark(visible.get(pos));
+            return true;
         });
         field.addTextChangedListener(
                 new TextWatcher() {
@@ -162,34 +332,131 @@ final class LibraryView {
 
                     public void afterTextChanged(Editable e) {}
                 });
+        refreshJobs();
         filter();
+        page.addOnAttachStateChangeListener(
+                new View.OnAttachStateChangeListener() {
+                    public void onViewAttachedToWindow(View v) {
+                        handler.post(refreshStatus);
+                    }
+
+                    public void onViewDetachedFromWindow(View v) {
+                        handler.removeCallbacks(refreshStatus);
+                    }
+                });
+        if (page.isAttachedToWindow()) handler.post(refreshStatus);
+    }
+
+    private void refreshJobs() {
+        Map<String, UploadQueue.Job> latest = new HashMap<>();
+        for (UploadQueue.Job j : UploadQueue.get(screen).jobs()) latest.putIfAbsent(j.rec(), j);
+        if (!uploads.equals(latest)) {
+            uploads = latest;
+            adapter.notifyDataSetChanged();
+        }
+    }
+
+    private final Runnable refreshStatus =
+            new Runnable() {
+                public void run() {
+                    refreshJobs();
+                    handler.postDelayed(this, 2500);
+                }
+            };
+
+    private String folder() {
+        return prefs.getString("folder", "");
+    }
+
+    private void action(LinearLayout bar, String label, int icon, View.OnClickListener listener) {
+        Button b = screen.button(label, listener);
+        b.setTextSize(12);
+        b.setPadding(screen.dp(2), screen.dp(3), screen.dp(2), screen.dp(2));
+        android.graphics.drawable.Drawable image = screen.getDrawable(icon).mutate();
+        image.setTint(MainActivity.ACCENT);
+        image.setBounds(0, 0, screen.dp(19), screen.dp(19));
+        b.setCompoundDrawables(null, image, null, null);
+        b.setFocusable(false);
+        bar.addView(b, screen.weight());
+    }
+
+    private void mark(SessionStore.Entry e) {
+        stop();
+        selected = null;
+        if (!marked.add(e.id())) marked.remove(e.id());
+        selectionBar();
+        adapter.notifyDataSetChanged();
+    }
+
+    private void selectionBar() {
+        panel.removeAllViews();
+        if (marked.isEmpty()) return;
+        List<SessionStore.Entry> picked =
+                visible.stream()
+                        .filter(e -> marked.contains(e.id()))
+                        .collect(java.util.stream.Collectors.toList());
+        LinearLayout header = screen.row();
+        panel.addView(header);
+        header.addView(
+                screen.text(picked.size() + " ausgewählt", 16, MainActivity.INK), screen.weight());
+        header.addView(
+                screen.button(
+                        "Abbrechen",
+                        v -> {
+                            marked.clear();
+                            panel.removeAllViews();
+                            adapter.notifyDataSetChanged();
+                        }));
+        LinearLayout bar = screen.row();
+        panel.addView(bar);
+        if (trash) {
+            action(bar, "Wiederherstellen", R.drawable.ic_back, v -> actions.restore(picked));
+            action(bar, "Löschen", R.drawable.ic_delete, v -> actions.trash(picked, true));
+        } else {
+            action(bar, "Teilen", R.drawable.ic_share, v -> actions.share(picked, true));
+            action(bar, "Verschieben", R.drawable.ic_folder, v -> actions.relocate(picked, false));
+            action(bar, "Löschen", R.drawable.ic_delete, v -> actions.trash(picked, false));
+            action(bar, "Mehr", R.drawable.ic_more, v -> actions.more(v, picked));
+        }
     }
 
     private void filter() {
         visible.clear();
         for (SessionStore.Entry entry : all)
-            if (entry.file().getName().toLowerCase(Locale.ROOT).contains(query)) visible.add(entry);
+            if ((entry.trashed() > 0) == trash
+                    && (trash || allFolders || entry.folder().equals(folder()))
+                    && entry.name().toLowerCase(Locale.ROOT).contains(query)) visible.add(entry);
         Comparator<SessionStore.Entry> by =
                 switch (prefs.getInt("sort", 1)) {
-                    case 0 ->
-                            Comparator.comparing(
-                                    e -> e.file().getName(), String.CASE_INSENSITIVE_ORDER);
+                    case 0 -> Comparator.comparing(e -> e.name(), String.CASE_INSENSITIVE_ORDER);
                     case 2 -> Comparator.comparingLong(SessionStore.Entry::frames);
                     case 3 -> Comparator.comparingLong(e -> e.file().length());
                     case 4 ->
-                            Comparator.comparing(e ->
-                                    e.file()
-                                            .getName()
-                                            .substring(e.file().getName().lastIndexOf('.') + 1));
+                            Comparator.comparing(
+                                    e -> LibraryFiles.extension(e.name()),
+                                    String.CASE_INSENSITIVE_ORDER);
                     default -> Comparator.comparing(SessionStore.Entry::start);
                 };
         if (prefs.getBoolean("descending", true)) by = by.reversed();
-        visible.sort(by.thenComparing(e -> e.file().getName()));
+        visible.sort(by.thenComparing(e -> e.name()));
         if (selected != null && !visible.contains(selected)) {
             stop();
             selected = null;
             panel.removeAllViews();
         }
+        if (!marked.isEmpty()) {
+            marked.retainAll(
+                    visible.stream()
+                            .map(SessionStore.Entry::id)
+                            .collect(java.util.stream.Collectors.toList()));
+            selectionBar();
+        }
+        empty.setText(
+                !query.isEmpty()
+                        ? "Keine passenden Aufnahmen"
+                        : trash ? "Der Papierkorb ist leer" : "Keine Aufnahmen in diesem Ordner");
+        count.setText(visible.size() + " Aufnahmen");
+        folderButton.setText(folder().isEmpty() ? "Aufnahmen" : folder().replace("/", " › "));
         adapter.notifyDataSetChanged();
     }
 
@@ -199,14 +466,14 @@ final class LibraryView {
         int pad = screen.dp(10);
         panel.setPadding(pad, pad, pad, pad);
         LinearLayout title = screen.row();
-        TextView full = screen.text(selected.file().getName(), 16, MainActivity.INK);
+        TextView full = screen.text(selected.name(), 16, MainActivity.INK);
         full.setMaxLines(2);
         full.setEllipsize(TextUtils.TruncateAt.END);
         title.addView(full, screen.weight());
         ImageButton more =
                 screen.icon(
                         "Dateiaktionen", R.drawable.ic_more, MainActivity.INK, MainActivity.PANEL);
-        more.setOnClickListener(v -> actions(more));
+        more.setOnClickListener(v -> actions.more(more, List.of(selected)));
         title.addView(more, screen.lp(48, 48));
         panel.addView(title);
         elapsed = screen.text("", 14, MainActivity.DIM);
@@ -238,9 +505,18 @@ final class LibraryView {
         forward =
                 screen.icon(
                         "Vorspringen", R.drawable.ic_forward, MainActivity.INK, MainActivity.PANEL);
-        controls.addView(back, screen.lp(48, 48));
+        LinearLayout backGroup = screen.column(), forwardGroup = screen.column();
+        controls.addView(backGroup);
+        backGroup.addView(back, screen.lp(48, 48));
         controls.addView(play, screen.lp(48, 48));
-        controls.addView(forward, screen.lp(48, 48));
+        controls.addView(forwardGroup);
+        forwardGroup.addView(forward, screen.lp(48, 48));
+        leftStep = screen.text("", 12, MainActivity.DIM);
+        rightStep = screen.text("", 12, MainActivity.DIM);
+        leftStep.setGravity(Gravity.CENTER);
+        rightStep.setGravity(Gravity.CENTER);
+        backGroup.addView(leftStep);
+        forwardGroup.addView(rightStep);
         back.setOnClickListener(v -> jump(-step));
         forward.setOnClickListener(v -> jump(step));
         play.setOnClickListener(v -> toggle());
@@ -298,6 +574,8 @@ final class LibraryView {
     }
 
     private void directions() {
+        leftStep.setText(step + " Sek.");
+        rightStep.setText(step + " Sek.");
         back.setContentDescription(step + " Sekunden zurück");
         forward.setContentDescription(step + " Sekunden vor");
     }
@@ -386,47 +664,6 @@ final class LibraryView {
         if (play != null) {
             play.setContentDescription("Abspielen");
             play.setImageResource(R.drawable.ic_play);
-        }
-    }
-
-    private void actions(View anchor) {
-        File file = selected.file();
-        PopupMenu menu = new PopupMenu(screen, anchor);
-        menu.getMenu()
-                .add("Teilen")
-                .setOnMenuItemClickListener(item -> {
-                    open(file, true);
-                    return true;
-                });
-        menu.getMenu()
-                .add("Extern öffnen")
-                .setOnMenuItemClickListener(item -> {
-                    open(file, false);
-                    return true;
-                });
-        menu.getMenu()
-                .add("Datei exportieren")
-                .setOnMenuItemClickListener(item -> {
-                    screen.export(file);
-                    return true;
-                });
-        menu.show();
-    }
-
-    private void open(File file, boolean share) {
-        Uri uri = FileProvider.getUriForFile(screen, "de.audomo.audio", file);
-        Intent intent =
-                share
-                        ? new Intent(Intent.ACTION_SEND)
-                                .setType("audio/ogg")
-                                .putExtra(Intent.EXTRA_STREAM, uri)
-                        : new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "audio/ogg");
-        intent.setClipData(ClipData.newRawUri("Aufnahme", uri));
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        try {
-            screen.startActivity(share ? Intent.createChooser(intent, "Aufnahme teilen") : intent);
-        } catch (ActivityNotFoundException e) {
-            screen.toast("Keine passende App installiert");
         }
     }
 }

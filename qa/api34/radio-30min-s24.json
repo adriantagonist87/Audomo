@@ -1,0 +1,20 @@
+{
+  "app": "0.1.3",
+  "device": "SM-S928B",
+  "androidApi": 34,
+  "source": "Radio im Raum, kein kalibrierter Zeitmarker",
+  "durationSeconds": 1799.68,
+  "frames": 86384640,
+  "bytes": 11221231,
+  "oggPagesInSequence": 9001,
+  "confirmedEOS": true,
+  "sampleRate": 48000,
+  "channels": 1,
+  "bitrateSettingKbps": 48,
+  "route": "Internes Mikrofon · Hinten unbestätigt",
+  "effects": "Echo ein · Rauschen aus",
+  "oneSecondWindowsIncludingLastPartial": 1800,
+  "fullySilentWindows": 0,
+  "medianRmsPcm16": 904.0,
+  "peakWindowRmsPcm16": 3103
+}

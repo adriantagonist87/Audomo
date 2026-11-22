@@ -1,6 +1,6 @@
 # Audomo für Android
 
-Der erste installierbare Entwicklungsstand richtet sich an das Galaxy S24 Ultra mit Android 14 und One UI 6.1. Aufnehmen, Pausieren, Fortsetzen, Speichern und Wiederherstellen laufen auf dem eingerichteten ARM64-AVD. Der vollständige Lieferumfang und die offenen Geräteprüfungen stehen im [Funktionsabgleich](qa/ANFORDERUNGSABGLEICH.md).
+Der Entwicklungsstand 0.2 richtet sich an das Galaxy S24 Ultra mit Android 14 und One UI 6.1. Aufnehmen, Pausieren, Fortsetzen, Speichern und Wiederherstellen laufen auf dem eingerichteten ARM64-AVD. Der vollständige Lieferumfang und die offenen Geräteprüfungen stehen im [Funktionsabgleich](qa/ANFORDERUNGSABGLEICH.md).
 
 ## Bauen und installieren
 
@@ -33,9 +33,18 @@ Unter „Vibration“ hat jedes Ereignis eine Taste „Testen“. Ein langer Imp
 
 „Wiedergeben“ öffnet die lokale Liste. Einen Eintrag auswählen und anschließend Play drücken. Die Dateiaktionen ermöglichen Teilen, externes Öffnen und Exportieren über den Android-Dateidialog. Originale liegen im privaten dauerhaften App-Speicher. Eine Deinstallation entfernt diesen Speicher. Zum Aufbewahren außerhalb der App „Datei exportieren“ verwenden.
 
+## Einstellungen und Dateien
+
+„Weitere Optionen“ → „Einstellungen“ öffnet die H1-Ansicht mit Aufnahme, Kalender und Dateinamen, Dateien, Cloud und Uploads sowie App und Diagnose. Unter „Speicher und Import“ lässt sich ein Android-Dokumentordner freigeben. Audomo sichert eine Aufnahme zuerst im privaten Speicher, kopiert sie in den ausgewählten Ordner und liest die Kopie zur SHA-256-Prüfung zurück. Bei einem Zugriffsfehler bleibt die private Sicherung erhalten.
+
+Ein Tipp in der Bibliothek öffnet die Schnellaktionen und den Player. Langes Drücken aktiviert Mehrfachauswahl. Dateien werden zuerst in den Papierkorb gelegt. Die 30-Tage-Bereinigung wird separat aktiviert. Beim Import werden Quelldateien unverändert kopiert. Der Einstellungs-Export enthält keine Audioinhalte, Zugangscodes oder Passwörter.
+
+Uploads sind anfangs ausgeschaltet. Ein Ziel wird in „Uploadziele“ eingerichtet. Dropbox verwendet einen öffentlichen App-Key und OAuth mit PKCE. Für SFTP wird der öffentliche Hostschlüssel des vorgesehenen Servers benötigt. FTPS verwendet explizites TLS, WebDAV HTTPS. Zugangsdaten liegen AES-GCM-verschlüsselt mit einem Schlüssel aus dem Android-Keystore. Erst nach vollständigem Rücklesen und SHA-256-Vergleich gilt eine Übertragung als bestätigt.
+
 ## Entwicklung und Nachweise
 
 - [Entscheidung zur Quellbasis, Architektur und Abhängigkeiten](ADR-001.md)
+- [Abnahme 0.2 nach allen 44 Kernfällen](qa/ABNAHME-0.2.md) und [alle Gestaltungsbeschlüsse](qa/MOCKUPABGLEICH.md)
 - [Geräte- und Testprotokoll](qa/GERAETETEST.md)
 - [Abgleich der 122 Feature-IDs](qa/ANFORDERUNGSABGLEICH.md)
 - [Quellcodelizenz](LICENSE) und [Hinweise zu Bibliotheken und Markenassets](DRITTANBIETER.md)

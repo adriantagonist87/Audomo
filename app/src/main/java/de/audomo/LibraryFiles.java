@@ -1,0 +1,329 @@
+package de.audomo;
+
+import android.content.*;
+import android.database.Cursor;
+import android.media.*;
+import android.net.Uri;
+import android.provider.DocumentsContract.Document;
+import android.provider.OpenableColumns;
+
+import org.json.JSONObject;
+
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.file.*;
+import java.security.*;
+import java.time.*;
+import java.util.*;
+
+final class LibraryFiles {
+    final SessionStore store;
+    final SharedPreferences prefs;
+
+    LibraryFiles(SessionStore store) {
+        this.store = store;
+        prefs = Profile.prefs(store.context);
+    }
+
+    static String title(String value) {
+        String result = SessionStore.fileName(value, OffsetDateTime.now());
+        if (value.isBlank() || value.equals(".") || value.equals(".."))
+            throw new IllegalArgumentException("Name fehlt");
+        return result.substring(0, result.length() - 4);
+    }
+
+    Set<String> folders() {
+        TreeSet<String> all = new TreeSet<>(prefs.getStringSet("folders", Set.of()));
+        all.add("");
+        return all;
+    }
+
+    String addFolder(String parent, String value) throws IOException {
+        synchronized (store) {
+            String name = title(value);
+            String path = parent.isEmpty() ? name : parent + "/" + name;
+            Set<String> all = folders();
+            if (!all.contains(parent) || !all.add(path))
+                throw new IOException("Ordner fehlt oder Name schon belegt");
+            if (!prefs.edit().putStringSet("folders", all).commit())
+                throw new IOException("Ordner nicht gesichert");
+            return path;
+        }
+    }
+
+    private JSONObject checked(SessionStore.Entry entry) throws Exception {
+        File dir = entry.file().getParentFile();
+        JSONObject meta = SessionStore.metadata(dir);
+        if (!entry.file().isFile()
+                || !meta.has("frames")
+                || new File(dir, "capture.part").exists()
+                || !entry.name().equals(meta.optString("displayName", meta.getString("name")))
+                || !entry.folder().equals(meta.optString("folder"))
+                || entry.trashed() != meta.optLong("trashed"))
+            throw new IOException("Datei wurde inzwischen geändert");
+        return meta;
+    }
+
+    void change(SessionStore.Entry e, String stem, String folder, boolean trash) throws Exception {
+        synchronized (store) {
+            JSONObject meta = checked(e);
+            if (meta.has("obsoleteUri") || meta.has("pendingUri")) {
+                DocumentStorage.deliver(store.context, e.file());
+                meta = checked(e);
+            }
+            String name = e.name();
+            if (stem != null) name = title(stem) + extension(name);
+            if (!folders().contains(folder)) throw new IOException("Zielordner fehlt");
+            if (!trash) name = store.availableName(name, folder, e.file().getParentFile());
+            meta.put("displayName", name)
+                    .put("folder", folder)
+                    .put("trashed", trash ? System.currentTimeMillis() : 0);
+            DocumentStorage.updateLocation(store.context, e.file(), meta);
+        }
+    }
+
+    void purge(SessionStore.Entry e) throws Exception {
+        synchronized (store) {
+            JSONObject meta = checked(e);
+            if (meta.has("obsoleteUri") || meta.has("pendingUri") || meta.has("deliveredUri"))
+                throw new IOException("Ordnerkopie zuerst prüfen");
+            if (UploadQueue.get(store.context).jobs().stream()
+                    .anyMatch(j ->
+                            j.rec().equals(e.id())
+                                    && List.of("Wartet", "Upload läuft", "Konflikt", "Fehler")
+                                            .contains(j.state())))
+                throw new IOException("Ein Cloudauftrag benötigt diese Datei noch");
+            if (e.trashed() == 0) throw new IOException("Datei liegt nicht im Papierkorb");
+            File dir = e.file().getParentFile();
+            File pending = new File(store.root, ".purge-" + e.id());
+            Files.move(dir.toPath(), pending.toPath(), StandardCopyOption.ATOMIC_MOVE);
+            SessionStore.syncDirectory(store.root);
+            removePrivateDirectory(pending);
+        }
+    }
+
+    void cleanOld() throws Exception {
+        if (!prefs.getBoolean("cleanTrash", false)) return;
+        long threshold = System.currentTimeMillis() - Duration.ofDays(30).toMillis();
+        for (SessionStore.Entry e : store.list())
+            if (e.trashed() > 0 && e.trashed() <= threshold) purge(e);
+    }
+
+    static String extension(String name) {
+        int at = name.lastIndexOf('.');
+        return at > 0 ? name.substring(at) : "";
+    }
+
+    static String mime(String name) {
+        String type =
+                android.webkit.MimeTypeMap.getSingleton()
+                        .getMimeTypeFromExtension(
+                                extension(name).replace(".", "").toLowerCase(Locale.ROOT));
+        return type == null ? "audio/*" : type;
+    }
+
+    static String digest(InputStream raw) throws Exception {
+        if (raw == null) throw new IOException("Inhalt nicht lesbar");
+        try (InputStream in = raw) {
+            MessageDigest sha = MessageDigest.getInstance("SHA-256");
+            byte[] chunk = new byte[65536];
+            for (int n; (n = in.read(chunk)) != -1; ) sha.update(chunk, 0, n);
+            return android.util.Base64.encodeToString(sha.digest(), android.util.Base64.NO_WRAP);
+        }
+    }
+
+    void copy(SessionStore.Entry e, String folder) throws Exception {
+        JSONObject meta = checked(e);
+        meta.remove("deliveredUri");
+        meta.remove("obsoleteUri");
+        meta.remove("pendingUri");
+        meta.remove("autoTarget");
+        meta.remove("autoQueued");
+        stage(new FileInputStream(e.file()), e.name(), folder, meta, false, e.start());
+    }
+
+    void importUri(Uri uri, String folder) throws Exception {
+        ContentResolver resolver = store.context.getContentResolver();
+        String name = null;
+        OffsetDateTime date = OffsetDateTime.now();
+        try (Cursor c = resolver.query(uri, null, null, null, null)) {
+            if (c != null && c.moveToFirst()) {
+                int n = c.getColumnIndex(OpenableColumns.DISPLAY_NAME),
+                        t = c.getColumnIndex(Document.COLUMN_LAST_MODIFIED),
+                        mediaTime =
+                                c.getColumnIndex(
+                                        android.provider.MediaStore.MediaColumns.DATE_MODIFIED);
+                if (n >= 0) name = c.getString(n);
+                Instant modified =
+                        t >= 0 && c.getLong(t) > 0
+                                ? Instant.ofEpochMilli(c.getLong(t))
+                                : mediaTime >= 0 && c.getLong(mediaTime) > 0
+                                        ? Instant.ofEpochSecond(c.getLong(mediaTime))
+                                        : null;
+                if (modified != null)
+                    date = modified.atZone(ZoneId.systemDefault()).toOffsetDateTime();
+            }
+        }
+        if (name == null || name.isBlank()) throw new IOException("Quelldateiname fehlt");
+        String ext = extension(name);
+        if (!ext.matches("\\.[a-zA-Z0-9]{1,10}")) throw new IOException("Audio-Dateiendung fehlt");
+        if (name.contains("/")
+                || name.contains("\\")
+                || name.chars().anyMatch(Character::isISOControl))
+            throw new IOException("Quellname enthält unzulässige Pfadzeichen");
+        InputStream in = resolver.openInputStream(uri);
+        if (in == null) throw new IOException("Quelldatei nicht lesbar");
+        stage(in, name, folder, new JSONObject().put("importedName", name), true, date);
+    }
+
+    private void stage(
+            InputStream source,
+            String name,
+            String folder,
+            JSONObject meta,
+            boolean importing,
+            OffsetDateTime date)
+            throws Exception {
+        try (InputStream in = source) {
+            Files.createDirectories(store.root.toPath());
+            String id = UUID.randomUUID().toString();
+            File temp = new File(store.root, ".copy-" + id);
+            Files.createDirectory(temp.toPath());
+            try {
+                String physical = "audio" + extension(name);
+                File audio = new File(temp, physical);
+                MessageDigest incoming = MessageDigest.getInstance("SHA-256");
+                try (FileOutputStream out = new FileOutputStream(audio)) {
+                    new DigestInputStream(in, incoming).transferTo(out);
+                    out.getFD().sync();
+                }
+                String hash =
+                        android.util.Base64.encodeToString(
+                                incoming.digest(), android.util.Base64.NO_WRAP);
+                if (!hash.equals(digest(new FileInputStream(audio))))
+                    throw new IOException("Kopie unvollständig");
+                if (importing) {
+                    if (extension(name).equalsIgnoreCase(".ogg")
+                            || extension(name).equalsIgnoreCase(".opus"))
+                        OggOpus.verifyCompleteOgg(audio);
+                    meta.put("frames", audioFrames(audio));
+                }
+                synchronized (store) {
+                    if (!folders().contains(folder)) throw new IOException("Zielordner fehlt");
+                    if (importing)
+                        for (SessionStore.Entry e : store.list()) {
+                            if (e.file().length() == audio.length()
+                                    && hash.equals(digest(new FileInputStream(e.file()))))
+                                throw new IOException("Bereits vorhanden · " + e.name());
+                        }
+                    String display = store.availableName(name, folder, null);
+                    meta.put("name", physical)
+                            .put("documentTree", prefs.getString("documentTree", ""))
+                            .put("displayName", display)
+                            .put("folder", folder)
+                            .put("trashed", 0)
+                            .put("start", date.toString())
+                            .put("sha256", hash);
+                    SessionStore.storeMeta(temp, meta);
+                    Files.move(
+                            temp.toPath(),
+                            new File(store.root, id).toPath(),
+                            StandardCopyOption.ATOMIC_MOVE);
+                    SessionStore.syncDirectory(store.root);
+                    DocumentStorage.deliver(
+                            store.context, new File(new File(store.root, id), physical));
+                }
+            } finally {
+                if (temp.exists()) removePrivateDirectory(temp);
+            }
+        }
+    }
+
+    private static long audioFrames(File file) throws Exception {
+        MediaExtractor extractor = new MediaExtractor();
+        try {
+            extractor.setDataSource(file.getAbsolutePath());
+            for (int i = 0; i < extractor.getTrackCount(); i++) {
+                MediaFormat format = extractor.getTrackFormat(i);
+                String mime = format.getString(MediaFormat.KEY_MIME);
+                if (mime == null || !mime.startsWith("audio/")) continue;
+                extractor.selectTrack(i);
+                MediaCodec decoder = MediaCodec.createDecoderByType(mime);
+                try {
+                    decoder.configure(format, null, null, 0);
+                    decoder.start();
+                    long frames = decodedFrames(extractor, decoder, format);
+                    if (frames <= 0) throw new IOException("Keine dekodierbaren Audioframes");
+                    return frames;
+                } finally {
+                    decoder.release();
+                }
+            }
+            throw new IOException("Audiospur fehlt");
+        } finally {
+            extractor.release();
+        }
+    }
+
+    private static long decodedFrames(MediaExtractor input, MediaCodec decoder, MediaFormat format)
+            throws IOException {
+        MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+        boolean inputEnded = false;
+        int rate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE),
+                channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT),
+                width = 2;
+        long scaled = 0, segment = 0, last = android.os.SystemClock.elapsedRealtime();
+        while (true) {
+            if (!inputEnded) {
+                int index = decoder.dequeueInputBuffer(10000);
+                if (index >= 0) {
+                    ByteBuffer buf = decoder.getInputBuffer(index);
+                    buf.clear();
+                    int n = input.readSampleData(buf, 0);
+                    inputEnded = n < 0;
+                    decoder.queueInputBuffer(
+                            index,
+                            0,
+                            Math.max(0, n),
+                            inputEnded ? 0 : input.getSampleTime(),
+                            inputEnded ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
+                    if (!inputEnded) input.advance();
+                    last = android.os.SystemClock.elapsedRealtime();
+                }
+            }
+            int index = decoder.dequeueOutputBuffer(info, 10000);
+            if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                scaled += Math.round(segment * 48000.0 / rate);
+                segment = 0;
+                MediaFormat pcm = decoder.getOutputFormat();
+                rate = pcm.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                channels = pcm.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+                width =
+                        switch (pcm.getInteger(
+                                MediaFormat.KEY_PCM_ENCODING, AudioFormat.ENCODING_PCM_16BIT)) {
+                            case AudioFormat.ENCODING_PCM_8BIT -> 1;
+                            case AudioFormat.ENCODING_PCM_24BIT_PACKED -> 3;
+                            case AudioFormat.ENCODING_PCM_FLOAT, AudioFormat.ENCODING_PCM_32BIT ->
+                                    4;
+                            default -> 2;
+                        };
+            } else if (index >= 0) {
+                if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0)
+                    segment += info.size / (channels * width);
+                decoder.releaseOutputBuffer(index, false);
+                last = android.os.SystemClock.elapsedRealtime();
+                if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0)
+                    return scaled + Math.round(segment * 48000.0 / rate);
+            }
+            if (android.os.SystemClock.elapsedRealtime() - last > 15000)
+                throw new IOException("Audiodecoder antwortet nicht");
+        }
+    }
+
+    private static void removePrivateDirectory(File dir) throws IOException {
+        File[] children = dir.listFiles();
+        if (children == null) throw new IOException("Arbeitsordner nicht lesbar");
+        for (File child : children) Files.delete(child.toPath());
+        Files.delete(dir.toPath());
+    }
+}

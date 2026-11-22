@@ -64,7 +64,7 @@ final class ProfileDialog {
 
     private void editor(Profile source) {
         Profile p = source == null ? Profile.selected(screen) : source;
-        boolean create = source == null || Profile.BUILTINS.contains(source);
+        boolean create = source == null;
         ScrollView scroll = new ScrollView(screen);
         LinearLayout fields = new LinearLayout(screen);
         fields.setOrientation(LinearLayout.VERTICAL);
@@ -74,6 +74,8 @@ final class ProfileDialog {
         EditText name = new EditText(screen);
         name.setSingleLine();
         name.setText(create ? p.name() + " (Kopie)" : p.name());
+        name.setEnabled(
+                create || Profile.BUILTINS.stream().noneMatch(b -> b.name().equals(p.name())));
         fields.addView(name);
         label(fields, "Opus / Ogg · Mono");
         Spinner input = select(fields, "Mikrofonwunsch", Profile.INPUTS, p.mic());

@@ -20,8 +20,17 @@ final class SessionStore {
     static final DateTimeFormatter STAMP =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss", Locale.ROOT);
     final File root;
+    final Context context;
+    private final Set<String> reportedMetadata = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private void reportMetadata(File dir) {
+        if (context instanceof Audomo app && reportedMetadata.add(dir.getName()))
+            app.diagnostic(
+                    "Warnung · Metadaten einer Sitzung unlesbar. Audiodateien bleiben erhalten.");
+    }
 
     SessionStore(Context context) {
+        this.context = context.getApplicationContext();
         root = new File(context.getFilesDir(), "sessions");
     }
 
@@ -41,7 +50,8 @@ final class SessionStore {
         return clean + ".ogg";
     }
 
-    File create(String requested, Profile profile, OffsetDateTime start) throws Exception {
+    synchronized File create(String requested, Profile profile, OffsetDateTime start)
+            throws Exception {
         Files.createDirectories(root.toPath());
         File dir = new File(root, UUID.randomUUID().toString());
         Files.createDirectory(dir.toPath());
@@ -50,7 +60,14 @@ final class SessionStore {
         JSONObject meta =
                 new JSONObject()
                         .put("name", unique)
+                        .put("folder", Profile.prefs(context).getString("folder", ""))
                         .put("start", start.toString())
+                        .put("documentTree", Profile.prefs(context).getString("documentTree", ""))
+                        .put(
+                                "autoTarget",
+                                Profile.prefs(context).getBoolean("autoUpload", false)
+                                        ? Profile.prefs(context).getString("defaultTarget", "")
+                                        : "")
                         .put("profile", profile.name())
                         .put("bitrate", profile.kbps())
                         .put("gainDb", profile.gain())
@@ -64,18 +81,39 @@ final class SessionStore {
         return dir;
     }
 
-    String uniqueName(String base, File dir) throws Exception {
+    synchronized String uniqueName(String base, File directory) throws Exception {
+        File meta = new File(directory, "session.json");
+        String folder =
+                meta.exists()
+                        ? metadata(directory).optString("folder")
+                        : Profile.prefs(context).getString("folder", "");
+        return availableName(base, folder, directory);
+    }
 
+    String availableName(String base, String folder, File exclude) throws Exception {
         Set<String> names = new HashSet<>();
-        for (File other : directories()) {
-            if (other.equals(dir)) continue;
-            File meta = new File(other, "session.json");
-            if (meta.isFile()) names.add(metadata(other).getString("name"));
+        for (File dir : directories()) {
+            if (dir.equals(exclude) || !new File(dir, "session.json").isFile()) continue;
+            try {
+                JSONObject meta = metadata(dir);
+                if (meta.optLong("trashed") == 0 && folder.equals(meta.optString("folder")))
+                    names.add(
+                            meta.optString("displayName", meta.getString("name"))
+                                    .toLowerCase(Locale.ROOT));
+            } catch (IOException | org.json.JSONException damaged) {
+                reportMetadata(dir);
+                File[] files = dir.listFiles(File::isFile);
+                if (files != null)
+                    for (File file : files) names.add(file.getName().toLowerCase(Locale.ROOT));
+            }
         }
-        String unique = base;
-        for (int i = 2; names.contains(unique); i++)
-            unique = base.substring(0, base.length() - 4) + " (" + i + ").ogg";
-        return unique;
+        int dot = base.lastIndexOf('.');
+        String stem = dot > 0 ? base.substring(0, dot) : base;
+        String ext = dot > 0 ? base.substring(dot) : "";
+        String result = base;
+        for (int n = 2; names.contains(result.toLowerCase(Locale.ROOT)); n++)
+            result = stem + " (" + n + ")" + ext;
+        return result;
     }
 
     static void storeMeta(File dir, JSONObject meta) throws Exception {
@@ -100,25 +138,46 @@ final class SessionStore {
 
     File[] directories() throws IOException {
         if (!root.exists()) return new File[0];
-        File[] dirs = root.listFiles(File::isDirectory);
+        File[] dirs = root.listFiles(f -> f.isDirectory() && !f.getName().startsWith("."));
         if (dirs == null) throw new IOException("Aufnahmeordner ist nicht lesbar");
         return dirs;
     }
 
-    record Entry(File file, long frames, OffsetDateTime start) {}
+    record Entry(
+            File file,
+            long frames,
+            OffsetDateTime start,
+            String name,
+            String folder,
+            long trashed) {
+        String id() {
+            return file.getParentFile().getName();
+        }
+    }
+
+    static Entry entry(File dir) throws Exception {
+        if (!new File(dir, "session.json").isFile()) return null;
+        JSONObject meta = metadata(dir);
+        File file = new File(dir, meta.getString("name"));
+        if (!file.isFile() || !meta.has("frames")) return null;
+        return new Entry(
+                file,
+                meta.getLong("frames"),
+                OffsetDateTime.parse(meta.getString("start")),
+                meta.optString("displayName", file.getName()),
+                meta.optString("folder"),
+                meta.optLong("trashed"));
+    }
 
     List<Entry> list() throws Exception {
         List<Entry> items = new ArrayList<>();
         for (File dir : directories()) {
-            if (!new File(dir, "session.json").isFile()) continue;
-            JSONObject meta = metadata(dir);
-            File file = new File(dir, meta.getString("name"));
-            if (file.isFile() && meta.has("frames"))
-                items.add(
-                        new Entry(
-                                file,
-                                meta.getLong("frames"),
-                                OffsetDateTime.parse(meta.getString("start"))));
+            try {
+                Entry e = entry(dir);
+                if (e != null) items.add(e);
+            } catch (IOException | org.json.JSONException | java.time.DateTimeException damaged) {
+                reportMetadata(dir);
+            }
         }
         items.sort(Comparator.comparing(Entry::start).reversed());
         return items;
