@@ -1,0 +1,45 @@
+package de.audomo;
+
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.service.quicksettings.*;
+
+public final class CaptureTile extends TileService {
+    @Override
+    public void onStartListening() {
+        super.onStartListening();
+        Audomo app = (Audomo) getApplication();
+        Tile tile = getQsTile();
+        if (tile == null) return;
+        tile.setLabel("Audomo");
+        tile.setSubtitle(app.active() ? "Stoppen" : app.ready() ? "Aufnehmen" : "Bitte warten");
+        tile.setState(
+                app.active()
+                        ? Tile.STATE_ACTIVE
+                        : app.ready() ? Tile.STATE_INACTIVE : Tile.STATE_UNAVAILABLE);
+        tile.updateTile();
+    }
+
+    @Override
+    public void onClick() {
+        super.onClick();
+        if (isLocked()) {
+            unlockAndRun(this::activate);
+            return;
+        }
+        activate();
+    }
+
+    private void activate() {
+        Audomo app = (Audomo) getApplication();
+        if (app.active()) app.command("STOP", null);
+        else if (app.ready()) {
+            Intent intent =
+                    new Intent(this, TileStartActivity.class)
+                            .setFlags(
+                                    Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivityAndCollapse(
+                    PendingIntent.getActivity(this, 7, intent, PendingIntent.FLAG_IMMUTABLE));
+        }
+    }
+}

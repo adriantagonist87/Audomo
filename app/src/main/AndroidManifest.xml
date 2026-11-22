@@ -1,0 +1,40 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-feature android:name="android.hardware.microphone" android:required="true" />
+    <application android:name=".Audomo" android:theme="@style/AudomoTheme" android:label="Audomo"
+        android:allowBackup="false" android:icon="@mipmap/ic_launcher">
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="de.audomo.audio"
+            android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/audio_paths"/>
+        </provider>
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity android:name=".CalendarSettings" android:exported="false"/>
+        <activity android:name=".TileStartActivity" android:exported="false"
+            android:taskAffinity="de.audomo.quick" android:excludeFromRecents="true" />
+        <service android:name=".CaptureService" android:foregroundServiceType="microphone" android:exported="false" />
+        <service android:name=".RecordingQuietMode" android:exported="true" android:label="Audomo-Aufnahme"
+            android:permission="android.permission.BIND_CONDITION_PROVIDER_SERVICE">
+            <intent-filter><action android:name="android.service.notification.ConditionProviderService"/></intent-filter>
+            <meta-data android:name="android.service.zen.automatic.ruleInstanceLimit" android:value="1"/>
+        </service>
+        <service android:name=".CaptureTile" android:exported="true"
+            android:icon="@drawable/ic_mic" android:label="Audomo"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE"/></intent-filter>
+            <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="true"/>
+        </service>
+    </application>
+</manifest>
