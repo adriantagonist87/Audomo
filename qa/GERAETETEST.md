@@ -1,6 +1,12 @@
 # Audomo · Teststand vom 22.11.2026
 
-Aktueller Entwicklungsstand und Testumfang für 0.2 im [Abnahmeprotokoll](ABNAHME-0.2.md). Die folgenden Messungen dokumentieren die Vorgängerversionen.
+## Kachellangdruck mit Version 0.2.1
+
+Auf dem entsperrten Samsung SM-S928B mit API 34 holte ein über die Samsung-Systemkachel ausgelöster Langdruck dieselbe laufende Audomo-Activity aus dem Hintergrund zurück. Aufnahmezustand und Zahl der gespeicherten Sitzungen blieben gleich. Der Test `TileLongPressDeviceTest` lässt sich mit dem Instrumentierungsargument `-e tileGesture true` auf einem entsperrten Gerät mit bereits hinzugefügter Kachel wiederholen.
+
+Auf dem Referenzemulator öffnete Version 0.2 bei langem Drücken die Android-App-Informationen. Bei 0.2.1 öffnete derselbe Langdruck nach beendetem App-Prozess die Hauptansicht. Bei bereits geöffneter Bibliothek oder Kalenderunterseite blieben die Activity-Instanz und die Task-ID erhalten. Ein weiterer Emulatorlauf mit `-e tileRecording true` prüfte einen kurzen Tipp zum Starten, einen langen Druck während der Aufnahme und einen kurzen Tipp zum Stoppen. Beim Langdruck blieb die Sitzung dieselbe und der Audioframezähler stieg weiter. Nach Stopp lag genau eine neue Aufnahme vor. Der Kacheleinstieg reagiert auf die von Android vorgesehene Systemaktion. [Android-Dokumentation zu Schnellkacheln](https://developer.android.com/develop/ui/views/quicksettings-tiles)
+
+Die umfassenden Ergebnisse für 0.2 stehen im [Abnahmeprotokoll](ABNAHME-0.2.md).
 
 ## AVD-Serie mit Version 0.1
 

@@ -23,6 +23,15 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name=".TileOpenActivity" android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:taskAffinity="" android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
         <activity android:name=".CalendarSettings" android:exported="false"/>
         <activity android:name=".TileStartActivity" android:exported="false"
             android:taskAffinity="de.audomo.quick" android:excludeFromRecents="true" />
