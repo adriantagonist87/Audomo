@@ -7,7 +7,7 @@ Am 23. November 2026 wurde der Funktionsstand nach 0.2.14 als erste stabile Ausg
 | Installationsdatei | `Audomo-1.0.0.apk` |
 | Manifest | `de.audomo`, Version 1.0.0, Code 20, minSdk 34, targetSdk 34, compileSdk 37 |
 | Auslieferungsvariante | Release, Debugging deaktiviert, ein Signierer, APK-Signatur v3 bestätigt |
-| SHA-256 der APK | `3fbd4cee4843dc3c832b2c2c396289f571ef52d16c63458e904928005aaa57f2` |
+| SHA-256 der APK | [SHA256SUMS.txt zum GitHub-Release](https://github.com/adriantagonist87/Audomo/releases/download/v1.0.0/SHA256SUMS.txt) |
 | SHA-256 des Signaturzertifikats | `02e25fd64a983b5ee87cf6a578f250d5835827673fd20e048b40b7df691fa338` |
 
 ## Für diesen Release erneut ausgeführt

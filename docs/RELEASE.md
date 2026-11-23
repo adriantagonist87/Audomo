@@ -12,6 +12,8 @@ Für eine Wiederherstellung auf einem anderen Mac werden sowohl PKCS#12-Datei al
 
 ## Aus geprüftem Quellstand signieren
 
+Gradle schreibt die Git-Revision in die APK. Den endgültigen Quellcode und das Prüfprotokoll vor dem Auslieferungsbuild committen. Die spätere APK-Prüfsumme als Release-Asset ablegen. Ein GitHub-Quellarchiv ohne Git-Metadaten kann im Versionskontrolleintrag vom Build eines Checkouts abweichen.
+
 1. Versionsname und monotonen Versionscode in `app/build.gradle.kts` setzen. Releaseprotokoll mit Gerätebezug, bekannten Grenzen und Unterschieden zur Vorversion vorbereiten.
 2. Die [Build- und Gerätetests](TESTEN.md) ausführen. Für die öffentliche APK die Variante `release` bauen. Der Standardbuild erzeugt eine unsignierte Datei. Die reguläre Entwicklung braucht keine Release-Zugänge.
 3. Auf dem Release-Mac mit gesetztem `JAVA_HOME` und `ANDROID_HOME` aus dem Repository ausführen. Das Zielverzeichnis vorher anlegen. Das Skript prüft die Ausrichtung, den erwarteten Zertifikatsfingerabdruck und anschließend die Signatur. Als Ziel eine neue Datei angeben.
@@ -24,7 +26,7 @@ python3 tools/sign-release-macos.py /tmp/audomo-release/Audomo-1.0.0.apk
 ```
 
 4. Mit `apksigner verify --verbose --print-certs` Zertifikat und Signaturschemata erfassen. Mit `aapt dump badging` Paket, Version, SDK und Debug-Flag prüfen. Die signierte APK auf einem leeren Testgerät installieren, über die drei Reiter bedienen und den Hash der installierten Datei mit dem Auslieferungsartefakt vergleichen.
-5. Quellen, Releaseanleitung und Prüfbericht committen. Einen annotierten Tag am getesteten Commit anlegen und mit dem Hauptzweig pushen. Einen GitHub-Release für exakt den vorhandenen Tag mit APK und `SHA256SUMS.txt` veröffentlichen. Bei einer offiziellen stabilen Version die Markierung „Latest“ setzen und die Felder Entwurf und Vorabversion kontrollieren. Bereits veröffentlichte Versionen behalten ihre ursprünglichen Assets. Eine Korrektur bekommt eine neue Versionsnummer.
+5. Den eingebetteten Git-Commit mit `unzip -p DATEI.apk META-INF/version-control-info.textproto` prüfen. Einen annotierten Tag am getesteten Commit anlegen und mit dem Hauptzweig pushen. Einen GitHub-Release für exakt den vorhandenen Tag mit APK und `SHA256SUMS.txt` veröffentlichen. Bei einer offiziellen stabilen Version die Markierung „Latest“ setzen und die Felder Entwurf und Vorabversion kontrollieren. Bereits veröffentlichte Versionen behalten ihre ursprünglichen Assets. Eine Korrektur bekommt eine neue Versionsnummer.
 6. Über die GitHub-API Tag, Commit, Status und Assets prüfen. Die veröffentlichte APK und Prüfsumme aus einem neuen Verzeichnis herunterladen und gegen die lokal geprüften Werte vergleichen. Der APK-SHA-256 ist für jede Version neu. Der Fingerabdruck des Signaturzertifikats verbindet die Updates.
 
 ## Aus Nutzersicht prüfen
