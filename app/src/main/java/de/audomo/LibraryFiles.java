@@ -40,6 +40,7 @@ final class LibraryFiles {
 
     String addFolder(String parent, String value) throws IOException {
         synchronized (store) {
+            FolderManager.checkWritable(prefs, parent);
             String name = title(value);
             String path = parent.isEmpty() ? name : parent + "/" + name;
             Set<String> all = folders();
@@ -48,6 +49,29 @@ final class LibraryFiles {
             if (!prefs.edit().putStringSet("folders", all).commit())
                 throw new IOException("Ordner nicht gesichert");
             return path;
+        }
+    }
+
+    static boolean validFolderPath(String path) {
+        if (path.isEmpty()) return true;
+        for (String segment : path.split("/", -1))
+            if (segment.isEmpty() || !segment.equals(SessionStore.cleanComponent(segment))) return false;
+        return true;
+    }
+
+    void ensureFolder(String path) throws IOException {
+        if (path.isEmpty()) return;
+        synchronized (store) {
+            Set<String> all = folders();
+            if (all.contains(path)) return;
+            if (!validFolderPath(path)) throw new IOException("Ungültiger Aufnahmeordner");
+            String parent = "";
+            for (String segment : path.split("/")) {
+                parent = parent.isEmpty() ? segment : parent + "/" + segment;
+                all.add(parent);
+            }
+            if (!prefs.edit().putStringSet("folders", all).commit())
+                throw new IOException("Aufnahmeordner nicht gesichert");
         }
     }
 
@@ -66,6 +90,8 @@ final class LibraryFiles {
 
     void change(SessionStore.Entry e, String stem, String folder, boolean trash) throws Exception {
         synchronized (store) {
+            FolderManager.checkWritable(prefs, e.folder());
+            FolderManager.checkWritable(prefs, folder);
             JSONObject meta = checked(e);
             if (meta.has("obsoleteUri") || meta.has("pendingUri")) {
                 DocumentStorage.deliver(store.context, e.file());
@@ -78,7 +104,15 @@ final class LibraryFiles {
             meta.put("displayName", name)
                     .put("folder", folder)
                     .put("trashed", trash ? System.currentTimeMillis() : 0);
-            DocumentStorage.updateLocation(store.context, e.file(), meta);
+            try {
+                DocumentStorage.updateLocation(store.context, e.file(), meta);
+            } finally {
+                SessionStore.Entry updated = SessionStore.entry(e.file().getParentFile());
+                if (updated != null)
+                    UploadQueue.get(store.context).getWritableDatabase().execSQL(
+                            "UPDATE recordings SET name=?,folder=? WHERE rec=?",
+                            new Object[]{updated.name(),updated.folder(),e.id()});
+            }
         }
     }
 
@@ -95,6 +129,7 @@ final class LibraryFiles {
                 throw new IOException("Ein Cloudauftrag benötigt diese Datei noch");
             if (e.trashed() == 0) throw new IOException("Datei liegt nicht im Papierkorb");
             File dir = e.file().getParentFile();
+            if (UploadQueue.get(store.context).hasCloud(e.id())) new CloudLibrary(store).known();
             File pending = new File(store.root, ".purge-" + e.id());
             Files.move(dir.toPath(), pending.toPath(), StandardCopyOption.ATOMIC_MOVE);
             SessionStore.syncDirectory(store.root);
@@ -139,6 +174,7 @@ final class LibraryFiles {
         meta.remove("pendingUri");
         meta.remove("autoTarget");
         meta.remove("autoQueued");
+        meta.remove("uploadNotBefore");
         stage(new FileInputStream(e.file()), e.name(), folder, meta, false, e.start());
     }
 
@@ -209,6 +245,7 @@ final class LibraryFiles {
                     meta.put("frames", audioFrames(audio));
                 }
                 synchronized (store) {
+                    FolderManager.checkWritable(prefs, folder);
                     if (!folders().contains(folder)) throw new IOException("Zielordner fehlt");
                     if (importing)
                         for (SessionStore.Entry e : store.list()) {

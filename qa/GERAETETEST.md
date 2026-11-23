@@ -1,4 +1,93 @@
-# Audomo · Teststand vom 22.11.2026
+# Audomo · Teststand vom 23.11.2026
+
+## Warteschlange auswählen, priorisieren und leeren mit Version 0.2.14
+
+Im S24-Ultra-Emulator mit Android 14 wurde eine 0.2.13-Installation mit einem bestätigten FTP-Upload und drei wartenden Aufträgen aktualisiert. Ein Rechtswisch zog einen Auftrag vor. Seine Position blieb nach Beenden des App-Prozesses erhalten. Nach Rückkehr des WLANs bestätigten die Eingangszeiten des lokalen FTP-Dienstes die geänderte Reihenfolge. Der per Linkswisch entfernte Auftrag wurde übersprungen.
+
+Langes Drücken und „Auswählen“ öffneten den Auswahlmodus. Mehrfachauswahl, alle auswählen, alle abwählen, gemeinsam vorziehen, Android-Zurück und Bildschirmdrehung wurden über die Oberfläche geprüft. Ein kurzer horizontaler Wisch und vertikales Scrollen lösten keine Aktion aus. „Beendete Aufträge entfernen“ ließ alle offenen Einträge bestehen. Anschließend wurden 15 offene Aufträge über die Bildschirmgrenze hinweg gemeinsam markiert und entfernt. [Mehrfachauswahl](api34/warteschlange-auswahl-0.2.14.webp)
+
+„Warteschlange leeren“ zeigte auch bei aktivem Filter die Gesamtzahl. Abbrechen behielt die Aufträge. Nach Bestätigung und Prozessneustart blieb die Warteschlange leer. In „Wiedergeben“ blieb der FTP-Speicherort erhalten. Nach Entnahme der lokalen Testkopie ließ sich die Aufnahme aus dem Cloudkatalog bytegleich wiederherstellen. Beim Linkswisch während eines laufenden FTP-Transfers blieben das lokale Original erhalten und das Ziel frei von Teil- und Zieldateien. [Bestätigung beim Leeren](api34/warteschlange-leeren-0.2.14.webp)
+
+14 Unit-Tests und 15 instrumentierte Tests bestanden. Geprüft wurden auch stabile Auftrags-IDs, unveränderte Fälligkeiten und das reine Nachprüfen eines bereits vom Server bestätigten oder fehlenden Zielinhalts. Das physische Galaxy S24 Ultra erhielt 0.2.14 als Update. Die Prüfsumme der installierten APK stimmt mit der Auslieferung überein.
+
+## Text der Aufnahmebenachrichtigung mit Version 0.2.13
+
+Im Android-14-Emulator war „die App ist aktiv und verrichtet ihren Dienst“ bei laufender Aufnahme im geöffneten Benachrichtigungsfeld vollständig lesbar. Der Gerätetest prüfte den Titel und das Audomo-Symbol für Aufnahme und Pause. Das Update wurde auf dem Galaxy S24 Ultra installiert und per SHA-256 bestätigt. [Benachrichtigung im Emulator](api34/aufnahmebenachrichtigung-0.2.13.webp)
+## Warteschlange als Hauptreiter mit Version 0.2.12
+
+Im S24-Ultra-Emulator mit Android 14 blieb ein bereits mit 0.2.11 erfolgreich an FTP gesendeter Auftrag nach dem Update sichtbar. Der Weg „Aufnehmen“ → „Wiedergeben“ → „Warteschlange“ führte mit zweimal Android-Zurück zur laufenden Aufnahme. Stopp speicherte diese Aufnahme und reihte sie mit fünf Minuten Wartezeit ein. „Jetzt freigeben“ startete den Transfer vorzeitig. Aus den Auftragsdetails ließ sich danach SFTP als weiteres Ziel beauftragen. Beide Kopien waren bytegleich. Zurück aus dem Warteschlangen-Einstieg in den Upload-Einstellungen führte wieder in diesen Dialog. [Warteschlange](api34/warteschlange-0.2.12.webp)
+
+Zwei gemeinsam ausgewählte Ziele blieben über die Bildschirmdrehung markiert. Ohne WLAN zeigte ein fälliger Auftrag den Wartegrund. Nach „Überspringen“ für FTP wurde die zweite Kopie an SFTP übertragen. „Erneut versuchen“ lieferte anschließend auch die FTP-Kopie. Bei einem laufenden FTP-Datentransfer wurde der lokale Testserver vor der Veröffentlichung kurz angehalten und der Auftrag über die Oberfläche abgebrochen. Nach der Freigabe des Servers war weder eine finale Datei noch eine Arbeitsdatei auf dem Ziel vorhanden. Der Status „Abgebrochen“ blieb nach einem Prozessneustart erhalten. [Auswahl mehrerer Ziele](api34/mehrere-uploadziele-0.2.12.webp)
+
+„Cloudkopie prüfen“ erkannte eine extern entfernte Datei. „Erneut hochladen“ stellte die Kopie bytegleich wieder her. Eine vorübergehend fehlende lokale Quelldatei erzeugte zwei getrennte Fehler. Der Filter „Klärungsbedarf“ zeigte beide betroffenen Dienste und den Grund. Nach Wiederherstellung der Quelle übertrug „Fehler wiederholen“ beide Dateien in den richtigen Unterordner. Die Instrumentierung prüfte unter anderem den Schutz der Veröffentlichung vor einem verspäteten Abbruch und den erneuten Namenskonflikt nach einem ausgelassenen Auftrag. [Fehlerfilter](api34/warteschlange-fehler-0.2.12.webp)
+
+14 Unit-Tests und 14 instrumentierte Tests bestanden. Android Lint meldete keine Fehler. Das physische Galaxy S24 Ultra erhielt 0.2.12 als Update über 0.2.11. Die SHA-256-Prüfsumme der installierten APK stimmt mit der Auslieferung überein. Die Übertragungstests nutzten lokale Testdienste und für Dropbox einen simulierten Transport.
+
+## Verzögerter Cloud-Upload und Aufnahmesymbol mit Version 0.2.11
+
+Auf dem S24-Ultra-Emulator mit Android 14 wurde die App über eine Installation von 0.2.10 aktualisiert. Zwei über den Aufnahmebutton erzeugte Ogg-Dateien erhielten unterschiedliche Wartezeiten von 0,5 und 5 Minuten. Eine dritte, manuell zum selben FTP-Ziel geschickte Datei traf vor beiden ein. Ein Wechsel der Einstellung ließ die bereits vorgemerkten Zeitpunkte bestehen. Der Dialog akzeptierte Komma und Punkt, wies eine negative Eingabe zurück und behielt bei „Abbrechen“ den bisherigen Wert. Die Warteschlange zeigte die Fälligkeit nach einem Prozessneustart weiterhin an. [Verzögerung in Minuten](api34/uploadverzoegerung-0.2.11.webp)
+
+Mit der ausgelieferten APK trafen die neuen Aufnahmen bei 0,5 Minuten nach rund 38 Sekunden und bei 5 Minuten nach 5 Minuten und 26 Sekunden am lokalen FTP-Dienst ein. Android startete beide Aufträge selbstständig. Die Datei mit 0 Minuten war schon vorher übertragen. Ohne WLAN wartete ein weiterer fälliger Auftrag bis zur Wiederverbindung. Alle verglichenen Serverdateien waren bytegleich mit ihren lokalen Originalen. 14 Unit-Tests und 13 instrumentierte Tests bestanden. Android Lint meldete keine Fehler.
+
+Während einer Aufnahme zeigte die Statusleiste das einfarbige Audomo-A. In der ausgeklappten Benachrichtigung stand das Zeichen auf lila Grund neben „Audomo“. Die Gerätetests prüften Logo und Akzentfarbe bei laufender und pausierter Aufnahme, den Export und Import von Dezimalminuten sowie die manuelle Freigabe eines bereits wartenden Auftrags ohne Duplikat. Das Galaxy S24 Ultra erhielt 0.2.11 als Update. Die Prüfsumme der installierten APK stimmt mit der Auslieferung überein. [Aufnahmebenachrichtigung](api34/aufnahmebenachrichtigung-0.2.11.webp)
+
+## Tagesansicht und manuelle Terminwahl mit Version 0.2.10
+
+Auf dem S24-Ultra-Emulator unter Android 14 öffnete ein Tipp auf den Terminbereich die Tagesansicht. Sie zeigte zwei gleichzeitig beginnende Termine nebeneinander, einen ganztägigen Termin oberhalb des Stundenrasters und die späteren Termine des Tages. Ein dritter, abgewählter Kalender war ausgeblendet. Die Providerprüfung deckte auch Serientermine, abgesagte Termine, lokale Tagesgrenzen und die doppelte Stunde bei der Zeitumstellung ab.
+
+„Abbrechen“ erhielt einen bereits manuell eingegebenen Namen. Android-Zurück erhielt einen vorgemerkten Termin, „Automatisch zuordnen“ hob ihn auf. Nach der Wahl von „Musikprobe“ erzeugte der Aufnahmebutton eine geprüfte Opus-Datei namens „Privat_Musikprobe.ogg“ im Kalenderordner „Privat“. Eine zweite Aufnahme erhielt den automatischen Namen „Folgeaufnahme.ogg“. Ohne Kalenderfreigabe und ohne ausgewählte Kalender waren die jeweils passenden Einstiege zur Einrichtung erreichbar. Zwei instrumentierte Tests und zwölf Unit-Tests bestanden. Das Update auf dem Galaxy S24 Ultra wurde per SHA-256 bestätigt. [Tagesansicht](api34/tagesansicht-0.2.10.webp) · [Dateinamenvorschau](api34/termin-vorgemerkt-0.2.10.webp)
+
+## Ordnerverwaltung, Speicherorte und Abgleich mit Version 0.2.9
+
+Ein Galaxy-S24-Ultra-AVD mit API 34 erhielt das Update über eine echte 0.2.8-Installation. Vorher wurden zwei Testaufnahmen per FTP übertragen und von einer die gesamte lokale Sitzung entfernt. Nach dem Update zeigte die Bibliothek für diese Aufnahme FTP und für die zweite „Lokal · FTP“. Die Wiederherstellung der älteren Aufnahme ergab wieder eine abspielbare lokale Datei. Fehlende historische Zeitangaben wurden als unbekannt angezeigt. Ein zusätzlicher SFTP-Upload derselben Aufnahme führte beide Dienste mit ihren Pfaden auf. [Speicherorte in der Liste](api34/speicherorte-liste-0.2.9.webp) · [Cloudkopie wiederherstellen](api34/cloudkopie-wiederherstellen-0.2.9.webp)
+
+In den Einstellungen wurden ein Ordner und ein Unterordner angelegt, mit einer MP3-Datei befüllt, umbenannt und verschoben. Das Auflösen eines Ordners behielt seine Inhalte, eine Namenskollision ließ beide Originale bestehen. Nach einer externen Unterordnerverschiebung im freigegebenen Android-Dokumentbaum ordnete der Abgleich die gespeicherte Aufnahme dem neuen Ordner zu. Sie war dort abspielbar. Nach Entfernen der privaten Test-MP3 stellte der Android-Abgleich die Datei aus der verifizierten Ordnerkopie bytegenau wieder her. [Ordnerverwaltung](api34/ordner-verwalten-0.2.9.webp)
+
+Am lokalen FTP-Dienst wurden lokale und mitgeführte Cloudverschiebung, Leeren des lokalen Papierkorbs, Verschieben einer reinen Cloudkopie, eindeutige und mehrdeutige Treffer sowie fehlende Dateien geprüft. Nach externer Verschiebung zeigte der Zieldialog den neuen Pfad. FTP, FTPS, SFTP und HTTPS-WebDAV wurden mit echten lokalen Testdiensten geprüft. Die Dropbox-Tests verwenden einen simulierten Transport für Paginierung, Download und mehrteiligen Upload. 13 instrumentierte Tests und elf Unit-Tests bestanden. Lint meldete keine Fehler. Das Galaxy S24 Ultra erhielt Version 0.2.9 als Update. Die Prüfsumme der installierten APK stimmt mit der Auslieferung überein.
+
+## Bestehende Aufnahmen hochladen mit Version 0.2.8
+
+Auf Android 14 wurden in „Wiedergeben“ zwei Testaufnahmen markiert und über „Cloud Upload“ an das ausgewählte SFTP-Ziel übertragen. Bei der ersten Zieleinrichtung blieb die Auswahl erhalten. Unter „Einstellungen“ → „Uploadziele“ → „Bestehende Aufnahmen hochladen“ standen vier gespeicherte Aufnahmen zur Auswahl. Die fünfte lag im Papierkorb. Alle auswählen, alle abwählen, Android-Zurück und Drehen behielten jeweils den erwarteten Auswahlzustand. Eine Aufnahme aus dem Ordner „Privat“ kam über diesen Weg unter demselben Ordnernamen auf dem FTP-Ziel an.
+
+Mit der ausgelieferten APK wurden beide Wege mit vertauschten Zielen wiederholt. Auf beiden lokalen Testservern stimmten Dateipfade und Inhalte bytegenau mit den ausgewählten Testdateien überein. Die unmarkierte Aufnahme und die Aufnahme im Papierkorb fehlten wie erwartet. Vier instrumentierte Tests und elf Unit-Tests bestanden. Das Galaxy S24 Ultra erhielt das Update, die Prüfsumme der installierten APK stimmt mit der Auslieferung überein. [Mehrfachauswahl](api34/cloud-upload-mehrfach-0.2.8.webp) · [Auswahl über alle Ordner](api34/bestehende-aufnahmen-hochladen-0.2.8.webp) · [Dienstauswahl](api34/cloud-upload-ziel-0.2.8.webp)
+
+## Android-Zurück vom Reiter „Wiedergeben“ mit Version 0.2.7
+
+Auf dem Galaxy S24 Ultra (SM-S928B, Android 14, One UI 6.1) war die Samsung-Navigation mit drei Gestenstreifen aktiv. Bei der Vorprüfung von 0.2.6 trat das berichtete vorzeitige Verlassen weder mit dem Android-Tastensignal noch beim Wischen am rechten Streifen auf. Seit 0.2.7 legt Android die besuchten Reiter als eigene Ansichten im selben Task ab.
+
+Nach dem Update führte ein Wisch am rechten Streifen aus „Wiedergeben“ direkt zum ursprünglichen „Aufnehmen“. Die Folge „Dateiname und Ordner“ → „Einstellungen“ → „Wiedergeben“ → „Aufnehmen“ wurde mit drei Zurückgesten durchlaufen. Nach drei abwechselnden Reiterwechseln erreichten drei Zurückgesten in umgekehrter Reihenfolge wieder die Startansicht. Der direkte Weg bestand auf dem S24 auch mit `KEYCODE_BACK`. Die installierte APK stimmte per SHA-256 mit der Auslieferung überein.
+
+Auf dem API-34-Emulator führte die Randgeste von der Bibliothek zum Recorder. Nach Drehung und Beenden des Hintergrundprozesses stellte Android die Bibliothek wieder her. Zurück erreichte den Recorder und ein weiterer Schritt den Startbildschirm. Bei einer laufenden Testaufnahme blieben Sitzung und Aufnahmedienst beim Besuch der Dateiliste erhalten. Ein Stopp speicherte genau eine Aufnahme. Drei instrumentierte Tests und elf Unit-Tests bestanden. Android Lint meldete keine Fehler. [Vor Zurück](api34/wiedergeben-vor-zurueck-0.2.7.webp) · [Nach Zurück](api34/aufnehmen-nach-zurueck-0.2.7.webp)
+
+## Dateiname und Kalenderordner mit Version 0.2.6
+
+Im Android-14-Emulator war ein laufender Termin „Abendessen“ im lokalen Testkalender „Privat“ eingetragen. Die Vorlage „Kalendername“ und die Ablage „Unterordner je Kalender“ ergaben bei zwei Aufnahmestarts über die Oberfläche `Privat/Privat.ogg` und `Privat/Privat (2).ogg`. Die Bibliothek und der freigegebene Android-Speicherordner enthielten jeweils einen Ordner „Privat“. Ein vor dem Start eingetragener eigener Name ergab `Privat/Eigener Name.ogg`. [Namens- und Ordnervorschau](api34/dateiname-und-ordner-0.2.6.webp) · [Aufnahmen im Kalenderordner](api34/kalenderordner-0.2.6.webp)
+
+Ohne ausgewählten Kalender entstand `Aufnahme.ogg` direkt im Basisordner. Mit der Vorlage „Termintitel“ entstanden im festen Ordner `Archiv/Abendessen.ogg` und bei Kalenderablage `Archiv/Privat/Abendessen.ogg`. Nach Entzug des Kalenderzugriffs zeigte Audomo den fehlenden Zugriff an und speicherte `Archiv/Aufnahme.ogg`. Für alle sieben Pfade stimmte der SHA-256-Wert der Android-Ordnerkopie mit der privaten Aufnahme überein.
+
+Die Menüprüfung umfasste Vorlagen, Einfügen eines Bausteins, Basisordnerwahl, einen neuen Basisordner und das Verwerfen eines Entwurfs mit Android-Zurück. Eine Bildschirmdrehung ließ den ungespeicherten Entwurf bestehen. Elf Unit-Tests und sieben instrumentierte Tests bestanden, darunter Kalenderpriorität, ältere Sicherungen und Android-Speicheranbieter. Android Lint meldete keine Fehler. Auf dem Galaxy S24 Ultra (SM-S928B) wurde das Update auf 0.2.6 installiert und gegen die ausgelieferte APK per SHA-256 geprüft.
+
+## Mehrfachauswahl mit Version 0.2.5
+
+Im API-34-Emulator markierte „Alle auswählen“ alle 500 Aufnahmen im aktuellen Ordner, einschließlich der Einträge unterhalb des Bildschirms. Eine Suche mit zehn Treffern markierte genau diese zehn. Bei Suche über alle Ordner kam eine weitere Testaufnahme hinzu. Beim Eingrenzen auf den Ausgangsordner fiel sie wieder aus der Auswahl. „Alle abwählen“ setzte den Zähler auf null. Bei leerer Auswahl waren die Dateiaktionen gesperrt. [Teilweise ausgewählt](api34/alle-auswaehlen-0.2.5.webp) · [Alle ausgewählt](api34/alle-abwaehlen-0.2.5.webp)
+
+In einem separaten Touchtest blieb die leere Auswahl nach einer Bildschirmdrehung geöffnet. Eine einzelne Aufnahme ließ sich direkt wieder markieren. Der Papierkorb-Dialog für zwei Suchtreffer zeigte zwei ausgewählte Aufnahmen. Nach Abbruch des Dialogs waren alle drei Testdateien vorhanden.
+
+Fünf instrumentierte Bibliothekstests und zehn Unit-Tests bestanden. Android Lint meldete keine Fehler. Das Update auf dem Galaxy S24 Ultra (SM-S928B) wurde anhand der installierten Versionsnummer und des SHA-256-Abgleichs mit der ausgelieferten APK bestätigt.
+
+## Android-Zurück und Aufnahmeknopf mit Version 0.2.4
+
+Auf dem Android-14-Emulator führten die Systemtaste und die Zurück-Geste zur vorher besuchten Ansicht. Vom Papierkorb ging es zurück in die Einstellungen, von dort zum zuvor geöffneten Player und vom Player zur gefilterten Dateiliste. Die Auswahl blieb auch nach dem Drehen des Displays erhalten. Beim Wechsel aus einer laufenden Aufnahme in die Dateiliste und zurück lief dieselbe Aufnahme weiter. An der Ausgangsansicht kehrte Android zum Startbildschirm zurück.
+
+Bei einer neuen Aufnahme zeigt der Knopf einen gefüllten salbeigrünen Kreis. Nach einer Pause kennzeichnet ein Dreieck das Fortsetzen. Start, Pause, Fortsetzen und Stopp wurden im Emulator bedient. [Aufnahmebereit](api34/aufnahmebereit-0.2.4.webp) · [Pausierte Aufnahme](api34/aufnahme-pausiert-0.2.4.webp)
+
+Zehn Unit-Tests und vier instrumentierte Tests bestanden, darunter die Bedienprüfung mit 500 Testdateien. Android Lint meldete keine Fehler. Das Galaxy S24 Ultra (SM-S928B) erhielt das Update auf 0.2.4 per ADB. Die SHA-256-Prüfsumme der installierten APK stimmte mit der Auslieferung überein.
+
+## Dropbox-Anmeldung mit Version 0.2.3
+
+Auf API 34 führte „Mit Dropbox verbinden“ aus den Uploadzielen zur echten Dropbox-Anmeldeseite. Dropbox zeigte Audomo als anfragende App und bot die Kontoanmeldung an. Der Auslieferungsbuild enthält den registrierten öffentlichen App-Key. Ein separater Build ohne Key zeigte die fehlende Konfiguration vor dem Browserstart. [Audomo-Dialog](api34/dropbox-anmeldung-0.2.3.webp) · [Dropbox-Anmeldeseite im Emulator](api34/dropbox-login-0.2.3.webp)
+
+Im Testbuild mit synthetischer Kennung wurden PKCE-Browseranforderung, Auflösung des Rücksprungschemas, Abbruch, erneutes Verbinden und verschlüsseltes Speichern einer simulierten SDK-Freigabe geprüft. Der lokale Transporttest prüfte Token-Erneuerung und mehrteiligen Upload. Persönliche Kontofreigabe und Dateiübertragung zu einem produktiven Konto stehen aus. Zehn Unit-Tests bestanden. Android-Lint meldete keine Fehler. Das S24 erhielt das Update per ADB. Die installierte APK stimmte per SHA-256 mit der Auslieferung überein.
 
 ## Sortiermenü mit Version 0.2.2
 

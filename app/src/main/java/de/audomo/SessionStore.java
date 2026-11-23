@@ -34,33 +34,39 @@ final class SessionStore {
         root = new File(context.getFilesDir(), "sessions");
     }
 
-    static String fileName(String input, OffsetDateTime start) {
+    static String cleanComponent(String input) {
         String clean =
                 input == null
                         ? ""
                         : input.strip()
-                                .replaceAll("(?i)\\.ogg$", "")
                                 .replaceAll("[\\p{Cntrl}\\\\/:*?\"<>|]", "_")
                                 .replaceAll("^[. ]+|[. ]+$", "");
         if (clean.matches("(?i)(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\\..*)?")) clean = "_" + clean;
-        if (clean.isBlank()) clean = STAMP.format(start) + "_Aufnahme";
         while (clean.getBytes(StandardCharsets.UTF_8).length > 220) {
             clean = clean.substring(0, clean.offsetByCodePoints(clean.length(), -1));
         }
-        return clean + ".ogg";
+        return clean.replaceAll("[. ]+$", "");
     }
 
-    synchronized File create(String requested, Profile profile, OffsetDateTime start)
+    static String fileName(String input, OffsetDateTime start) {
+        String stem =
+                cleanComponent(input == null ? "" : input.strip().replaceAll("(?i)\\.ogg$", ""));
+        return (stem.isBlank() ? STAMP.format(start) + "_Aufnahme" : stem) + ".ogg";
+    }
+
+    synchronized File create(String requested, Profile profile, OffsetDateTime start, String folder)
             throws Exception {
+        FolderManager.checkWritable(Profile.prefs(context), folder);
+        new LibraryFiles(this).ensureFolder(folder);
         Files.createDirectories(root.toPath());
         File dir = new File(root, UUID.randomUUID().toString());
         Files.createDirectory(dir.toPath());
         syncDirectory(root);
-        String unique = uniqueName(fileName(requested, start), dir);
+        String unique = availableName(fileName(requested, start), folder, dir);
         JSONObject meta =
                 new JSONObject()
                         .put("name", unique)
-                        .put("folder", Profile.prefs(context).getString("folder", ""))
+                        .put("folder", folder)
                         .put("start", start.toString())
                         .put("documentTree", Profile.prefs(context).getString("documentTree", ""))
                         .put(
@@ -81,15 +87,6 @@ final class SessionStore {
         return dir;
     }
 
-    synchronized String uniqueName(String base, File directory) throws Exception {
-        File meta = new File(directory, "session.json");
-        String folder =
-                meta.exists()
-                        ? metadata(directory).optString("folder")
-                        : Profile.prefs(context).getString("folder", "");
-        return availableName(base, folder, directory);
-    }
-
     String availableName(String base, String folder, File exclude) throws Exception {
         Set<String> names = new HashSet<>();
         for (File dir : directories()) {
@@ -106,6 +103,16 @@ final class SessionStore {
                 if (files != null)
                     for (File file : files) names.add(file.getName().toLowerCase(Locale.ROOT));
             }
+        }
+        // Verified cloud-only titles remain reserved in the same logical folder.
+        android.database.sqlite.SQLiteDatabase db = UploadQueue.get(context).getReadableDatabase();
+        try (android.database.Cursor c = db.rawQuery(
+                "SELECT rec,name FROM recordings WHERE folder=? AND EXISTS (SELECT 1 FROM jobs"
+                + " WHERE jobs.rec=recordings.rec AND verified!='' AND state!='Cloudkopie gelöscht')",
+                new String[]{folder})) {
+            while (c.moveToNext())
+                if (exclude == null || !exclude.getName().equals(c.getString(0)))
+                    names.add(c.getString(1).toLowerCase(Locale.ROOT));
         }
         int dot = base.lastIndexOf('.');
         String stem = dot > 0 ? base.substring(0, dot) : base;
@@ -149,7 +156,17 @@ final class SessionStore {
             OffsetDateTime start,
             String name,
             String folder,
-            long trashed) {
+            long trashed,
+            boolean cloudOnly,
+            long storedBytes) {
+        Entry(File file, long frames, OffsetDateTime start, String name, String folder, long trashed) {
+            this(file, frames, start, name, folder, trashed, false, file.length());
+        }
+
+        long bytes() {
+            return cloudOnly ? storedBytes : file.length();
+        }
+
         String id() {
             return file.getParentFile().getName();
         }
@@ -169,6 +186,11 @@ final class SessionStore {
                 meta.optLong("trashed"));
     }
 
+    Entry byId(String id) throws Exception {
+        if (id.isEmpty() || id.startsWith(".") || id.contains("/")) return null;
+        return entry(new File(root, id));
+    }
+
     List<Entry> list() throws Exception {
         List<Entry> items = new ArrayList<>();
         for (File dir : directories()) {
@@ -183,11 +205,13 @@ final class SessionStore {
         return items;
     }
 
-    static File publish(File dir, File closed, long frames, boolean recovered) throws Exception {
+    File publish(File dir, File closed, long frames, boolean recovered) throws Exception {
         JSONObject meta = metadata(dir);
         verify(closed);
         File target = new File(dir, meta.getString("name"));
         meta.put("frames", frames).put("recovered", recovered);
+        if (!meta.optString("autoTarget").isEmpty() && !meta.has("uploadNotBefore"))
+            meta.put("uploadNotBefore", UploadDelay.notBefore(Profile.prefs(context), System.currentTimeMillis()));
         storeMeta(dir, meta);
         Files.move(closed.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE);
         syncDirectory(dir);

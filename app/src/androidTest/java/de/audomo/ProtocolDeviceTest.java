@@ -95,6 +95,13 @@ public class ProtocolDeviceTest {
             r.put(sample, path, false, null);
             String hash = LibraryFiles.digest(new FileInputStream(sample));
             assertEquals(hash, r.hash(path));
+            assertTrue(r.children("/").stream().anyMatch(item -> item.directory() && item.name().equals(RemoteFiles.leaf(dir))));
+            assertTrue(r.children(dir).stream().anyMatch(item -> !item.directory() && item.name().equals("Audio 01.ogg")));
+            File restored = File.createTempFile("restore-", ".ogg", ctx.getCacheDir());
+            try {
+                r.downloadVerified(path, hash, restored);
+                assertEquals(hash, LibraryFiles.digest(new FileInputStream(restored)));
+            } finally { Files.deleteIfExists(restored.toPath()); }
             assertThrows(RemoteFiles.Conflict.class, () -> r.put(sample, path, false, null));
             assertThrows(Exception.class, () -> r.deleteIfMatches(path, "falscher Hash"));
             assertEquals(hash, r.hash(path));

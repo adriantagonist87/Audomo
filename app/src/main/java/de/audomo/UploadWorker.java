@@ -19,37 +19,49 @@ public final class UploadWorker extends JobService {
 
     @Override
     public boolean onStartJob(JobParameters p) {
+        if (p.getJobId() == UploadQueue.DELAY_TIMER) {
+            UploadQueue.get(this).plan(false, true);
+            return false;
+        }
         AtomicBoolean current = new AtomicBoolean(true);
         active = current;
         worker.execute(() -> {
             UploadQueue queue = UploadQueue.get(this);
             Set<Long> attempted = new HashSet<>();
             while (current.get()) {
-                UploadQueue.Job j =
-                        queue.jobs().stream()
-                                .filter(v ->
-                                        !attempted.contains(v.id())
-                                                && List.of("Wartet", "Fehler", "Upload läuft")
-                                                        .contains(v.state()))
-                                .findFirst()
-                                .orElse(null);
-                if (j == null) break;
-                attempted.add(j.id());
+                UploadQueue.Job j;
+                UploadQueue.Attempt attempt;
+                synchronized (queue) {
+                    j = queue.nextReady(attempted);
+                    if (j == null) break;
+                    attempted.add(j.id());
+                    attempt = queue.claim(j);
+                }
+                if (attempt == null) continue;
                 try {
-                    transfer(this, queue, j, p.getNetwork(), current);
+                    transfer(this, queue, j, p.getNetwork(), current, attempt);
                 } catch (Exception e) {
                     String message = safeError(e);
-                    queue.state(
-                            j.id(),
-                            current.get() ? "Fehler" : "Wartet",
-                            current.get() ? message : "");
-                    if (current.get() && !message.equals(j.error())) notifyError(j.id());
+                    synchronized (queue) {
+                        if (attempt.cancelled) continue;
+                        queue.state(
+                                j.id(),
+                                current.get() ? "Fehler" : "Wartet",
+                                current.get() ? message : "");
+                        if (current.get()
+                                && !attempt.finishOnly
+                                && j.inQueue()
+                                && !message.equals(j.error())) notifyError(j.id());
+                    }
+                } finally {
+                    queue.release(attempt);
+                    if (attempt.cancelled) attempted.remove(j.id());
                 }
             }
             new Handler(Looper.getMainLooper())
                     .post(() -> {
                         synchronized (queue) {
-                            if (current.get()) jobFinished(p, queue.pending());
+                            if (current.get()) jobFinished(p, queue.pendingNow());
                         }
                     });
         });
@@ -58,7 +70,7 @@ public final class UploadWorker extends JobService {
 
     @Override
     public boolean onStopJob(JobParameters p) {
-        if (active != null) active.set(false);
+        if (p.getJobId() == UploadQueue.JOB && active != null) active.set(false);
         return true;
     }
 
@@ -88,51 +100,77 @@ public final class UploadWorker extends JobService {
     }
 
     static void transfer(
-            Context c, UploadQueue q, UploadQueue.Job j, Network net, AtomicBoolean running)
+            Context c,
+            UploadQueue q,
+            UploadQueue.Job j,
+            Network net,
+            AtomicBoolean running,
+            UploadQueue.Attempt attempt)
             throws Exception {
         Audomo app = (Audomo) c.getApplicationContext();
-        SessionStore.Entry e =
-                app.sessions.list().stream()
-                        .filter(entry ->
-                                entry.id().equals(j.rec())
-                                        && (entry.trashed() == 0 || j.action().equals("delete")))
-                        .findFirst()
-                        .orElseThrow(
-                                () -> new IOException("Quelle fehlt oder liegt im Papierkorb"));
+        SessionStore.Entry e = app.sessions.byId(j.rec());
+        if (j.action().equals("upload") && (e == null || e.trashed() != 0))
+            throw new IOException("Quelle fehlt oder liegt im Papierkorb");
         CloudConfig t = CloudConfig.byId(c, j.target());
         ConnectivityManager cm = c.getSystemService(ConnectivityManager.class);
-        long size = e.file().length();
+        long size = e == null ? 0 : e.bytes();
         long[] last = {-1};
         boolean[] uploading = {false};
         RemoteFiles.Progress check =
-                bytes -> {
-                    NetworkCapabilities caps = net == null ? null : cm.getNetworkCapabilities(net);
-                    if (!running.get()
-                            || caps == null
-                            || (Profile.prefs(c).getBoolean("wifiOnly", true)
-                                    && !caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)))
-                        throw new IOException("Netzregel erlaubt keine Übertragung");
-                    if (uploading[0]) {
-                        long percent = Math.min(99, bytes * 100 / Math.max(1, size));
-                        if (percent > last[0]) {
-                            q.progress(j.id(), (int) percent);
-                            last[0] = percent;
+                new RemoteFiles.Progress() {
+                    public void beforeCommit() throws IOException {
+                        check(0);
+                        q.beforeCommit(attempt);
+                    }
+
+                    public void check(long bytes) throws IOException {
+                        attempt.check();
+                        NetworkCapabilities caps =
+                                net == null ? null : cm.getNetworkCapabilities(net);
+                        if (!running.get()
+                                || caps == null
+                                || (Profile.prefs(c).getBoolean("wifiOnly", true)
+                                        && !caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)))
+                            throw new IOException("Netzregel erlaubt keine Übertragung");
+                        if (uploading[0]) {
+                            long percent = Math.min(99, bytes * 100 / Math.max(1, size));
+                            if (percent > last[0]) {
+                                synchronized (q) {
+                                    attempt.check();
+                                    q.progress(j.id(), (int) percent);
+                                }
+                                last[0] = percent;
+                            }
                         }
                     }
                 };
         check.check(0);
-        q.state(j.id(), "Upload läuft", j.error());
-        String local = LibraryFiles.digest(new FileInputStream(e.file()));
+        File staging = null;
         try (RemoteFiles remote = RemoteFiles.open(t, CloudConfig.secret(c, t.id()), net, check)) {
+            if (j.action().equals("verifyRemoval")) {
+                String destination = remote.hash(j.path());
+                String previous =
+                        j.confirmedPath().equals(j.path())
+                                ? destination
+                                : remote.hash(j.confirmedPath());
+                q.finishRemoval(j, destination, previous);
+                return;
+            }
             if (j.action().equals("delete")) {
                 if (j.verified().isEmpty()) throw new IOException("Cloudkopie ist nicht bestätigt");
+                check.beforeCommit();
                 remote.deleteIfMatches(j.origin(), j.verified());
                 if (remote.hash(j.origin()) != null)
                     throw new IOException("Verifikation der Cloudlöschung fehlgeschlagen");
                 q.state(j.id(), "Cloudkopie gelöscht", "");
                 return;
             }
-            if (j.action().equals("move") && !local.equals(j.verified()))
+            String local =
+                    e == null
+                            ? j.verified()
+                            : LibraryFiles.digest(remote.guarded(new FileInputStream(e.file())));
+            attempt.expectedHash = local;
+            if (j.action().equals("move") && (local.isEmpty() || !local.equals(j.verified())))
                 throw new IOException("Quelle hat sich seit dem Upload geändert");
             String sub = RemoteFiles.parent(j.path());
             String base = t.base();
@@ -149,15 +187,31 @@ public final class UploadWorker extends JobService {
             if (!recovered) {
                 if (previous != null
                         && (j.replacement() == null || !j.replacement().equals(previous))) {
-                    q.conflict(j.id(), previous);
+                    synchronized (q) {
+                        attempt.check();
+                        q.conflict(j.id(), previous);
+                    }
                     return;
                 }
-                q.sent(j.id());
+                synchronized (q) {
+                    attempt.check();
+                    q.sent(j.id());
+                }
                 uploading[0] = true;
                 try {
-                    remote.put(e.file(), j.path(), previous != null, previous);
+                    File source;
+                    if (e == null) {
+                        staging = File.createTempFile("move-", ".part", c.getCacheDir());
+                        remote.downloadVerified(j.origin(), j.verified(), staging);
+                        source = staging;
+                    } else source = e.file();
+                    remote.put(source, j.path(), previous != null, previous);
                 } catch (RemoteFiles.Conflict conflict) {
-                    q.conflict(j.id(), remote.hash(j.path()));
+                    String hash = remote.hash(j.path());
+                    synchronized (q) {
+                        attempt.check();
+                        q.conflict(j.id(), hash);
+                    }
                     return;
                 }
                 uploading[0] = false;
@@ -167,16 +221,26 @@ public final class UploadWorker extends JobService {
             }
             check.check(0);
             if (j.action().equals("move")) {
+                check.beforeCommit();
                 remote.deleteIfMatches(j.origin(), j.verified());
                 if (remote.hash(j.origin()) != null)
                     throw new IOException("Verifikation des früheren Cloudpfads fehlgeschlagen");
             }
-            q.verified(j.id(), local);
+            synchronized (q) {
+                attempt.check();
+                q.verified(j.id(), local);
+            }
+        } finally {
+            if (staging != null) java.nio.file.Files.deleteIfExists(staging.toPath());
         }
         if (j.action().equals("upload") && Profile.prefs(c).getBoolean("cleanupUploaded", false)) {
-            synchronized (q) {
-                if (q.jobs().stream()
-                        .noneMatch(k -> k.rec().equals(e.id()) && !"Hochgeladen".equals(k.state())))
+            synchronized (app.sessions) {
+                UploadQueue.Job completed = q.byId(j.id());
+                if (completed != null
+                        && completed.inQueue()
+                        && q.jobs().stream()
+                                .noneMatch(k ->
+                                        k.rec().equals(e.id()) && !"Hochgeladen".equals(k.state())))
                     try {
                         new LibraryFiles(app.sessions).change(e, null, e.folder(), true);
                     } catch (Exception x) {
@@ -193,11 +257,14 @@ public final class UploadWorker extends JobService {
         manager.createNotificationChannel(
                 new NotificationChannel(
                         "upload-errors", "Uploadfehler", NotificationManager.IMPORTANCE_DEFAULT));
-        Intent details = new Intent(this, MainActivity.class).setAction("de.audomo.UPLOADS");
+        Intent details =
+                new Intent(this, MainActivity.class)
+                        .setAction("de.audomo.UPLOADS")
+                        .putExtra("uploadJob", job);
         PendingIntent open =
                 PendingIntent.getActivity(
                         this,
-                        0,
+                        (int) job,
                         details,
                         PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Intent retry = new Intent(this, UploadRetry.class).putExtra("job", job);

@@ -23,6 +23,7 @@ import javax.net.ssl.*;
 abstract class RemoteFiles implements AutoCloseable {
     interface Progress {
         void check(long bytes) throws IOException;
+        default void beforeCommit() throws IOException { check(0); }
     }
 
     final CloudConfig config;
@@ -37,7 +38,30 @@ abstract class RemoteFiles implements AutoCloseable {
 
     abstract void ensureFolder(String path) throws Exception;
 
-    abstract String hash(String path) throws Exception; // null only for an absent object
+    record Child(String name, boolean directory, long bytes) {}
+    abstract List<Child> children(String directory) throws Exception;
+    abstract boolean read(String path, OutputStream out) throws Exception;
+
+    String hash(String path) throws Exception {
+        java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+        try (OutputStream sink = new java.security.DigestOutputStream(OutputStream.nullOutputStream(), digest)) {
+            if (!read(path, sink)) return null;
+        }
+        return android.util.Base64.encodeToString(digest.digest(), android.util.Base64.NO_WRAP);
+    }
+
+    void downloadVerified(String path, String expected, File temp) throws Exception {
+        try (FileOutputStream out = new FileOutputStream(temp)) {
+            if (!read(path, out)) throw new IOException("Cloudkopie am gespeicherten Pfad nicht gefunden");
+            out.getFD().sync();
+        }
+        if (!LibraryFiles.digest(new FileInputStream(temp)).equals(expected))
+            throw new IOException("Cloudkopie stimmt nicht mit der bestätigten Aufnahme überein");
+    }
+
+    void copyTo(InputStream raw, OutputStream out) throws IOException {
+        try (InputStream in = guarded(raw)) { in.transferTo(out); }
+    }
 
     abstract void deleteIfMatches(String path, String expected) throws Exception;
 
@@ -121,7 +145,13 @@ abstract class RemoteFiles implements AutoCloseable {
             public void writeTo(BufferedSink sink) throws IOException {
                 try (InputStream in = guarded(new FileInputStream(file))) {
                     byte[] b = new byte[65536];
-                    for (int n; (n = in.read(b)) != -1; ) sink.write(b, 0, n);
+                    long remaining = contentLength();
+                    if (remaining == 0) progress.beforeCommit();
+                    for (int n; (n = in.read(b)) != -1; ) {
+                        remaining -= n;
+                        if (remaining == 0) progress.beforeCommit();
+                        sink.write(b, 0, n);
+                    }
                 }
             }
         };
@@ -175,11 +205,54 @@ abstract class RemoteFiles implements AutoCloseable {
             }
         }
 
-        String hash(String path) throws Exception {
+        List<Child> children(String directory) throws Exception {
+            Request.Builder req = request(directory).header("Depth", "1").method("PROPFIND",
+                    RequestBody.create(MediaType.get("application/xml"),
+                            "<propfind xmlns='DAV:'><prop><resourcetype/><getcontentlength/></prop></propfind>"));
+            List<Child> result = new ArrayList<>();
+            try (Response response = client.newCall(req.build()).execute()) {
+                require(response);
+                org.xmlpull.v1.XmlPullParser xml = android.util.Xml.newPullParser();
+                xml.setFeature(org.xmlpull.v1.XmlPullParser.FEATURE_PROCESS_DOCDECL, false);
+                xml.setInput(guarded(response.body().byteStream()), null);
+                String href = null, status = "";
+                boolean dir = false, confirmed = false;
+                long size = -1;
+                for (int event = xml.getEventType(); event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT; event = xml.next()) {
+                    String tag = xml.getName();
+                    if (!"DAV:".equals(xml.getNamespace())) continue;
+                    if (event == org.xmlpull.v1.XmlPullParser.START_TAG) {
+                        if ("response".equals(tag)) { href = null; dir = false; size = -1; confirmed = false; }
+                        else if ("href".equals(tag)) href = xml.nextText();
+                        else if ("collection".equals(tag)) dir = true;
+                        else if ("getcontentlength".equals(tag)) {
+                            try { size = Long.parseLong(xml.nextText()); } catch (NumberFormatException ignored) { size = -1; }
+                        } else if ("status".equals(tag)) {
+                            status = xml.nextText();
+                            if (status.matches("HTTP/[^ ]+ 2[0-9][0-9].*")) confirmed = true;
+                        }
+                    } else if (event == org.xmlpull.v1.XmlPullParser.END_TAG && "response".equals(tag) && href != null) {
+                        if (!confirmed) throw new IOException("WebDAV-Ordner nicht vollständig lesbar");
+                        HttpUrl address = request(directory.equals("/") ? "/" : directory + "/").build().url();
+                        HttpUrl resource = address.newBuilder().addPathSegment("").build().resolve(href);
+                        if (resource == null || !address.host().equals(resource.host()) || address.port() != resource.port()) continue;
+                        List<String> parts = new ArrayList<>(resource.pathSegments());
+                        if (!parts.isEmpty() && parts.get(parts.size()-1).isEmpty()) parts.remove(parts.size()-1);
+                        if (parts.stream().anyMatch(part -> part.contains("/"))) continue;
+                        String path = "/" + String.join("/", parts);
+                        if (!path.equals(directory) && parent(path).equals(directory)) result.add(new Child(leaf(path), dir, size));
+                    }
+                }
+            }
+            return result;
+        }
+
+        boolean read(String path, OutputStream out) throws Exception {
             try (Response r = client.newCall(request(path).get().build()).execute()) {
-                if (r.code() == 404) return null;
+                if (r.code() == 404) return false;
                 require(r);
-                return LibraryFiles.digest(guarded(r.body().byteStream()));
+                copyTo(r.body().byteStream(), out);
+                return true;
             }
         }
 
@@ -290,17 +363,30 @@ abstract class RemoteFiles implements AutoCloseable {
         boolean exists(String path) throws Exception {
             if (ftp.mlistFile(path) != null) return true;
             FTPFile[] files = ftp.listFiles(parent(path));
-            if (!FTPReply.isPositiveCompletion(ftp.getReplyCode())) throw error();
+            if (!FTPReply.isPositiveCompletion(ftp.getReplyCode())) {
+                if (ftp.getReplyCode() == 550 && !parent(path).equals("/") && !exists(parent(path))) return false;
+                throw error();
+            }
             return Arrays.stream(files).anyMatch(f -> f.getName().equals(leaf(path)));
         }
 
-        String hash(String path) throws Exception {
-            if (!exists(path)) return null;
+        List<Child> children(String directory) throws Exception {
+            FTPFile[] files = ftp.listFiles(directory);
+            if (!FTPReply.isPositiveCompletion(ftp.getReplyCode())) throw error();
+            List<Child> result = new ArrayList<>();
+            for (FTPFile file : files)
+                if (file.isDirectory() || file.isFile())
+                    result.add(new Child(file.getName(), file.isDirectory(), file.getSize()));
+            return result;
+        }
+
+        boolean read(String path, OutputStream out) throws Exception {
+            if (!exists(path)) return false;
             InputStream in = ftp.retrieveFileStream(path);
             if (in == null) throw error();
-            String hash = LibraryFiles.digest(guarded(in));
+            copyTo(in, out);
             if (!ftp.completePendingCommand()) throw error();
-            return hash;
+            return true;
         }
 
         void put(File local, String path, boolean replace, String expected) throws Exception {
@@ -309,11 +395,12 @@ abstract class RemoteFiles implements AutoCloseable {
                 try (InputStream in = guarded(new FileInputStream(local))) {
                     if (!ftp.storeFile(tmp, in)) throw error();
                 }
-                if (!Objects.equals(hash(tmp), LibraryFiles.digest(new FileInputStream(local))))
+                if (!Objects.equals(hash(tmp), LibraryFiles.digest(guarded(new FileInputStream(local)))))
                     throw new IOException("Übertragene Arbeitsdatei fehlerhaft");
                 String current = hash(path);
                 if (current != null && (!replace || !current.equals(expected)))
                     throw new Conflict();
+                progress.beforeCommit();
                 if (!ftp.rename(tmp, path)) throw error();
             } finally {
                 if (ftp.isConnected()) ftp.deleteFile(tmp);
@@ -396,11 +483,22 @@ abstract class RemoteFiles implements AutoCloseable {
             }
         }
 
-        String hash(String path) throws Exception {
+        List<Child> children(String directory) throws Exception {
+            List<Child> result = new ArrayList<>();
+            for (ChannelSftp.LsEntry entry : channel.ls(literal(directory))) {
+                SftpATTRS attrs = entry.getAttrs();
+                if (attrs.isDir() || attrs.isReg())
+                    result.add(new Child(entry.getFilename(), attrs.isDir(), attrs.getSize()));
+            }
+            return result;
+        }
+
+        boolean read(String path, OutputStream out) throws Exception {
             try {
-                return LibraryFiles.digest(guarded(channel.get(literal(path))));
+                copyTo(channel.get(literal(path)), out);
+                return true;
             } catch (SftpException e) {
-                if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) return null;
+                if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) return false;
                 throw e;
             }
         }
@@ -411,11 +509,12 @@ abstract class RemoteFiles implements AutoCloseable {
                 try (InputStream in = guarded(new FileInputStream(local))) {
                     channel.put(in, literal(tmp));
                 }
-                if (!Objects.equals(hash(tmp), LibraryFiles.digest(new FileInputStream(local))))
+                if (!Objects.equals(hash(tmp), LibraryFiles.digest(guarded(new FileInputStream(local)))))
                     throw new IOException("SFTP-Arbeitsdatei fehlerhaft");
                 String current = hash(path);
                 if (current != null && (!replace || !current.equals(expected)))
                     throw new Conflict();
+                progress.beforeCommit();
                 channel.rename(literal(tmp), literal(path));
             } finally {
                 try {

@@ -1,0 +1,7 @@
+<resources>
+    <string name="dropbox_unconfigured">Die Dropbox-Anmeldung ist in dieser Audomo-Version noch nicht eingerichtet. Für die Verbindung wird eine Version mit dem registrierten Audomo-App-Key benötigt.</string>
+    <string name="dropbox_consent">Gib Audomo bei Dropbox den Zugriff frei. Danach kehrst du automatisch hierher zurück.</string>
+    <string name="dropbox_connect">Mit Dropbox verbinden</string>
+    <string name="dropbox_launch_failed">Die Dropbox-Anmeldung konnte nicht geöffnet werden.</string>
+    <string name="dropbox_incomplete">Verbindung nicht abgeschlossen. Du kannst die Anmeldung erneut starten.</string>
+</resources>

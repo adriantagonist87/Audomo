@@ -47,6 +47,22 @@ record CloudConfig(
             throw new IllegalArgumentException("Öffentlichen SSH-Hostschlüssel angeben");
     }
 
+    String label() {
+        if (protocol.equals("Dropbox"))
+            return "Dropbox · " + (base.equals("/") ? "App-Ordner" : base);
+        return protocol + " · " + host;
+    }
+
+    boolean hasCredentials(Context context) {
+        return context.getSharedPreferences("credentials", 0).contains(id);
+    }
+
+    String uploadLabel() {
+        if (protocol.equals("Dropbox")) return label();
+        String account = user.isEmpty() ? "" : user + "@";
+        return protocol + " · " + account + host + ":" + port + base;
+    }
+
     static String path(String raw) {
         List<String> clean = new ArrayList<>();
         for (String s : raw.split("/")) {

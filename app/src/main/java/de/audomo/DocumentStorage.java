@@ -178,10 +178,10 @@ final class DocumentStorage {
             if (out == null) throw new IOException("Ziel ist nicht beschreibbar");
             in.transferTo(out);
         }
-        if (!LibraryFiles.digest(new FileInputStream(audio))
-                .equals(LibraryFiles.digest(r.openInputStream(target))))
+        String verified = LibraryFiles.digest(new FileInputStream(audio));
+        if (!verified.equals(LibraryFiles.digest(r.openInputStream(target))))
             throw new IOException("Kopie im Aufnahmeordner nicht verifiziert");
-        meta.put("deliveredUri", target.toString());
+        meta.put("deliveredUri", target.toString()).put("deliveredHash", verified);
         meta.remove("pendingUri");
         SessionStore.storeMeta(dir, meta);
         retirePrevious(c, audio, meta);

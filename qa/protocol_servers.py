@@ -85,7 +85,23 @@ class Dav(BaseHTTPRequestHandler):
             etag=lambda:'"'+hashlib.sha256(path.read_bytes()).hexdigest()+'"'
             if self.command=="PROPFIND":
                 code=207 if path.is_dir() else 404
-                body=b'<d:multistatus xmlns:d="DAV:"/>'
+                self.rfile.read(int(self.headers.get("Content-Length", "0")))
+                import xml.etree.ElementTree as xml
+                document=xml.Element("{DAV:}multistatus")
+                if path.is_dir():
+                    members=[path]
+                    if self.headers.get("Depth")=="1": members.extend(path.iterdir())
+                    for item in members:
+                        response=xml.SubElement(document,"{DAV:}response")
+                        relative="" if item==roots["WebDAV"] else item.relative_to(roots["WebDAV"]).as_posix()
+                        xml.SubElement(response,"{DAV:}href").text=urllib.parse.quote("/"+relative)
+                        stat=xml.SubElement(response,"{DAV:}propstat")
+                        prop=xml.SubElement(stat,"{DAV:}prop")
+                        typ=xml.SubElement(prop,"{DAV:}resourcetype")
+                        if item.is_dir(): xml.SubElement(typ,"{DAV:}collection")
+                        else: xml.SubElement(prop,"{DAV:}getcontentlength").text=str(item.stat().st_size)
+                        xml.SubElement(stat,"{DAV:}status").text="HTTP/1.1 200 OK"
+                body=xml.tostring(document)
             elif self.command=="MKCOL":
                 if path.exists():code=405
                 else:path.mkdir();code=201

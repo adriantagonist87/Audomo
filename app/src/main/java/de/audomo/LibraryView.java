@@ -27,12 +27,19 @@ final class LibraryView {
     private final SharedPreferences prefs;
     private final BaseAdapter adapter;
     private final LibraryActions actions;
-    private Map<String, UploadQueue.Job> uploads = new HashMap<>();
+    private Map<String, List<UploadQueue.Job>> uploads = new HashMap<>();
+    private long nextStatusCheck;
     private final Set<String> marked = new LinkedHashSet<>();
+    private boolean selectionMode;
     private final Button folderButton;
     private final ImageButton sort;
     private final TextView count, empty;
     private final boolean trash;
+    private final EditText field;
+    private final CheckBox allScope;
+    private final ListView list;
+    private final ArrayList<String> folderTrail = new ArrayList<>();
+    private boolean searchOnTop;
     private boolean allFolders;
     private SessionStore.Entry selected;
     private ExoPlayer player;
@@ -71,7 +78,7 @@ final class LibraryView {
                             "Größe",
                             "Kleinste zuerst",
                             "Größte zuerst",
-                            Comparator.comparingLong(e -> e.file().length())),
+                            Comparator.comparingLong(SessionStore.Entry::bytes)),
                     new SortField(
                             "Endung",
                             "A bis Z",
@@ -107,6 +114,8 @@ final class LibraryView {
                                 actions.folder(
                                         folder(),
                                         path -> {
+                                            if (path.equals(folder())) return;
+                                            folderTrail.add(folder());
                                             prefs.edit().putString("folder", path).apply();
                                             filter();
                                         }));
@@ -115,14 +124,14 @@ final class LibraryView {
         folderButton.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_expand, 0);
         folderButton.setContentDescription("Ordner wählen");
         if (!trash) page.addView(folderButton);
-        CheckBox allScope = new CheckBox(screen);
+        allScope = new CheckBox(screen);
         allScope.setText("Alle Ordner");
         allScope.setVisibility(View.GONE);
         allScope.setOnCheckedChangeListener((v, on) -> {
             allFolders = on;
             filter();
         });
-        EditText field = new EditText(screen);
+        field = new EditText(screen);
         field.setSingleLine();
         field.setHint("Aufnahmen suchen");
         field.setVisibility(View.GONE);
@@ -130,11 +139,9 @@ final class LibraryView {
         page.addView(allScope);
         search.setOnClickListener(v -> {
             if (field.getVisibility() == View.VISIBLE) {
-                allScope.setChecked(false);
-                allScope.setVisibility(View.GONE);
-                field.setText("");
-                field.setVisibility(View.GONE);
+                closeSearch();
             } else {
+                searchOnTop = true;
                 field.setVisibility(View.VISIBLE);
                 if (!trash) allScope.setVisibility(View.VISIBLE);
                 field.requestFocus();
@@ -143,7 +150,7 @@ final class LibraryView {
             }
         });
         sort.setOnClickListener(v -> showSortMenu());
-        ListView list = new ListView(screen);
+        list = new ListView(screen);
         list.setDividerHeight(screen.dp(1));
         page.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         empty = screen.text("", 16, MainActivity.DIM);
@@ -177,7 +184,7 @@ final class LibraryView {
                         TextView title = screen.text(e.name(), 15, MainActivity.INK);
                         title.setSingleLine();
                         title.setEllipsize(TextUtils.TruncateAt.END);
-                        if (!marked.isEmpty()) {
+                        if (selectionMode) {
                             RadioButton circle = new RadioButton(screen);
                             circle.setChecked(marked.contains(e.id()));
                             circle.setClickable(false);
@@ -185,13 +192,13 @@ final class LibraryView {
                             top.addView(circle);
                         }
                         top.addView(title, screen.weight());
-                        top.addView(screen.text(Audomo.duration(e.frames()), 14, MainActivity.INK));
+                        top.addView(screen.text(e.frames() < 0 ? "" : Audomo.duration(e.frames()), 14, MainActivity.INK));
                         cell.addView(top);
                         LinearLayout info = screen.row();
                         cell.addView(info);
                         info.addView(
                                 screen.text(
-                                        e.start()
+                                        e.start().equals(CloudLibrary.UNKNOWN_DATE) ? "Datum unbekannt" : e.start()
                                                 .format(
                                                         DateTimeFormatter.ofPattern(
                                                                 "dd.MM.yyyy HH:mm")),
@@ -199,14 +206,32 @@ final class LibraryView {
                                         MainActivity.INK));
                         info.addView(
                                 screen.text(
-                                        "  "
-                                                + android.text.format.Formatter.formatShortFileSize(
-                                                        screen, e.file().length()),
+                                        e.bytes() < 0 ? "" : "  " + android.text.format.Formatter.formatShortFileSize(screen, e.bytes()),
                                         12,
                                         MainActivity.DIM),
                                 screen.weight());
-                        UploadQueue.Job job = uploads.get(e.id());
-                        String state = job == null ? "Lokal" : job.state();
+                        List<UploadQueue.Job> copies = uploads.getOrDefault(e.id(), List.of());
+                        List<String> locations = new ArrayList<>();
+                        if (!e.cloudOnly()) locations.add("Lokal");
+                        String state = "Lokal";
+                        for (UploadQueue.Job job : copies) {
+                            if (job.knownCopy() && job.availability().isEmpty()) {
+                                String provider = job.provider().isEmpty() ? "Cloud" : job.provider();
+                                if (!locations.contains(provider)) locations.add(provider);
+                                state = "Hochgeladen";
+                            }
+                        }
+                        for (UploadQueue.Job job : copies) {
+                            if (!job.availability().isEmpty()) {
+                                locations.add((job.provider().isEmpty() ? "Cloud" : job.provider()) + " · " + job.availability());
+                                state = "Fehler";
+                            } else if (!List.of("Cloudkopie gelöscht", "Hochgeladen", "Ausgelassen").contains(job.state())
+                                    || !job.knownCopy() && job.state().equals("Hochgeladen")) {
+                                if (!locations.contains(job.state())) locations.add(job.state());
+                                state = job.state();
+                            }
+                        }
+                        String where = String.join(" · ", locations);
                         int color =
                                 switch (state) {
                                     case "Hochgeladen" -> 0xff82dcc3;
@@ -223,17 +248,19 @@ final class LibraryView {
                                     case "Upload läuft" -> R.drawable.ic_progress;
                                     default -> R.drawable.ic_folder;
                                 };
-                        TextView status = screen.text(state, 12, color);
+                        TextView status = screen.text(where, 12, color);
                         android.graphics.drawable.Drawable symbol =
                                 screen.getDrawable(icon).mutate();
                         symbol.setBounds(0, 0, screen.dp(14), screen.dp(14));
                         symbol.setTint(color);
                         status.setCompoundDrawables(symbol, null, null, null);
                         status.setCompoundDrawablePadding(screen.dp(3));
-                        if (job != null)
-                            status.setOnClickListener(v -> new CloudScreen(screen).details(job));
-                        info.addView(status);
-                        if (selected == e && marked.isEmpty()) {
+                        if (!copies.isEmpty()) status.setOnClickListener(v -> new CloudScreen(screen).locations(e, copies));
+                        if (where.length() > 23) {
+                            status.setGravity(Gravity.END);
+                            cell.addView(status);
+                        } else info.addView(status);
+                        if (selected == e && !selectionMode) {
                             LinearLayout bar = screen.row();
                             cell.addView(bar);
                             if (trash) {
@@ -258,7 +285,7 @@ final class LibraryView {
                                         "Umbenennen",
                                         R.drawable.ic_edit,
                                         v -> actions.rename(e));
-                                action(bar, "Upload", R.drawable.ic_upload, v -> screen.upload(e));
+                                action(bar, "Upload", R.drawable.ic_upload, v -> screen.upload(List.of(e)));
                                 action(
                                         bar,
                                         "Mehr",
@@ -271,9 +298,14 @@ final class LibraryView {
                 };
         list.setAdapter(adapter);
         list.setOnItemClickListener((p, v, pos, id) -> {
+            searchOnTop = false;
             SessionStore.Entry e = visible.get(pos);
-            if (!marked.isEmpty()) {
+            if (selectionMode) {
                 mark(e);
+                return;
+            }
+            if (e.cloudOnly()) {
+                new CloudScreen(screen).locations(e, uploads.getOrDefault(e.id(), List.of()));
                 return;
             }
             stop();
@@ -297,19 +329,8 @@ final class LibraryView {
 
                     public void afterTextChanged(Editable e) {}
                 });
-        refreshJobs();
+        refreshStatus();
         filter();
-        page.addOnAttachStateChangeListener(
-                new View.OnAttachStateChangeListener() {
-                    public void onViewAttachedToWindow(View v) {
-                        handler.post(refreshStatus);
-                    }
-
-                    public void onViewDetachedFromWindow(View v) {
-                        handler.removeCallbacks(refreshStatus);
-                    }
-                });
-        if (page.isAttachedToWindow()) handler.post(refreshStatus);
     }
 
     void addMenu(PopupMenu menu) {
@@ -318,8 +339,8 @@ final class LibraryView {
                 menu,
                 trash ? "Zur Bibliothek" : "Papierkorb",
                 () -> {
-                    screen.trashView = !trash;
-                    screen.showLibrary();
+                    if (trash) screen.returnToLibrary();
+                    else screen.openTrash(-1);
                 });
         if (trash) {
             menu.getMenu()
@@ -351,25 +372,98 @@ final class LibraryView {
         }
     }
 
-    private void refreshJobs() {
-        Map<String, UploadQueue.Job> latest = new HashMap<>();
-        for (UploadQueue.Job j : UploadQueue.get(screen).jobs()) latest.putIfAbsent(j.rec(), j);
+    void refreshStatus() {
+        long now = SystemClock.elapsedRealtime();
+        if (now < nextStatusCheck) return;
+        nextStatusCheck = now + 2500;
+        Map<String, List<UploadQueue.Job>> latest = new HashMap<>();
+        for (UploadQueue.Job j : UploadQueue.get(screen).jobs()) latest.computeIfAbsent(j.rec(), key -> new ArrayList<>()).add(j);
         if (!uploads.equals(latest)) {
             uploads = latest;
             adapter.notifyDataSetChanged();
         }
     }
 
-    private final Runnable refreshStatus =
-            new Runnable() {
-                public void run() {
-                    refreshJobs();
-                    handler.postDelayed(this, 2500);
-                }
-            };
-
     private String folder() {
         return prefs.getString("folder", "");
+    }
+
+    private void closeSearch() {
+        screen.getSystemService(android.view.inputmethod.InputMethodManager.class)
+                .hideSoftInputFromWindow(field.getWindowToken(), 0);
+        allScope.setChecked(false);
+        allScope.setVisibility(View.GONE);
+        field.setText("");
+        field.setVisibility(View.GONE);
+        searchOnTop = false;
+    }
+
+    boolean navigateBack() {
+        if (searchOnTop && field.isShown()) {
+            closeSearch();
+        } else if (selectionMode) {
+            endSelection();
+        } else if (selected != null) {
+            stop();
+            selected = null;
+            panel.removeAllViews();
+            panel.setPadding(0, 0, 0, 0);
+            adapter.notifyDataSetChanged();
+        } else if (field.isShown()) {
+            closeSearch();
+        } else if (!folderTrail.isEmpty()) {
+            prefs.edit().putString("folder", folderTrail.remove(folderTrail.size() - 1)).apply();
+            filter();
+        } else return false;
+        return true;
+    }
+
+    Bundle saveState() {
+        Bundle state = new Bundle();
+        if (field.getVisibility() == View.VISIBLE) state.putString("search", field.getText().toString());
+        if (!trash) state.putString("folder", folder());
+        state.putBoolean("allFolders", allFolders);
+        state.putBoolean("searchOnTop", searchOnTop);
+        state.putStringArrayList("folders", new ArrayList<>(folderTrail));
+        state.putStringArrayList("marked", new ArrayList<>(marked));
+        state.putBoolean("selectionMode", selectionMode);
+        if (selected != null) {
+            state.putString("selected", selected.id());
+            if (!trash) state.putInt("seek", seek.getProgress());
+        }
+        state.putInt("first", list.getFirstVisiblePosition());
+        if (list.getChildCount() > 0) state.putInt("offset", list.getChildAt(0).getTop());
+        return state;
+    }
+
+    void restoreState(Bundle state) {
+        if (!trash && state.containsKey("folder") && actions.files.folders().contains(state.getString("folder")) && !folder().equals(state.getString("folder")))
+            prefs.edit().putString("folder", state.getString("folder")).apply();
+        folderTrail.addAll(state.getStringArrayList("folders"));
+        folderTrail.retainAll(actions.files.folders());
+        if (state.containsKey("search")) {
+            field.setVisibility(View.VISIBLE);
+            if (!trash) allScope.setVisibility(View.VISIBLE);
+            allScope.setChecked(state.getBoolean("allFolders"));
+            field.setText(state.getString("search"));
+            searchOnTop = state.getBoolean("searchOnTop");
+        }
+        marked.addAll(state.getStringArrayList("marked"));
+        selectionMode = state.getBoolean("selectionMode", !marked.isEmpty());
+        filter();
+        for (SessionStore.Entry e : visible) {
+            if (!e.cloudOnly() && e.id().equals(state.getString("selected"))) {
+                selected = e;
+                if (!trash) {
+                    showPlayer();
+                    seek.setProgress(state.getInt("seek"));
+                    time(durationMs() * seek.getProgress() / 100000);
+                }
+                adapter.notifyDataSetChanged();
+                break;
+            }
+        }
+        list.setSelectionFromTop(state.getInt("first"), state.getInt("offset"));
     }
 
     private void action(LinearLayout bar, String label, int icon, View.OnClickListener listener) {
@@ -385,16 +479,26 @@ final class LibraryView {
     }
 
     private void mark(SessionStore.Entry e) {
+        searchOnTop = false;
         stop();
         selected = null;
+        selectionMode = true;
         if (!marked.add(e.id())) marked.remove(e.id());
         selectionBar();
         adapter.notifyDataSetChanged();
     }
 
+    private void endSelection() {
+        selectionMode = false;
+        marked.clear();
+        panel.removeAllViews();
+        panel.setPadding(0, 0, 0, 0);
+        adapter.notifyDataSetChanged();
+    }
+
     private void selectionBar() {
         panel.removeAllViews();
-        if (marked.isEmpty()) return;
+        panel.setPadding(0, 0, 0, 0);
         List<SessionStore.Entry> picked =
                 visible.stream()
                         .filter(e -> marked.contains(e.id()))
@@ -403,14 +507,38 @@ final class LibraryView {
         panel.addView(header);
         header.addView(
                 screen.text(picked.size() + " ausgewählt", 16, MainActivity.INK), screen.weight());
-        header.addView(
-                screen.button(
-                        "Abbrechen",
-                        v -> {
-                            marked.clear();
-                            panel.removeAllViews();
-                            adapter.notifyDataSetChanged();
-                        }));
+        boolean allSelected = !visible.isEmpty() && marked.size() == visible.size();
+        String label = allSelected ? "Alle abwählen" : "Alle auswählen";
+        ImageButton toggleAll = screen.toolbarIcon(
+                label, allSelected ? R.drawable.ic_deselect_all : R.drawable.ic_select_all);
+        toggleAll.setTooltipText(label);
+        toggleAll.setEnabled(!visible.isEmpty());
+        if (visible.isEmpty()) toggleAll.setAlpha(0.45f);
+        toggleAll.setOnClickListener(v -> {
+            searchOnTop = false;
+            if (allSelected) {
+                marked.clear();
+            } else {
+                for (SessionStore.Entry entry : visible) marked.add(entry.id());
+            }
+            selectionBar();
+            adapter.notifyDataSetChanged();
+        });
+        header.addView(toggleAll, screen.lp(48, 48));
+        header.addView(screen.button("Abbrechen", v -> endSelection()));
+        if (picked.stream().anyMatch(SessionStore.Entry::cloudOnly)) {
+            panel.addView(screen.text("Für Dateiaktionen zuerst die Cloudaufnahme lokal wiederherstellen.", 14, MainActivity.DIM));
+            if (picked.size() == 1) panel.addView(screen.button("Speicherorte", v -> new CloudScreen(screen)
+                    .locations(picked.get(0), uploads.getOrDefault(picked.get(0).id(), List.of()))));
+            return;
+        }
+        if (!trash) {
+            LinearLayout uploads = screen.row();
+            panel.addView(uploads);
+            action(uploads, "Cloud Upload", R.drawable.ic_upload, v -> screen.upload(picked));
+            uploads.getChildAt(0).setEnabled(!picked.isEmpty());
+            if (picked.isEmpty()) uploads.setAlpha(0.45f);
+        }
         LinearLayout bar = screen.row();
         panel.addView(bar);
         if (trash) {
@@ -421,6 +549,10 @@ final class LibraryView {
             action(bar, "Verschieben", R.drawable.ic_folder, v -> actions.relocate(picked, false));
             action(bar, "Löschen", R.drawable.ic_delete, v -> actions.trash(picked, false));
             action(bar, "Mehr", R.drawable.ic_more, v -> actions.more(v, picked));
+        }
+        if (picked.isEmpty()) {
+            bar.setAlpha(0.45f);
+            for (int i = 0; i < bar.getChildCount(); i++) bar.getChildAt(i).setEnabled(false);
         }
     }
 
@@ -501,11 +633,11 @@ final class LibraryView {
             selected = null;
             panel.removeAllViews();
         }
-        if (!marked.isEmpty()) {
+        if (selectionMode) {
             marked.retainAll(
                     visible.stream()
                             .map(SessionStore.Entry::id)
-                            .collect(java.util.stream.Collectors.toList()));
+                            .collect(java.util.stream.Collectors.toSet()));
             selectionBar();
         }
         empty.setText(

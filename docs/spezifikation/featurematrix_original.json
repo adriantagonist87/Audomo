@@ -1,0 +1,669 @@
+{
+  "date": "2026-11-22",
+  "status": "verbindliche Nutzerprioritäten",
+  "totals": {
+    "MUSS": 83,
+    "OPTIONAL": 17,
+    "NICHT BENÖTIGT": 22
+  },
+  "sections": [
+    {
+      "number": 1,
+      "name": "Aufnahme und Zuverlässigkeit",
+      "entries": [
+        {
+          "id": "a01",
+          "priority": "MUSS",
+          "requirement": "Aufnahme starten und stoppen"
+        },
+        {
+          "id": "a02",
+          "priority": "MUSS",
+          "requirement": "Aufnahme pausieren und fortsetzen"
+        },
+        {
+          "id": "a03",
+          "priority": "MUSS",
+          "requirement": "Mehrstündige Aufnahmen ohne Zeitlimit"
+        },
+        {
+          "id": "a04",
+          "priority": "MUSS",
+          "requirement": "Hintergrundaufnahme bei ausgeschaltetem Bildschirm"
+        },
+        {
+          "id": "a05",
+          "priority": "MUSS",
+          "requirement": "Aufnahme während der Nutzung anderer Apps"
+        },
+        {
+          "id": "a06",
+          "priority": "OPTIONAL",
+          "requirement": "Live-Anzeige von Aufnahmezeit und Pegel"
+        },
+        {
+          "id": "a07",
+          "priority": "OPTIONAL",
+          "requirement": "Verbleibende Speicherkapazität anzeigen"
+        },
+        {
+          "id": "a08",
+          "priority": "MUSS",
+          "requirement": "Audioverluste erkennen und melden"
+        },
+        {
+          "id": "a09",
+          "priority": "MUSS",
+          "requirement": "Audiodaten nach Absturz möglichst retten"
+        },
+        {
+          "id": "a10",
+          "priority": "MUSS",
+          "requirement": "Aufnahmedateien regelmäßig zwischensichern"
+        },
+        {
+          "id": "a11",
+          "priority": "OPTIONAL",
+          "requirement": "Aufnahme bei Telefonanruf automatisch pausieren"
+        },
+        {
+          "id": "a12",
+          "priority": "MUSS",
+          "requirement": "Benachrichtigungstöne während Aufnahme stummschalten"
+        },
+        {
+          "id": "a13",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Aufnahme bei Tönen anderer Apps pausieren"
+        },
+        {
+          "id": "a14",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Stille bei Aufnahme automatisch überspringen"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Mikrofon und Audioqualität",
+      "entries": [
+        {
+          "id": "b01",
+          "priority": "MUSS",
+          "requirement": "Internes Mikrofon auswählen, z. B. hinten"
+        },
+        {
+          "id": "b02",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Externes USB-Mikrofon"
+        },
+        {
+          "id": "b03",
+          "priority": "OPTIONAL",
+          "requirement": "Bluetooth-Mikrofon"
+        },
+        {
+          "id": "b04",
+          "priority": "MUSS",
+          "requirement": "Mikrofonverstärkung in dB einstellen"
+        },
+        {
+          "id": "b05",
+          "priority": "OPTIONAL",
+          "requirement": "MP3-Aufnahmeformat"
+        },
+        {
+          "id": "b06",
+          "priority": "OPTIONAL",
+          "requirement": "AAC/M4A-Aufnahmeformat"
+        },
+        {
+          "id": "b07",
+          "priority": "MUSS",
+          "requirement": "Opus/Ogg-Aufnahmeformat"
+        },
+        {
+          "id": "b08",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "WAV/PCM-Aufnahmeformat"
+        },
+        {
+          "id": "b09",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "FLAC-Aufnahmeformat"
+        },
+        {
+          "id": "b10",
+          "priority": "OPTIONAL",
+          "requirement": "Mono und Stereo auswählen"
+        },
+        {
+          "id": "b11",
+          "priority": "MUSS",
+          "requirement": "Abtastrate einstellen"
+        },
+        {
+          "id": "b12",
+          "priority": "MUSS",
+          "requirement": "Bitrate einstellen"
+        },
+        {
+          "id": "b13",
+          "priority": "OPTIONAL",
+          "requirement": "Variable Bitrate (VBR)"
+        },
+        {
+          "id": "b14",
+          "priority": "MUSS",
+          "requirement": "Echounterdrückung ein/aus/Gerätestandard"
+        },
+        {
+          "id": "b15",
+          "priority": "MUSS",
+          "requirement": "Rauschunterdrückung ein/aus/Gerätestandard"
+        },
+        {
+          "id": "b16",
+          "priority": "OPTIONAL",
+          "requirement": "Automatische Pegelanpassung (AGC)"
+        },
+        {
+          "id": "b17",
+          "priority": "MUSS",
+          "requirement": "Speicherbare Aufnahmeprofile"
+        },
+        {
+          "id": "b18",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Vor dem Teilen automatisch komprimieren"
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Kalender und Dateinamen",
+      "entries": [
+        {
+          "id": "c01",
+          "priority": "MUSS",
+          "requirement": "Android-Kalender auslesen"
+        },
+        {
+          "id": "c02",
+          "priority": "MUSS",
+          "requirement": "Bestimmten Kalender auswählen"
+        },
+        {
+          "id": "c03",
+          "priority": "MUSS",
+          "requirement": "Mehrere Kalender auswählen"
+        },
+        {
+          "id": "c04",
+          "priority": "MUSS",
+          "requirement": "Beim Start laufenden Termin suchen"
+        },
+        {
+          "id": "c05",
+          "priority": "MUSS",
+          "requirement": "Titel des Kalendertermins übernehmen"
+        },
+        {
+          "id": "c06",
+          "priority": "MUSS",
+          "requirement": "ISO-Datum und Uhrzeit im Dateinamen"
+        },
+        {
+          "id": "c07",
+          "priority": "MUSS",
+          "requirement": "Dateinamensschema frei konfigurieren"
+        },
+        {
+          "id": "c08",
+          "priority": "MUSS",
+          "requirement": "Standardname ohne Kalendertermin"
+        },
+        {
+          "id": "c09",
+          "priority": "MUSS",
+          "requirement": "Ganztägige Kalendereinträge ignorieren"
+        },
+        {
+          "id": "c10",
+          "priority": "MUSS",
+          "requirement": "Regeln für überschneidende Termine"
+        },
+        {
+          "id": "c11",
+          "priority": "MUSS",
+          "requirement": "Zeitliche Toleranz vor/nach Termin"
+        },
+        {
+          "id": "c12",
+          "priority": "MUSS",
+          "requirement": "Dateinamen vor Aufnahme bearbeiten"
+        },
+        {
+          "id": "c13",
+          "priority": "MUSS",
+          "requirement": "Ungültige Sonderzeichen automatisch ersetzen"
+        },
+        {
+          "id": "c14",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Automatischer Aufnahmestart bei Kalendertermin"
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "name": "Android-Schnellzugriff",
+      "entries": [
+        {
+          "id": "d01",
+          "priority": "MUSS",
+          "requirement": "Eigene Quick-Settings-Kachel"
+        },
+        {
+          "id": "d02",
+          "priority": "MUSS",
+          "requirement": "Aufnahme mit einem Tipp starten"
+        },
+        {
+          "id": "d03",
+          "priority": "MUSS",
+          "requirement": "Aufnahme über dieselbe Kachel stoppen"
+        },
+        {
+          "id": "d04",
+          "priority": "MUSS",
+          "requirement": "Aktuellen Aufnahmezustand in Kachel anzeigen"
+        },
+        {
+          "id": "d05",
+          "priority": "MUSS",
+          "requirement": "Vibration nach erfolgreichem Start"
+        },
+        {
+          "id": "d06",
+          "priority": "MUSS",
+          "requirement": "Vibration nach erfolgreichem Stopp"
+        },
+        {
+          "id": "d07",
+          "priority": "MUSS",
+          "requirement": "Anderes Vibrationsmuster bei Fehler"
+        },
+        {
+          "id": "d08",
+          "priority": "MUSS",
+          "requirement": "Nach Start zur vorherigen App zurückkehren"
+        },
+        {
+          "id": "d09",
+          "priority": "MUSS",
+          "requirement": "Aufnahmesteuerung über Benachrichtigung"
+        },
+        {
+          "id": "d10",
+          "priority": "MUSS",
+          "requirement": "Vertrauliche Sperrbildschirminformationen verbergen"
+        },
+        {
+          "id": "d11",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Start direkt vom gesperrten Bildschirm"
+        },
+        {
+          "id": "d12",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Homescreen-Widget"
+        },
+        {
+          "id": "d13",
+          "priority": "OPTIONAL",
+          "requirement": "Erinnerungsbenachrichtigung"
+        },
+        {
+          "id": "d14",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Näherungssensor zur Displaysteuerung"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "name": "Dateien und Verwaltung",
+      "entries": [
+        {
+          "id": "e01",
+          "priority": "MUSS",
+          "requirement": "Aufnahmeordner frei wählen"
+        },
+        {
+          "id": "e02",
+          "priority": "MUSS",
+          "requirement": "Unterordner verwalten"
+        },
+        {
+          "id": "e03",
+          "priority": "MUSS",
+          "requirement": "Aufnahmeliste mit Datum, Dauer und Größe"
+        },
+        {
+          "id": "e04",
+          "priority": "MUSS",
+          "requirement": "Aufnahmen durchsuchen"
+        },
+        {
+          "id": "e05",
+          "priority": "MUSS",
+          "requirement": "Sortieren nach Name, Datum, Dauer, Größe, Endung"
+        },
+        {
+          "id": "e06",
+          "priority": "MUSS",
+          "requirement": "Dateien manuell umbenennen"
+        },
+        {
+          "id": "e07",
+          "priority": "MUSS",
+          "requirement": "Dateien kopieren und verschieben"
+        },
+        {
+          "id": "e08",
+          "priority": "MUSS",
+          "requirement": "Android-Teilen-Menü"
+        },
+        {
+          "id": "e09",
+          "priority": "MUSS",
+          "requirement": "Mehrfachauswahl von Aufnahmen"
+        },
+        {
+          "id": "e10",
+          "priority": "MUSS",
+          "requirement": "Papierkorb mit Wiederherstellung"
+        },
+        {
+          "id": "e11",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Aufnahmen anpinnen"
+        },
+        {
+          "id": "e12",
+          "priority": "MUSS",
+          "requirement": "Ordner vor Android-Mediensuche verbergen"
+        },
+        {
+          "id": "e13",
+          "priority": "OPTIONAL",
+          "requirement": "Ausgeblendete Aufnahmen anzeigen"
+        },
+        {
+          "id": "e14",
+          "priority": "MUSS",
+          "requirement": "Korrekte Dateizeitstempel und Metadaten"
+        },
+        {
+          "id": "e15",
+          "priority": "MUSS",
+          "requirement": "Bestehende Aufnahmen importieren"
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "name": "Wiedergabe und Bearbeitung",
+      "entries": [
+        {
+          "id": "f01",
+          "priority": "MUSS",
+          "requirement": "Audioplayer mit Zeitleiste"
+        },
+        {
+          "id": "f02",
+          "priority": "MUSS",
+          "requirement": "Wiedergabe pausieren/fortsetzen"
+        },
+        {
+          "id": "f03",
+          "priority": "MUSS",
+          "requirement": "Vor- und Zurückspringen um 5 Sekunden"
+        },
+        {
+          "id": "f04",
+          "priority": "MUSS",
+          "requirement": "Sprungintervalle konfigurieren"
+        },
+        {
+          "id": "f05",
+          "priority": "MUSS",
+          "requirement": "Wiedergabegeschwindigkeit ändern"
+        },
+        {
+          "id": "f06",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Wiedergabeschleife"
+        },
+        {
+          "id": "f07",
+          "priority": "MUSS",
+          "requirement": "Stille bei Wiedergabe überspringen"
+        },
+        {
+          "id": "f08",
+          "priority": "OPTIONAL",
+          "requirement": "Hintergrundwiedergabe"
+        },
+        {
+          "id": "f09",
+          "priority": "OPTIONAL",
+          "requirement": "Steuerung über Bluetooth-Headset oder Auto"
+        },
+        {
+          "id": "f10",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Audio schneiden und bearbeiten"
+        },
+        {
+          "id": "f11",
+          "priority": "OPTIONAL",
+          "requirement": "Alte Aufnahme nachträglich fortsetzen"
+        },
+        {
+          "id": "f12",
+          "priority": "OPTIONAL",
+          "requirement": "Audioformat konvertieren"
+        },
+        {
+          "id": "f13",
+          "priority": "MUSS",
+          "requirement": "Datei mit anderer Audio-App öffnen"
+        },
+        {
+          "id": "f14",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Audio als Video exportieren"
+        },
+        {
+          "id": "f15",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Aufnahme als Klingelton"
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "name": "Cloud und Upload",
+      "entries": [
+        {
+          "id": "g01",
+          "priority": "MUSS",
+          "requirement": "Dropbox-Anbindung"
+        },
+        {
+          "id": "g02",
+          "priority": "MUSS",
+          "requirement": "WebDAV-Anbindung"
+        },
+        {
+          "id": "g03",
+          "priority": "MUSS",
+          "requirement": "FTP/FTPS-Anbindung"
+        },
+        {
+          "id": "g04",
+          "priority": "MUSS",
+          "requirement": "SFTP-Anbindung"
+        },
+        {
+          "id": "g05",
+          "priority": "MUSS",
+          "requirement": "Automatischer Upload nach Aufnahmeende"
+        },
+        {
+          "id": "g06",
+          "priority": "MUSS",
+          "requirement": "Einzelne Aufnahmen manuell hochladen"
+        },
+        {
+          "id": "g07",
+          "priority": "MUSS",
+          "requirement": "Upload auf WLAN beschränken können"
+        },
+        {
+          "id": "g08",
+          "priority": "MUSS",
+          "requirement": "Upload über mobile Daten"
+        },
+        {
+          "id": "g09",
+          "priority": "MUSS",
+          "requirement": "Zielordner auf Server wählen"
+        },
+        {
+          "id": "g10",
+          "priority": "OPTIONAL",
+          "requirement": "Gleichzeitig an mehrere Ziele hochladen"
+        },
+        {
+          "id": "g11",
+          "priority": "MUSS",
+          "requirement": "Persistente Upload-Warteschlange"
+        },
+        {
+          "id": "g12",
+          "priority": "MUSS",
+          "requirement": "Automatische Wiederholungsversuche"
+        },
+        {
+          "id": "g13",
+          "priority": "MUSS",
+          "requirement": "Upload nach Neustart fortsetzen"
+        },
+        {
+          "id": "g14",
+          "priority": "MUSS",
+          "requirement": "Upload-Fortschritt und Fehler anzeigen"
+        },
+        {
+          "id": "g15",
+          "priority": "MUSS",
+          "requirement": "Erfolgreichen Upload überprüfen"
+        },
+        {
+          "id": "g16",
+          "priority": "MUSS",
+          "requirement": "Originaldatei lokal behalten"
+        },
+        {
+          "id": "g17",
+          "priority": "MUSS",
+          "requirement": "Automatische Löschung nach Upload"
+        },
+        {
+          "id": "g18",
+          "priority": "MUSS",
+          "requirement": "Zugangsdaten geschützt speichern"
+        },
+        {
+          "id": "g19",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Upload nur während Smartphone geladen wird"
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "name": "Oberfläche, VoxDrop und Sonstiges",
+      "entries": [
+        {
+          "id": "h01",
+          "priority": "OPTIONAL",
+          "requirement": "Dark Mode und Android-Systemdesign"
+        },
+        {
+          "id": "h02",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Verschiedene Farbschemata"
+        },
+        {
+          "id": "h03",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Automatische Bildschirmrotation"
+        },
+        {
+          "id": "h04",
+          "priority": "MUSS",
+          "requirement": "Schnellaktionen in Aufnahmeliste"
+        },
+        {
+          "id": "h05",
+          "priority": "MUSS",
+          "requirement": "Aufnahme und Wiedergabe getrennt"
+        },
+        {
+          "id": "h06",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Direkte Übergabe an VoxDrop über Teilen"
+        },
+        {
+          "id": "h07",
+          "priority": "MUSS",
+          "requirement": "Originalaufnahme unverändert erhalten"
+        },
+        {
+          "id": "h08",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Integrierte Transkription in der App"
+        },
+        {
+          "id": "h09",
+          "priority": "MUSS",
+          "requirement": "Diagnoseprotokoll für Aufnahmefehler"
+        },
+        {
+          "id": "h10",
+          "priority": "MUSS",
+          "requirement": "Werbefrei und ohne Tracking"
+        },
+        {
+          "id": "h11",
+          "priority": "MUSS",
+          "requirement": "Einstellungen importieren/exportieren"
+        },
+        {
+          "id": "h12",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Aufnahmequalitätsvergleich mit VoxDrop"
+        },
+        {
+          "id": "h13",
+          "priority": "NICHT BENÖTIGT",
+          "requirement": "Aufnahme über Sprachbefehl starten"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "standard_profile": "Besprechung",
+  "profiles": [
+    {
+      "name": "Besprechung",
+      "codec": "Opus",
+      "container": "Ogg",
+      "bitrate_kbps": 48,
+      "sampling_hz": 48000,
+      "channels": 1,
+      "microphone": "Hinten",
+      "gain_db": 5,
+      "echo_cancellation": "on",
+      "noise_suppression": "off"
+    },
+    {
+      "name": "Hohe Qualität",
+      "codec": "Opus",
+      "container": "Ogg",
+      "bitrate_kbps": 80,
+      "sampling_hz": 48000,
+      "channels": 1,
+      "microphone": "Hinten",
+      "gain_db": 5,
+      "echo_cancellation": "on",
+      "noise_suppression": "off"
+    },
+    {
+      "name": "Kompakt",
+      "codec": "Opus",
+      "container": "Ogg",
+      "bitrate_kbps": 32,
+      "sampling_hz": 48000,
+      "channels": 1,
+      "microphone": "Hinten",
+      "gain_db": 5,
+      "echo_cancellation": "on",
+      "noise_suppression": "off"
+    }
+  ]
+}

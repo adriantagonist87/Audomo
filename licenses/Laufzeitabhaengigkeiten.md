@@ -29,19 +29,25 @@ Gradle-Konfiguration `debugRuntimeClasspath` des ausgelieferten Builds. Lizenzbe
 | androidx.startup:startup-runtime | 1.1.1 | The Apache Software License, Version 2.0 |
 | androidx.tracing:tracing | 1.2.0 | The Apache Software License, Version 2.0 |
 | androidx.versionedparcelable:versionedparcelable | 1.1.1 | The Apache Software License, Version 2.0 |
+| ch.randelshofer:fastdoubleparser | 0.8.0 | MIT |
+| com.dropbox.core:dropbox-android-sdk | 7.1.1 | MIT |
+| com.dropbox.core:dropbox-core-sdk | 7.1.1 | MIT |
+| com.fasterxml.jackson.core:jackson-core | 2.15.0 | Apache-2.0 |
+| com.fasterxml.jackson:jackson-bom | 2.15.0 | Apache-2.0 |
 | com.github.mwiede:jsch | 2.28.8 | Revised BSD, Revised BSD, ISC |
 | com.google.guava:failureaccess | 1.0.2 | The Apache Software License, Version 2.0 (Parent-POM) |
 | com.google.guava:guava | 33.3.1-android | Apache License, Version 2.0 (Parent-POM) |
 | com.google.guava:listenablefuture | 9999.0-empty-to-avoid-conflict-with-guava | The Apache Software License, Version 2.0 (Parent-POM) |
+| com.google.code.findbugs:jsr305 | 3.0.2 | The Apache Software License, Version 2.0 |
 | com.squareup.okhttp3:okhttp | 4.12.0 | The Apache Software License, Version 2.0 |
 | com.squareup.okio:okio-jvm | 3.6.0 | The Apache Software License, Version 2.0 |
 | com.squareup.okio:okio | 3.6.0 | The Apache Software License, Version 2.0 |
 | commons-io:commons-io | 2.21.0 | Apache-2.0 (Modulfamilie) |
 | commons-net:commons-net | 3.13.0 | Apache-2.0 (Modulfamilie) |
-| org.jetbrains.kotlin:kotlin-stdlib-common | 2.2.10 | The Apache License, Version 2.0 |
+| org.jetbrains.kotlin:kotlin-stdlib-common | 2.4.0 | The Apache License, Version 2.0 |
 | org.jetbrains.kotlin:kotlin-stdlib-jdk7 | 1.9.10 | The Apache License, Version 2.0 |
 | org.jetbrains.kotlin:kotlin-stdlib-jdk8 | 1.9.10 | The Apache License, Version 2.0 |
-| org.jetbrains.kotlin:kotlin-stdlib | 2.2.10 | The Apache License, Version 2.0 |
+| org.jetbrains.kotlin:kotlin-stdlib | 2.4.0 | The Apache License, Version 2.0 |
 | org.jetbrains.kotlinx:kotlinx-coroutines-android | 1.9.0 | The Apache Software License, Version 2.0 |
 | org.jetbrains.kotlinx:kotlinx-coroutines-bom | 1.9.0 | The Apache Software License, Version 2.0 |
 | org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm | 1.9.0 | The Apache Software License, Version 2.0 |

@@ -1,5 +1,7 @@
 # Abnahme Audomo 0.2
 
+Die spätere [Bedienprüfung der Version 0.2.2](BEDIENPRUEFUNG-0.2.2.md) dokumentiert die Emulatorergebnisse für Bedienelemente, Rückmeldungen und Navigation.
+
 Stand 22.11.2026. API 34, ARM64. Die normale Referenzinstanz war Galaxy_S24_Ultra_API_34. Für Prozessabbrüche und Neustart lief ein separates AVD mit demselben Systemimage und derselben Displaykonfiguration. Das persönliche SM-S928B wurde während der Radioaufnahme nicht für Fehlerinjektionen verwendet.
 
 16 der 44 Fälle haben einen PASS für den angegebenen Umfang, 28 enthalten offene Teilprüfungen. Ein ausdrücklich begrenzter PASS bezieht sich auf die genannte Umgebung. Die Liste enthält alle Kernfälle des Übergabepakets. [40 Aufnahmeversuche](api34/aufnahme-serie-0.2.json) · [Neustart und Mikrofonsperre](api34/unterbrechungen-0.2.json) · [Gestaltungsabgleich](MOCKUPABGLEICH.md)

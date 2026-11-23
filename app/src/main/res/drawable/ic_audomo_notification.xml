@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="184" android:viewportHeight="184">
+    <!-- Silhouette of Audomo's A, five audio bars and the detached dot. -->
+    <group android:translateX="-31" android:translateY="-35">
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M44,176 L104,66 C109,56 117,50.5 127.5,50.5 C137.5,50.5 145,55.5 150.5,65 L197.5,149 C200.5,154 198.5,158.5 194,160.5 C191,161.5 188,159.5 184.5,159.5 C181,159.5 178.5,161.5 175.5,160 C173.5,159.5 172.5,157.5 171.5,155.5 L137,94 C132,85.5 123,85.5 118,94 L65.5,188 C62.5,194 56.5,197 50,194 C43.5,191.5 40.5,183 44,176 Z"/>
+        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="8.7"
+            android:strokeLineCap="round" android:pathData="M98.8,146 L98.8,154 M113.4,135 L113.4,161 M127.6,122 L127.6,171 M142.3,135 L142.3,161 M156.5,146 L156.5,154"/>
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M185.8,166.7a18.2,18.2 0,1 0,0 36.4a18.2,18.2 0,1 0,0 -36.4z"/>
+    </group>
+</vector>

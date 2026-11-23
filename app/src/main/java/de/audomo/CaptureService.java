@@ -61,6 +61,8 @@ public final class CaptureService extends Service {
     }
 
     private void begin(String name) {
+        app.draft.validate(this);
+        RecordingDraft.Value draft = app.draft.get();
         running = true;
         sounded = false;
         warned = false;
@@ -101,7 +103,7 @@ public final class CaptureService extends Service {
                                 }));
         app.worker.execute(() -> {
             try {
-                File file = engine.run(name);
+                File file = engine.run(name, draft);
                 String note = "Gespeichert · " + file.getName();
                 try {
                     DocumentStorage.deliver(this, file);
@@ -160,7 +162,8 @@ public final class CaptureService extends Service {
                                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                         PendingIntent.FLAG_IMMUTABLE);
         return new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(R.drawable.ic_mic)
+                .setSmallIcon(R.drawable.ic_audomo_notification)
+                .setColor(getColor(R.color.audomo_purple))
                 .setContentTitle(title)
                 .setContentText(body)
                 .setContentIntent(open)
@@ -172,7 +175,7 @@ public final class CaptureService extends Service {
         boolean paused = app.state == Audomo.State.PAUSED;
         String title =
                 switch (app.state) {
-                    case RECORDING -> "Aufnahme läuft";
+                    case RECORDING -> "die App ist aktiv und verrichtet ihren Dienst";
                     case PAUSED -> "Aufnahme pausiert";
                     case FINALIZING -> "Aufnahme wird gesichert";
                     default -> "Aufnahme startet";

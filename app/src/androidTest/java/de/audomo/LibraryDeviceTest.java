@@ -197,7 +197,10 @@ public class LibraryDeviceTest {
         assertEquals(96, Profile.profiles(ctx).get(0).kbps());
         lib.prefs
                 .edit()
-                .putString("template", "{termin}_{datum}")
+                .putString("template", "{kalender}_{datum}")
+                .putString("recordingFolderMode", "CALENDAR")
+                .putString("recordingBase", "Archiv/Termine")
+                .putString(UploadDelay.KEY, "0.5")
                 .putString("calendars", "11,29")
                 .putInt("before", 17)
                 .commit();
@@ -223,7 +226,12 @@ public class LibraryDeviceTest {
         lib.prefs.edit().clear().commit();
         SettingsBackup.restore(ctx, new ByteArrayInputStream(backup));
         assertEquals(17, lib.prefs.getInt("before", 0));
+        assertEquals(31_000, UploadDelay.notBefore(lib.prefs, 1_000));
+        assertEquals("0,5", UploadDelay.display(lib.prefs));
         assertEquals(List.of(11L, 29L), CalendarNames.ids(ctx));
+        assertEquals(CalendarNames.FolderMode.CALENDAR, CalendarNames.folderMode(ctx));
+        assertEquals("Archiv/Termine", CalendarNames.baseFolder(ctx, CalendarNames.folderMode(ctx)));
+        assertEquals("{kalender}_{datum}", CalendarNames.template(ctx));
         assertEquals("Draußen", Profile.selected(ctx).name());
         assertEquals(1, CloudConfig.all(ctx).size());
         assertFalse(lib.prefs.getBoolean("autoUpload", true));
@@ -232,6 +240,12 @@ public class LibraryDeviceTest {
         SettingsBackup.restore(
                 ctx, new ByteArrayInputStream(edited.toString().getBytes(StandardCharsets.UTF_8)));
         assertTrue(CalendarNames.ids(ctx).isEmpty());
+        edited.getJSONObject("audomo").remove("recordingFolderMode");
+        edited.getJSONObject("audomo").remove("recordingBase");
+        edited.getJSONObject("audomo").remove(UploadDelay.KEY);
+        SettingsBackup.restore(ctx, new ByteArrayInputStream(edited.toString().getBytes(StandardCharsets.UTF_8)));
+        assertEquals(CalendarNames.FolderMode.CURRENT, CalendarNames.folderMode(ctx));
+        assertEquals(0, UploadDelay.notBefore(lib.prefs, 1_000));
         edited.put("schema", 999);
         assertThrows(
                 IOException.class,

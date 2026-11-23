@@ -11,14 +11,13 @@ import android.text.*;
 import android.view.*;
 import android.widget.*;
 
-import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 
 public final class CalendarSettings extends Activity {
     private LinearLayout page, rows;
-    private TextView notice, preview;
-    private EditText before, after, template;
+    private TextView notice;
+    private EditText before, after;
     private final List<Long> order = new ArrayList<>();
     private final Map<Long, String> available = new LinkedHashMap<>();
     private final ExecutorService queries = Executors.newSingleThreadExecutor();
@@ -56,42 +55,8 @@ public final class CalendarSettings extends Activity {
         page.addView(times);
         before = minutes(times, "Vorlauf (Min.)", "before");
         after = minutes(times, "Nachlauf (Min.)", "after");
-        title("Dateinamensschema", 18);
-        template = new EditText(this);
-        template.setSingleLine();
-        template.setText(CalendarNames.template(this));
-        page.addView(template);
-        LinearLayout tokens = new LinearLayout(this);
-        page.addView(tokens);
-        for (String token : List.of("{datum}", "{uhrzeit}", "{termin}"))
-            tokens.addView(
-                    button(
-                            token,
-                            v -> {
-                                int a = Math.max(0, template.getSelectionStart()),
-                                        b = Math.max(0, template.getSelectionEnd());
-                                template.getText().replace(Math.min(a, b), Math.max(a, b), token);
-                            }),
-                    new LinearLayout.LayoutParams(0, -2, 1));
-        preview = title("", 14);
-        preview();
-        template.addTextChangedListener(
-                new TextWatcher() {
-                    public void beforeTextChanged(CharSequence t, int s, int c, int a) {}
-
-                    public void onTextChanged(CharSequence t, int s, int b, int c) {
-                        preview();
-                    }
-
-                    public void afterTextChanged(Editable value) {}
-                });
         page.addView(button("Speichern", v -> save()));
         load();
-        if (getIntent().getBooleanExtra("focusTemplate", false))
-            template.post(() -> {
-                template.requestFocus();
-                scroll.smoothScrollTo(0, template.getTop());
-            });
     }
 
     private boolean granted() {
@@ -128,12 +93,6 @@ public final class CalendarSettings extends Activity {
         n.setText(String.valueOf(Profile.prefs(this).getInt(key, 0)));
         field.addView(n);
         return n;
-    }
-
-    private void preview() {
-        preview.setText(
-                CalendarNames.name(
-                        template.getText().toString(), OffsetDateTime.now(), "Aufnahme"));
     }
 
     private void load() {
@@ -225,18 +184,16 @@ public final class CalendarSettings extends Activity {
         try {
             int a = Integer.parseInt(before.getText().toString()),
                     b = Integer.parseInt(after.getText().toString());
-            if (a < 0 || b < 0 || template.getText().toString().isBlank())
-                throw new IllegalArgumentException();
+            if (a < 0 || b < 0) throw new IllegalArgumentException();
             Profile.prefs(this)
                     .edit()
                     .putString("calendars", android.text.TextUtils.join(",", order))
                     .putInt("before", a)
                     .putInt("after", b)
-                    .putString("template", template.getText().toString())
                     .apply();
             finish();
         } catch (IllegalArgumentException invalid) {
-            notice.setText("Vorlage und nichtnegative ganze Minuten eingeben");
+            notice.setText("Für Vorlauf und Nachlauf ganze Minuten ab null eingeben");
         }
     }
 

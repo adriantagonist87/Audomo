@@ -4,4 +4,12 @@
 local.properties
 *.iml
 *.keystore
+*.jks
+*.p12
+*.pfx
+*.apk
+*.aab
+*.idsig
+keystore.properties
+.env
 .DS_Store

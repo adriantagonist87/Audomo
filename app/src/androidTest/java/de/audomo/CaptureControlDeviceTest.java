@@ -52,6 +52,7 @@ public class CaptureControlDeviceTest {
                 a.command("START", "QA-Befehle");
             });
             await(() -> a.state == Audomo.State.RECORDING);
+            await(() -> brandedNotification(manager, c, "die App ist aktiv und verrichtet ihren Dienst"));
             if (allowed)
                 await(() ->
                         manager.getCurrentInterruptionFilter()
@@ -63,6 +64,7 @@ public class CaptureControlDeviceTest {
                     a.command("PAUSE", null);
                 });
                 await(() -> a.state == Audomo.State.PAUSED);
+                await(() -> brandedNotification(manager, c, "Aufnahme pausiert"));
                 long saved = a.frames;
                 Thread.sleep(300);
                 assertEquals(saved, a.frames);
@@ -91,5 +93,13 @@ public class CaptureControlDeviceTest {
             }
             inst.runOnMainSync(activity::finish);
         }
+    }
+
+    private boolean brandedNotification(NotificationManager manager, Context context, String title) {
+        return Arrays.stream(manager.getActiveNotifications())
+                .map(status -> status.getNotification())
+                .anyMatch(n -> title.equals(n.extras.getCharSequence(Notification.EXTRA_TITLE))
+                        && n.getSmallIcon().getResId() == R.drawable.ic_audomo_notification
+                        && n.color == context.getColor(R.color.audomo_purple));
     }
 }

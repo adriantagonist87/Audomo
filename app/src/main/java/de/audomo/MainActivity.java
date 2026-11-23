@@ -10,29 +10,31 @@ import android.graphics.drawable.*;
 import android.os.*;
 import android.view.*;
 import android.widget.*;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 
 import java.io.*;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 
-public final class MainActivity extends Activity {
+public class MainActivity extends Activity {
     static final int BG = 0xff0d0b2b, PANEL = 0xff242039, LINE = 0xff39354f;
     static final int INK = 0xfffaf8ff, DIM = 0xffc2bed1, ACCENT = 0xffbd9eff;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final ExecutorService files = Executors.newSingleThreadExecutor();
     private Audomo app;
     private LinearLayout root, body, controls;
-    private TextView name, timer, status, note, mic, format, recordTab, libraryTab;
+    private TextView name, timer, status, note, mic, format, recordTab, libraryTab, queueTab;
     private Wave wave;
-    private View recordLine, libraryLine;
-    private TextView calendar;
+    private View recordLine, libraryLine, queueLine;
+    private QueueDashboard dashboard;
+    private TextView calendar, calendarHeading;
+    private LinearLayout calendarButton;
     private EditText inlineName;
     private CalendarNames.Match previewEvent = new CalendarNames.Match(null, "");
     private long nextPreview, previewVersion;
     private boolean editing;
     private boolean library, pendingStart, resumed;
-    private String manualName = "";
     private Profile currentProfile;
     private final SharedPreferences.OnSharedPreferenceChangeListener optionsChanged =
             (options, key) -> currentProfile = Profile.selected(this);
@@ -40,21 +42,31 @@ public final class MainActivity extends Activity {
     private LibraryView recordings;
     private File export;
     boolean trashView;
+    private final ArrayList<Bundle> history = new ArrayList<>();
+    private Bundle loadingLibrary;
+    private Bundle pausedLibrary;
+    private boolean openingTab;
+    private final OnBackInvokedCallback back = this::navigateBack;
+    private boolean handlingBack;
     String importFolder;
     private AppSettings preferences;
     private final Runnable refresh =
             new Runnable() {
                 public void run() {
+                    if (isQueuePage()) {
+                        dashboard.refresh();
+                        handler.postDelayed(this, 1000);
+                        return;
+                    }
                     if (pendingStart
                             && resumed
                             && hasWindowFocus()
                             && app.ready()
                             && permitted(Manifest.permission.RECORD_AUDIO)) {
                         pendingStart = false;
-                        app.command("START", manualName);
+                        app.command("START", app.draft.get().name());
                     }
                     if (app.state != shown) {
-                        if (app.state == Audomo.State.SAVED) manualName = "";
                         if (!app.ready()) stopPlayer();
                         shown = app.state;
                         if (library) showLibrary();
@@ -66,7 +78,8 @@ public final class MainActivity extends Activity {
                                 Audomo.duration(
                                         idle && app.state != Audomo.State.FAILED ? 0 : app.frames));
                         long now = SystemClock.elapsedRealtime();
-                        if (idle && now >= nextPreview) {
+                        CalendarNames.Event chosen = app.draft.get().event();
+                        if (idle && chosen == null && now >= nextPreview) {
                             nextPreview = now + 15000;
                             long version = ++previewVersion;
                             CalendarNames.at(MainActivity.this, OffsetDateTime.now())
@@ -76,10 +89,15 @@ public final class MainActivity extends Activity {
                                                     previewEvent = result;
                                             }));
                         }
-                        calendar.setText(
-                                idle || app.eventText.isEmpty()
-                                        ? CalendarNames.describe(previewEvent)
-                                        : app.eventText);
+                        String heading = chosen == null ? "Aktueller Kalendertermin" : "Termin für die nächste Aufnahme";
+                        String appointment = chosen != null ? CalendarNames.describe(new CalendarNames.Match(chosen, ""))
+                                : idle || app.eventText.isEmpty() ? CalendarNames.describe(previewEvent) : app.eventText;
+                        String caption = heading.toUpperCase(Locale.GERMAN);
+                        if (!caption.contentEquals(calendarHeading.getText())) calendarHeading.setText(caption);
+                        if (!appointment.contentEquals(calendar.getText())) calendar.setText(appointment);
+                        String description = heading + " · " + appointment + " · Tagesansicht öffnen";
+                        if (!android.text.TextUtils.equals(description,calendarButton.getContentDescription()))
+                            calendarButton.setContentDescription(description);
                         String active =
                                 !idle && !app.activeName.isEmpty() ? app.activeName : previewName();
                         name.setText(active);
@@ -107,6 +125,8 @@ public final class MainActivity extends Activity {
                                         : "Mikrofonwunsch: " + currentProfile.mic());
                         format.setText("Opus · " + currentProfile.kbps() + " kbit/s");
                         if (app.state == Audomo.State.RECORDING) wave.sample(app.peak);
+                    } else if (recordings != null) {
+                        recordings.refreshStatus();
                     }
                     handler.postDelayed(this, 150);
                 }
@@ -119,10 +139,15 @@ public final class MainActivity extends Activity {
         currentProfile = Profile.selected(this);
         preferences = new AppSettings(this);
         prefs().registerOnSharedPreferenceChangeListener(optionsChanged);
+        library = this instanceof LibraryActivity;
+        String legacyDraft = state == null ? getIntent().getStringExtra("draftName") : state.getString("name");
+        if (legacyDraft != null && !legacyDraft.isBlank() && app.draft.get().event() == null && app.draft.get().name().isEmpty())
+            app.draft.name(legacyDraft);
         if (state != null) {
-            manualName = state.getString("name", "");
             library = state.getBoolean("library");
             trashView = state.getBoolean("trashView");
+            ArrayList<Bundle> savedHistory = state.getParcelableArrayList("history", Bundle.class);
+            if (savedHistory != null) history.addAll(savedHistory);
             if (state.getString("export") != null) export = new File(state.getString("export"));
             importFolder = state.getString("importFolder");
             pendingStart = state.getBoolean("pending");
@@ -145,21 +170,30 @@ public final class MainActivity extends Activity {
         header.addView(more, lp(48, 48));
         LinearLayout tabs = row();
         root.addView(tabs);
-        recordTab = tab("Aufnehmen", false);
-        libraryTab = tab("Wiedergeben", true);
+        recordTab = tab("Aufnehmen", () -> { if (library || isQueuePage()) openTab(MainActivity.class); });
+        libraryTab = tab("Wiedergeben", this::openLibrary);
         tabs.addView(recordTab, weight());
         tabs.addView(libraryTab, weight());
+        queueTab = tab("Warteschlange", () -> { if (!isQueuePage()) openQueue(); });
+        tabs.addView(queueTab, weight());
         LinearLayout indicator = row();
         root.addView(indicator, lp(-1, 2));
         recordLine = new View(this);
         libraryLine = new View(this);
         indicator.addView(recordLine, new LinearLayout.LayoutParams(0, -1, 1));
         indicator.addView(libraryLine, new LinearLayout.LayoutParams(0, -1, 1));
+        queueLine = new View(this);
+        indicator.addView(queueLine, new LinearLayout.LayoutParams(0, -1, 1));
         body = column();
         root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
-        if (library) showLibrary();
+        if (library) renderLibrary(state == null ? null : state.getBundle("libraryState"));
+        else if (isQueuePage()) showQueue(state);
         else showRecorder();
-        if ("de.audomo.UPLOADS".equals(getIntent().getAction())) new CloudScreen(this).queue();
+        if (state == null && "de.audomo.UPLOADS".equals(getIntent().getAction())) {
+            startActivity(new Intent(this, QueueActivity.class).putExtra("uploadJob", getIntent().getLongExtra("uploadJob", -1)));
+        } else if (isQueuePage() && state == null && getIntent().getLongExtra("uploadJob", -1) >= 0) {
+            UploadDetailsDialog.open(this, getIntent().getLongExtra("uploadJob", -1));
+        }
         else if (state == null && !prefs().getBoolean("onboardingSeen", false)) {
             prefs().edit().putBoolean("onboardingSeen", true).apply();
             if (!permitted(Manifest.permission.RECORD_AUDIO)) preferences.onboarding();
@@ -170,44 +204,68 @@ public final class MainActivity extends Activity {
         return getSharedPreferences("options", MODE_PRIVATE);
     }
 
-    private TextView tab(String label, boolean toLibrary) {
-        TextView t = text(label, 16, DIM);
-        t.setGravity(
-                toLibrary
-                        ? Gravity.END | Gravity.CENTER_VERTICAL
-                        : Gravity.START | Gravity.CENTER_VERTICAL);
+    private TextView tab(String label, Runnable go) {
+        TextView t = text(label, 15, DIM);
+        t.setGravity(Gravity.CENTER);
+        t.setSingleLine();
+        t.setAutoSizeTextTypeUniformWithConfiguration(11, 15, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
         t.setMinHeight(dp(48));
-        t.setOnClickListener(v -> {
-            if (toLibrary) showLibrary();
-            else showRecorder();
-        });
+        t.setOnClickListener(v -> go.run());
         return t;
     }
 
     private void switchTab(boolean toLibrary) {
         finishName();
         stopPlayer();
+        recordings = null;
         library = toLibrary;
-        recordLine.setBackgroundColor(toLibrary ? LINE : ACCENT);
+        updateBackHandler();
+        boolean record = !toLibrary && !isQueuePage();
+        recordLine.setBackgroundColor(record ? ACCENT : LINE);
+        queueLine.setBackgroundColor(isQueuePage() ? ACCENT : LINE);
+        queueTab.setTextColor(isQueuePage() ? ACCENT : DIM);
+        queueTab.setSelected(isQueuePage());
         libraryLine.setBackgroundColor(toLibrary ? ACCENT : LINE);
         body.removeAllViews();
-        recordTab.setTextColor(toLibrary ? DIM : ACCENT);
+        recordTab.setTextColor(record ? ACCENT : DIM);
         libraryTab.setTextColor(toLibrary ? ACCENT : DIM);
-        recordTab.setSelected(!toLibrary);
+        recordTab.setSelected(record);
         libraryTab.setSelected(toLibrary);
     }
 
     private void showRecorder() {
+        trashView = false;
         switchTab(false);
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         body.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         LinearLayout content = column();
         scroll.addView(content);
-        content.addView(label("Aktueller Kalendertermin"));
+        calendarButton = row();
+        calendarButton.setMinimumHeight(dp(58));
+        calendarButton.setFocusable(true);
+        calendarButton.setOnClickListener(v -> {
+            if (openingTab) return;
+            openingTab = true;
+            finishName();
+            startActivity(new Intent(this, CalendarDayActivity.class));
+        });
+        android.util.TypedValue selectable = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(android.R.attr.selectableItemBackground, selectable, true))
+            calendarButton.setBackgroundResource(selectable.resourceId);
+        LinearLayout calendarLabels = column();
+        calendarHeading = label("Aktueller Kalendertermin");
+        calendarLabels.addView(calendarHeading);
         calendar = text("Kein Termin zugeordnet", 18, INK);
-        content.addView(calendar);
-        gap(content, 16);
+        calendarLabels.addView(calendar);
+        calendarButton.addView(calendarLabels, weight());
+        ImageView openDay = new ImageView(this);
+        openDay.setImageResource(R.drawable.ic_calendar_day);
+        openDay.setColorFilter(ACCENT);
+        openDay.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        calendarButton.addView(openDay, lp(24, 24));
+        content.addView(calendarButton);
+        gap(content, 6);
         divider(content);
         content.addView(label("Dateiname"));
         name = text("", 17, INK);
@@ -254,7 +312,7 @@ public final class MainActivity extends Activity {
         content.addView(info);
         note = text(app.note, 14, ACCENT);
         note.setOnClickListener(v -> {
-            if (app.ready()) showLibrary();
+            if (app.ready()) openLibrary();
         });
         content.addView(note);
         controls = row();
@@ -280,7 +338,7 @@ public final class MainActivity extends Activity {
         boolean recording = app.state == Audomo.State.RECORDING,
                 paused = app.state == Audomo.State.PAUSED;
         int surface = getColor(android.R.color.system_neutral1_800);
-        Button folder = button("Dateien", v -> showLibrary());
+        Button folder = button("Dateien", v -> openLibrary());
         controls.addView(folder, weight());
         FrameLayout middle = new FrameLayout(this);
         controls.addView(middle, lp(104, 70));
@@ -289,8 +347,9 @@ public final class MainActivity extends Activity {
                         recording
                                 ? "Aufnahme stoppen"
                                 : paused ? "Aufnahme fortsetzen" : "Aufnahme starten",
-                        recording ? R.drawable.ic_stop : R.drawable.ic_play,
-                        recording ? INK : 0xff71db9b,
+                        recording ? R.drawable.ic_stop
+                                : paused ? R.drawable.ic_play : R.drawable.ic_record,
+                        recording ? INK : 0xff85ad94,
                         recording ? 0xff575564 : surface);
         main.setEnabled(app.ready() || recording || paused);
         main.setAlpha(main.isEnabled() ? 1f : .5f);
@@ -345,16 +404,19 @@ public final class MainActivity extends Activity {
     }
 
     private String previewName() {
-        if (!manualName.isBlank()) return SessionStore.fileName(manualName, OffsetDateTime.now());
+        RecordingDraft.Value draft = app.draft.get();
+        if (!draft.name().isBlank()) return SessionStore.fileName(draft.name(), OffsetDateTime.now());
+        if (draft.event() != null) return CalendarNames.chosenName(CalendarNames.template(this),OffsetDateTime.now(),draft.event());
         return CalendarNames.name(
                 CalendarNames.template(this),
                 OffsetDateTime.now(),
-                previewEvent.event() == null ? null : previewEvent.event().title());
+                previewEvent.event());
     }
 
     private void editName() {
         if (!app.ready()) return;
         editing = true;
+        updateBackHandler();
         inlineName.setText(previewName().replaceFirst("\\.ogg$", ""));
         name.setVisibility(View.GONE);
         inlineName.setVisibility(View.VISIBLE);
@@ -367,7 +429,8 @@ public final class MainActivity extends Activity {
     private void finishName() {
         if (!editing) return;
         editing = false;
-        manualName = inlineName.getText().toString();
+        updateBackHandler();
+        app.draft.name(inlineName.getText().toString());
         getSystemService(android.view.inputmethod.InputMethodManager.class)
                 .hideSoftInputFromWindow(inlineName.getWindowToken(), 0);
         inlineName.setVisibility(View.GONE);
@@ -401,13 +464,17 @@ public final class MainActivity extends Activity {
         LibraryActions.item(menu, "Einstellungen", () -> preferences.show());
         if (library && recordings != null) recordings.addMenu(menu);
         LibraryActions.item(menu, "Einrichtung", () -> preferences.onboarding());
-        LibraryActions.item(menu, "Uploads", () -> preferences.upload(null));
+        LibraryActions.item(menu, "Uploads", preferences::uploadTargets);
         menu.getMenu()
-                .add("Kalender und Dateinamen")
+                .add("Kalender")
                 .setOnMenuItemClickListener(item -> {
                     startActivity(new Intent(this, CalendarSettings.class));
                     return true;
                 });
+        menu.getMenu().add("Dateiname und Ordner").setOnMenuItemClickListener(item -> {
+            startActivity(new Intent(this, NamingSettings.class));
+            return true;
+        });
         menu.getMenu()
                 .add("Kachel hinzufügen")
                 .setOnMenuItemClickListener(item -> {
@@ -518,26 +585,131 @@ public final class MainActivity extends Activity {
         dialog.setView(scroll).setPositiveButton("Schließen", null).show();
     }
 
+    private boolean isQueuePage() {
+        return this instanceof QueueActivity && !library;
+    }
+
+    void openQueue() {
+        openTab(QueueActivity.class);
+    }
+
+    private void showQueue(Bundle state) {
+        switchTab(false);
+        dashboard = new QueueDashboard(this, body, state);
+    }
+
+    void openLibrary() {
+        if (!library) {
+            openTab(LibraryActivity.class);
+            return;
+        }
+        if (!trashView) return;
+        rememberPage(-1);
+        trashView = false;
+        renderLibrary(null);
+    }
+
+    private void openTab(Class<? extends MainActivity> destination) {
+        if (openingTab) return;
+        openingTab = true;
+        finishName();
+        startActivity(new Intent(this, destination));
+    }
+
+    void openTrash(int settingsScroll) {
+        if (trashView) return;
+        rememberPage(settingsScroll);
+        trashView = true;
+        renderLibrary(null);
+    }
+
+    void returnToLibrary() {
+        if (!history.isEmpty()) {
+            Bundle previous = history.get(history.size() - 1);
+            if (previous.getBoolean("library") && !previous.getBoolean("trashView")
+                    && !previous.containsKey("settingsScroll")) {
+                restorePreviousPage();
+                return;
+            }
+        }
+        openLibrary();
+    }
+
+    private void rememberPage(int settingsScroll) {
+        Bundle page = new Bundle();
+        page.putBoolean("library", library);
+        if (isQueuePage()) dashboard.save(page);
+        page.putBoolean("trashView", trashView);
+        if (library) page.putBundle("libraryState", libraryState());
+        if (settingsScroll >= 0) page.putInt("settingsScroll", settingsScroll);
+        history.add(page);
+    }
+
+    private void restorePreviousPage() {
+        Bundle page = history.remove(history.size() - 1);
+        trashView = page.getBoolean("trashView");
+        if (page.getBoolean("library")) renderLibrary(page.getBundle("libraryState"));
+        else if (this instanceof QueueActivity) showQueue(page);
+        else showRecorder();
+        if (page.containsKey("settingsScroll")) preferences.show(page.getInt("settingsScroll"));
+    }
+
+    private void updateBackHandler() {
+        boolean needed = isQueuePage() || library || editing || !history.isEmpty();
+        if (needed == handlingBack) return;
+        handlingBack = needed;
+        if (needed) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT, back);
+        else getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(back);
+    }
+
+    private void navigateBack() {
+        if (editing) {
+            finishName();
+            return;
+        }
+        if (isQueuePage() && dashboard.exitSelection()) return;
+        if (recordings != null && recordings.navigateBack()) return;
+        if (!history.isEmpty()) restorePreviousPage();
+        else if (this instanceof LibraryActivity || this instanceof QueueActivity) finish();
+        else showRecorder();
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void onBackPressed() {
+        // Some navigation modes deliver Back through Activity rather than the window callback.
+        if (isQueuePage() || library || editing || !history.isEmpty()) navigateBack();
+        else super.onBackPressed();
+    }
+
+    private Bundle libraryState() {
+        return recordings == null ? loadingLibrary : recordings.saveState();
+    }
+
     void showLibrary() {
+        renderLibrary(library ? libraryState() : null);
+    }
+
+    private void renderLibrary(Bundle restore) {
         switchTab(true);
+        loadingLibrary = restore;
         LinearLayout page = column();
         body.addView(page, new LinearLayout.LayoutParams(-1, -1));
 
-        files.execute(() -> {
+        app.libraryFiles.execute(() -> {
             try {
-                List<SessionStore.Entry> entries = app.sessions.list();
+                List<SessionStore.Entry> entries = new CloudLibrary(app.sessions).library();
                 runOnUiThread(() -> {
                     if (!library || page.getParent() != body || isDestroyed()) return;
-                    libraryRows(page, entries);
+                    recordings = new LibraryView(this, page, entries);
+                    if (restore != null) recordings.restoreState(restore);
+                    loadingLibrary = null;
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> toast(Audomo.cause(e)));
             }
         });
-    }
-
-    private void libraryRows(LinearLayout page, List<SessionStore.Entry> entries) {
-        recordings = new LibraryView(this, page, entries);
     }
 
     void export(SessionStore.Entry entry) {
@@ -585,7 +757,7 @@ public final class MainActivity extends Activity {
                 || export == null) return;
         File source = export;
         android.net.Uri target = data.getData();
-        files.execute(() -> {
+        app.libraryFiles.execute(() -> {
             try (InputStream in = new FileInputStream(source);
                     OutputStream out = getContentResolver().openOutputStream(target, "wt")) {
                 if (out == null) throw new IOException("Ziel nicht beschreibbar");
@@ -609,7 +781,7 @@ public final class MainActivity extends Activity {
     }
 
     void runFiles(Callable<String> work) {
-        files.execute(() -> {
+        app.libraryFiles.execute(() -> {
             String message;
             try {
                 message = work.call();
@@ -625,8 +797,10 @@ public final class MainActivity extends Activity {
         });
     }
 
-    void upload(SessionStore.Entry e) {
-        preferences.upload(e);
+    void upload(List<SessionStore.Entry> entries) {
+        ArrayList<String> ids = new ArrayList<>(entries.size());
+        for (SessionStore.Entry e : entries) ids.add(e.id());
+        ManualUploadDialog.chooseTarget(this, ids);
     }
 
     private void stopPlayer() {
@@ -756,6 +930,12 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        openingTab = false;
+        app.draft.validate(this);
+        if (library && pausedLibrary != null) {
+            renderLibrary(pausedLibrary);
+            pausedLibrary = null;
+        }
         nextPreview = 0;
         resumed = true;
         handler.post(refresh);
@@ -764,6 +944,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onPause() {
         resumed = false;
+        if (library) pausedLibrary = libraryState();
         handler.removeCallbacks(refresh);
         super.onPause();
     }
@@ -777,8 +958,11 @@ public final class MainActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
-        state.putString("name", manualName);
+        if (editing) app.draft.name(inlineName.getText().toString());
+        if (isQueuePage()) dashboard.save(state);
         state.putBoolean("trashView", trashView);
+        state.putParcelableArrayList("history", new ArrayList<>(history));
+        if (library) state.putBundle("libraryState", pausedLibrary != null ? pausedLibrary : libraryState());
         if (export != null) state.putString("export", export.getAbsolutePath());
         state.putString("importFolder", importFolder);
         state.putBoolean("library", library);
@@ -790,7 +974,6 @@ public final class MainActivity extends Activity {
         prefs().unregisterOnSharedPreferenceChangeListener(optionsChanged);
         handler.removeCallbacksAndMessages(null);
         stopPlayer();
-        files.shutdown();
         super.onDestroy();
     }
 }

@@ -1,4 +1,10 @@
 plugins { id("com.android.application") }
+val dropboxAppKey = providers.gradleProperty("audomoDropboxAppKey")
+    .orElse(providers.environmentVariable("AUDOMO_DROPBOX_APP_KEY"))
+    .orElse("tyhojvodo6itbg5").get().trim()
+require(dropboxAppKey.isEmpty() || dropboxAppKey.matches(Regex("[a-z0-9]+"))) {
+    "Für audomoDropboxAppKey den öffentlichen App-Key aus den Dropbox-App-Einstellungen angeben."
+}
 android {
     namespace = "de.audomo"
     compileSdk = 37
@@ -7,15 +13,20 @@ android {
         minSdk = 34
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 7
-        versionName = "0.2.2"
+        versionCode = 20
+        versionName = "1.0.0"
+        buildConfigField("String", "DROPBOX_APP_KEY", "\"$dropboxAppKey\"")
+        manifestPlaceholders["dropboxScheme"] = "db-" + dropboxAppKey.ifEmpty { "audomo-unconfigured" }
+        manifestPlaceholders["dropboxConfigured"] = dropboxAppKey.isNotEmpty().toString()
     }
+    buildFeatures { buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
 dependencies {
+    implementation("com.dropbox.core:dropbox-android-sdk:7.1.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("commons-net:commons-net:3.13.0")
     implementation("com.github.mwiede:jsch:2.28.8")

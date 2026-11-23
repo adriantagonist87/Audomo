@@ -46,11 +46,14 @@ final class SettingsBackup {
         data.put("profiles", profiles)
                 .put("selected", Profile.selected(c).name())
                 .put("template", CalendarNames.template(c))
+                .put("recordingFolderMode", CalendarNames.folderMode(c).name())
+                .put("recordingBase", p.getString("recordingBase", ""))
                 .put("speed", (double) p.getFloat("speed", 1))
                 .put("skipSeconds", p.getInt("skipSeconds", 5))
                 .put("calendars", p.getString("calendars", ""))
                 .put("installation", installation(c))
                 .put("defaultTarget", p.getString("defaultTarget", ""))
+                .put(UploadDelay.KEY, p.getString(UploadDelay.KEY, "0"))
                 .put("autoUpload", p.getBoolean("autoUpload", false))
                 .put("cleanupUploaded", p.getBoolean("cleanupUploaded", false));
         JSONObject root = new JSONObject().put("schema", 1).put("audomo", data);
@@ -76,6 +79,11 @@ final class SettingsBackup {
         String chosen = d.getString("selected"), template = d.getString("template");
         if (!names.contains(chosen) || template.isBlank())
             throw new IOException("Profil oder Vorlage ungültig");
+        CalendarNames.FolderMode mode =
+                CalendarNames.FolderMode.valueOf(d.optString("recordingFolderMode", "CURRENT"));
+        String base = d.optString("recordingBase", "");
+        if (!LibraryFiles.validFolderPath(base)) throw new IOException("Ungültiger Aufnahmeordner");
+        ed.putString("recordingFolderMode", mode.name()).putString("recordingBase", base);
         ed.putString("profiles", own.toString())
                 .putString("selected", chosen)
                 .putString("template", template);
@@ -109,6 +117,7 @@ final class SettingsBackup {
                 root.getJSONArray("targets"),
                 d.optString("defaultTarget"),
                 d.optBoolean("autoUpload"));
+        ed.putString(UploadDelay.KEY, UploadDelay.minutes(d.optString(UploadDelay.KEY, "0")).toPlainString());
         ed.putBoolean("cleanupUploaded", d.optBoolean("cleanupUploaded"));
         if (!ed.commit()) throw new IOException("Einstellungen nicht gesichert");
         return same

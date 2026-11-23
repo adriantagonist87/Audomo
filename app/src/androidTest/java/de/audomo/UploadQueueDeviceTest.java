@@ -43,7 +43,8 @@ public class UploadQueueDeviceTest {
         String original = prefs.getString("targets", "[]"),
                 standard = prefs.getString("defaultTarget", "");
         boolean wifi = prefs.getBoolean("wifiOnly", true),
-                auto = prefs.getBoolean("cleanupUploaded", false);
+                auto = prefs.getBoolean("cleanupUploaded", false),
+                autoUpload = prefs.getBoolean("autoUpload", false);
         String id = UUID.randomUUID().toString();
         String path = "qa-" + UUID.randomUUID() + ".ogg";
         CloudConfig target =
@@ -85,13 +86,32 @@ public class UploadQueueDeviceTest {
                 } finally {
                     foreign.delete();
                 }
-                queue.enqueue(e, target);
+                assertThrows(IOException.class, () -> queue.enqueueSelected(
+                        app.sessions, List.of(id, UUID.randomUUID().toString()), target));
+                assertNull(queue.job(id));
+                long due = System.currentTimeMillis() + 300_000;
+                prefs.edit().putBoolean("autoUpload", true).commit();
+                SessionStore.storeMeta(dir, SessionStore.metadata(dir)
+                        .put("autoTarget", target.id()).put("uploadNotBefore", due));
+                UploadQueue.afterCapture(app, file);
+                long originalJob = queue.job(id).id();
+                UploadQueue.afterCapture(app, file);
+                assertEquals(originalJob, queue.job(id).id());
+                assertEquals(due, queue.job(id).notBefore());
+                assertEquals(1, queue.enqueueSelected(app.sessions, List.of(id, id), target));
+                assertEquals(0, queue.job(id).notBefore());
+                assertEquals(originalJob, queue.job(id).id());
+                assertEquals(0, queue.enqueueSelected(app.sessions, List.of(id), target));
                 drive(queue, id, "Konflikt");
                 assertEquals("Konflikt", queue.job(id).state());
                 assertTrue(file.isFile());
                 queue.resolve(queue.job(id), 2);
                 assertEquals("Ausgelassen", queue.job(id).state());
                 assertTrue(file.isFile());
+                queue.resume(queue.job(id).id());
+                drive(queue, id, "Konflikt");
+                assertNotEquals(LibraryFiles.digest(new FileInputStream(file)), ftp.hash("/" + path));
+                queue.resolve(queue.job(id), 2);
                 queue.enqueue(e, target);
                 drive(queue, id, "Konflikt");
                 queue.resolve(queue.job(id), 0);
@@ -99,6 +119,13 @@ public class UploadQueueDeviceTest {
                 UploadQueue.Job verified = queue.job(id);
                 String local = LibraryFiles.digest(new FileInputStream(file));
                 assertEquals(local, ftp.hash(verified.path()));
+                checkRemovedPublication(c, queue, network, target, verified.path(), local, true);
+                String absent = "/absent-" + id + ".ogg";
+                checkRemovedPublication(c, queue, network, target, absent, local, false);
+                assertNull(ftp.hash(absent));
+                assertTrue(verified.attempts() >= 3);
+                assertTrue(verified.lastAttempt() > 0 && verified.lastChecked() > 0);
+                assertTrue(CloudReconcile.verify(app.sessions, verified).contains("stimmt überein"));
                 assertFalse(local.equals(ftp.hash("/" + path)));
                 LibraryFiles lib = new LibraryFiles(app.sessions);
                 lib.change(e, "Umbenannt-" + id, "", false);
@@ -139,6 +166,7 @@ public class UploadQueueDeviceTest {
                     .putString("defaultTarget", standard)
                     .putBoolean("wifiOnly", wifi)
                     .putBoolean("cleanupUploaded", auto)
+                    .putBoolean("autoUpload", autoUpload)
                     .commit();
             c.getSharedPreferences("credentials", 0).edit().remove(target.id()).commit();
             try (var files = Files.walk(dir.toPath())) {
@@ -146,6 +174,134 @@ public class UploadQueueDeviceTest {
                         files.sorted(Comparator.reverseOrder())
                                 .collect(java.util.stream.Collectors.toList()))
                     Files.deleteIfExists(p);
+            }
+        }
+    }
+
+    @Test
+    public void cancelAndSkipArePersistentAndRespectRemoteCommit() throws Exception {
+        Context c = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
+        UploadQueue q = UploadQueue.get(c);
+        String rec = UUID.randomUUID().toString();
+        synchronized (q) {
+            q.getWritableDatabase().execSQL("INSERT INTO jobs(rec,target,path,state) VALUES(?,?,?,?)",
+                    new Object[]{rec, "test", "/cancel.ogg", "Wartet"});
+            long id = q.job(rec).id();
+            try {
+                UploadQueue.Attempt first = q.claim(q.byId(id));
+                assertNotNull(first);
+                assertEquals("Abgebrochen", q.stop(id, false));
+                assertThrows(IOException.class, first::check);
+                assertThrows(IOException.class, () -> q.beforeCommit(first));
+                q.release(first);
+                assertNull(q.claim(q.byId(id)));
+                q.resume(id);
+                q.stop(id, true);
+                assertEquals("Ausgelassen", q.byId(id).state());
+                assertNull(q.claim(q.byId(id)));
+                q.resume(id);
+                UploadQueue.Attempt second = q.claim(q.byId(id));
+                assertNotNull(second);
+                q.beforeCommit(second);
+                assertThrows(IOException.class, () -> q.stop(id, false));
+                assertEquals("Upload läuft", q.byId(id).state());
+                q.verified(id, "synthetic");
+                q.release(second);
+                assertThrows(IOException.class, () -> q.resume(id));
+                assertEquals(2, q.byId(id).attempts());
+            } finally {
+                q.getWritableDatabase().delete("jobs", "id=?", new String[]{Long.toString(id)});
+            }
+        }
+    }
+
+    private void checkRemovedPublication(Context c, UploadQueue q, Network net, CloudConfig target,
+            String path, String expected, boolean published) throws Exception {
+        String rec = UUID.randomUUID().toString();
+        synchronized (q) {
+            var db = q.getWritableDatabase();
+            db.execSQL("INSERT INTO jobs(rec,target,path,state) VALUES(?,?,?,'Wartet')",
+                    new Object[]{rec, target.id(), path});
+            long id = q.job(rec).id();
+            try {
+                var publishing = q.claim(q.byId(id));
+                publishing.expectedHash = expected;
+                q.beforeCommit(publishing);
+                q.remove(List.of(id));
+                q.release(publishing);
+                var saved = q.byId(id);
+                assertEquals("verifyRemoval", saved.action());
+                var resumed = q.claim(saved);
+                try {
+                    UploadWorker.transfer(c, q, saved, net, new java.util.concurrent.atomic.AtomicBoolean(true), resumed);
+                } finally {
+                    q.release(resumed);
+                }
+                if (published) {
+                    assertEquals(expected, q.byId(id).verified());
+                    assertFalse(q.byId(id).inQueue());
+                } else assertNull(q.byId(id));
+            } finally {
+                db.delete("jobs", "rec=?", new String[]{rec});
+            }
+        }
+    }
+
+    @Test
+    public void removeAndPromotePreserveDeadlinesCatalogAndStableIds() throws Exception {
+        Context c = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
+        UploadQueue q = UploadQueue.get(c);
+        String target = UUID.randomUUID().toString();
+        synchronized (q) {
+            var db = q.getWritableDatabase();
+            Set<Long> ignore = new HashSet<>();
+            for (UploadQueue.Job j : q.jobs()) ignore.add(j.id());
+            try {
+                long[] ids = new long[5];
+                for (int i = 0; i < ids.length; i++) {
+                    String rec = UUID.randomUUID().toString();
+                    db.execSQL("INSERT INTO jobs(rec,target,path,state) VALUES(?,?,?,'Wartet')",
+                            new Object[]{rec, target, "/test-" + i + ".ogg"});
+                    ids[i] = q.job(rec).id();
+                }
+                long future = System.currentTimeMillis() + 300_000;
+                db.execSQL("UPDATE jobs SET notBefore=? WHERE id=?", new Object[]{future, ids[2]});
+                q.verified(ids[3], "confirmed");
+                assertEquals(3, q.prioritize(List.of(ids[2], ids[4], ids[1], ids[3], ids[4])));
+                assertEquals(ids[4], q.nextReady(ignore).id());
+                assertEquals(future, q.byId(ids[2]).notBefore());
+                UploadQueue.Attempt active = q.claim(q.byId(ids[4]));
+                assertNotNull(active);
+                assertEquals(0, q.prioritize(List.of(ids[4])));
+                assertEquals(3, q.remove(List.of(ids[4],ids[2],ids[3],ids[4])).removed());
+                assertThrows(IOException.class, active::check);
+                q.release(active);
+                assertNull(q.byId(ids[4]));
+                assertTrue(q.byId(ids[3]).knownCopy());
+                assertFalse(q.byId(ids[3]).inQueue());
+                assertEquals(ids[1], q.nextReady(ignore).id());
+                assertEquals(0, q.remove(List.of(ids[3])).removed());
+
+                UploadQueue.Job first = q.byId(ids[1]);
+                UploadQueue.Attempt confirming = q.claim(first);
+                confirming.expectedHash = "uploaded";
+                q.beforeCommit(confirming);
+                assertEquals(1, q.remove(List.of(first.id())).finishing());
+                assertFalse(q.byId(first.id()).inQueue());
+                assertThrows(IOException.class, () -> q.beforeCommit(confirming));
+                q.release(confirming);
+                UploadQueue.Job check = q.byId(first.id());
+                assertEquals("verifyRemoval", check.action());
+                q.finishRemoval(check, "uploaded", null);
+                assertEquals("uploaded", q.byId(first.id()).verified());
+                assertFalse(q.listedJobs().stream().anyMatch(j -> j.id() == first.id()));
+                db.execSQL("INSERT INTO jobs(rec,target,path,state) VALUES(?,?,?,'Wartet')",
+                        new Object[]{first.rec() + "-new", target, "/new.ogg"});
+                assertTrue(q.job(first.rec() + "-new").id() > ids[4]);
+            } finally {
+                db.delete("jobs", "target=?", new String[]{target});
             }
         }
     }

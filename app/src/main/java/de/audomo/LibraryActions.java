@@ -33,25 +33,20 @@ final class LibraryActions {
                 new AlertDialog.Builder(screen)
                         .setTitle("Ordner wählen")
                         .setItems(labels, (a, i) -> picked.accept(folders.get(i)))
-                        .setNeutralButton(
-                                "Neuer Ordner",
-                                (a, i) ->
-                                        input(
-                                                "Unterordner in "
-                                                        + (current.isEmpty()
-                                                                ? "Aufnahmen"
-                                                                : current),
-                                                "",
-                                                name -> {
-                                                    try {
-                                                        picked.accept(
-                                                                files.addFolder(current, name));
-                                                    } catch (Exception e) {
-                                                        screen.toast(Audomo.cause(e));
-                                                    }
-                                                }))
+                        .setPositiveButton("Verwalten", (dialog, which) -> new FolderSettings(screen).show())
+                        .setNeutralButton("Neuer Ordner", null)
                         .setNegativeButton("Abbrechen", null)
                         .show();
+        d.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
+                input("Unterordner in " + (current.isEmpty() ? "Aufnahmen" : current), "", name -> {
+                    try {
+                        String path = files.addFolder(current, name);
+                        d.dismiss();
+                        picked.accept(path);
+                    } catch (Exception e) {
+                        screen.toast(Audomo.cause(e));
+                    }
+                }));
         d.getWindow().setGravity(Gravity.BOTTOM);
     }
 
@@ -216,7 +211,7 @@ final class LibraryActions {
                             new AlertDialog.Builder(screen)
                                     .setTitle(e.name())
                                     .setMessage(
-                                            e.start()
+                                            (e.start().equals(CloudLibrary.UNKNOWN_DATE) ? "Aufnahmedatum unbekannt" : e.start().toString())
                                                     + "\n"
                                                     + Audomo.duration(e.frames())
                                                     + " · "

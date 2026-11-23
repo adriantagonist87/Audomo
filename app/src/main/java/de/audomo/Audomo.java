@@ -30,13 +30,17 @@ public final class Audomo extends Application {
     volatile boolean spaceLow, quietRequested;
     volatile String systemNote = "";
     final ExecutorService worker = Executors.newSingleThreadExecutor();
+    final ExecutorService libraryFiles = Executors.newSingleThreadExecutor();
+    final ExecutorService uploadControls = Executors.newSingleThreadExecutor();
     final Handler main = new Handler(Looper.getMainLooper());
     SessionStore sessions;
+    RecordingDraft draft;
 
     @Override
     public void onCreate() {
         super.onCreate();
         sessions = new SessionStore(this);
+        draft = new RecordingDraft(this);
         worker.execute(() -> {
             RecordingQuietMode.update(this, false);
             String notice;
@@ -46,6 +50,7 @@ public final class Audomo extends Application {
                 notice = cause(e);
             }
             try {
+                new FolderManager(sessions).resume();
                 new LibraryFiles(sessions).cleanOld();
                 UploadQueue.get(this).reconcile();
             } catch (Exception e) {

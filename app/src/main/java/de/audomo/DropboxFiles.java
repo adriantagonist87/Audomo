@@ -1,16 +1,14 @@
 package de.audomo;
 
 import android.net.Network;
-import android.util.Base64;
 
 import okhttp3.*;
 
 import org.json.JSONObject;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.security.*;
-import java.util.*;
+import java.util.Locale;
+import java.util.Objects;
 
 final class DropboxFiles extends RemoteFiles {
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8"),
@@ -35,48 +33,6 @@ final class DropboxFiles extends RemoteFiles {
                                         .add("client_id", c.host())
                                         .build())
                         .getString("access_token");
-    }
-
-    static String verifier() {
-        byte[] bytes = new byte[48];
-        new SecureRandom().nextBytes(bytes);
-        return b64(bytes);
-    }
-
-    static String b64(byte[] data) {
-        return Base64.encodeToString(data, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
-    }
-
-    static android.net.Uri authorize(String key, String verifier) throws Exception {
-        return android.net.Uri.parse("https://www.dropbox.com/oauth2/authorize")
-                .buildUpon()
-                .appendQueryParameter("client_id", key)
-                .appendQueryParameter("response_type", "code")
-                .appendQueryParameter("token_access_type", "offline")
-                .appendQueryParameter("code_challenge_method", "S256")
-                .appendQueryParameter(
-                        "code_challenge",
-                        b64(
-                                MessageDigest.getInstance("SHA-256")
-                                        .digest(verifier.getBytes(StandardCharsets.US_ASCII))))
-                .build();
-    }
-
-    static String exchange(String key, String verifier, String code) throws Exception {
-        OkHttpClient c = http(null);
-        try {
-            return token(
-                            c,
-                            new FormBody.Builder()
-                                    .add("grant_type", "authorization_code")
-                                    .add("client_id", key)
-                                    .add("code_verifier", verifier)
-                                    .add("code", code)
-                                    .build())
-                    .getString("refresh_token");
-        } finally {
-            c.connectionPool().evictAll();
-        }
     }
 
     static JSONObject token(OkHttpClient client, FormBody form) throws Exception {
@@ -146,7 +102,29 @@ final class DropboxFiles extends RemoteFiles {
         }
     }
 
-    String hash(String path) throws Exception {
+    java.util.List<Child> children(String path) throws Exception {
+        java.util.List<Child> list = new java.util.ArrayList<>();
+        String method = "list_folder";
+        JSONObject args = new JSONObject().put("path", path.equals("/") ? "" : path);
+        while (true) {
+            try (Response r = request(method, args, null)) {
+                require(r);
+                JSONObject page = new JSONObject(r.body().string());
+                org.json.JSONArray entries = page.getJSONArray("entries");
+                for (int i = 0; i < entries.length(); i++) {
+                    JSONObject item = entries.getJSONObject(i);
+                    String kind = item.getString(".tag");
+                    if (kind.equals("file") || kind.equals("folder"))
+                        list.add(new Child(item.getString("name"), kind.equals("folder"), item.optLong("size", -1)));
+                }
+                if (!page.getBoolean("has_more")) return list;
+                method = "list_folder/continue";
+                args = new JSONObject().put("cursor", page.getString("cursor"));
+            }
+        }
+    }
+
+    boolean read(String path, OutputStream out) throws Exception {
         try (Response r =
                 client.newCall(
                                 new Request.Builder()
@@ -158,9 +136,10 @@ final class DropboxFiles extends RemoteFiles {
                                         .post(RequestBody.create(null, new byte[0]))
                                         .build())
                         .execute()) {
-            if (r.code() == 409 && r.body().string().contains("not_found")) return null;
+            if (r.code() == 409 && r.body().string().contains("not_found")) return false;
             require(r);
-            return LibraryFiles.digest(guarded(r.body().byteStream()));
+            copyTo(r.body().byteStream(), out);
+            return true;
         }
     }
 
@@ -212,7 +191,10 @@ final class DropboxFiles extends RemoteFiles {
                                         new JSONObject().put("session_id", id).put("offset", pos));
                 pos += data.length;
                 boolean last = pos == f.length();
-                if (last) req.put("commit", args);
+                if (last) {
+                    progress.beforeCommit();
+                    req.put("commit", args);
+                }
                 try (Response r =
                         request(
                                 last ? "upload_session/finish" : "upload_session/append_v2",

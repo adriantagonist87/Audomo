@@ -37,10 +37,11 @@ final class ProfileDialog {
                                                 .putString("selected", all.get(choice[0]).name())
                                                 .apply();
                                 })
-                        .setNeutralButton("Profile verwalten", (d, w) -> manage())
+                        .setNeutralButton("Profile verwalten", null)
                         .setNegativeButton("Schließen", null)
                         .create();
         dialog.show();
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> manage(dialog));
         dialog.getWindow().setGravity(Gravity.BOTTOM);
         dialog.getWindow()
                 .setLayout(
@@ -48,21 +49,29 @@ final class ProfileDialog {
                         WindowManager.LayoutParams.WRAP_CONTENT);
     }
 
-    private void manage() {
+    private void manage(AlertDialog chooser) {
         List<Profile> all = Profile.profiles(screen);
         String[] names =
                 all.stream()
                         .map(p -> p.name() + " · " + p.kbps() + " kbit/s")
                         .toArray(String[]::new);
-        new AlertDialog.Builder(screen)
+        AlertDialog management = new AlertDialog.Builder(screen)
                 .setTitle("Aufnahmeprofile")
-                .setItems(names, (d, i) -> editor(all.get(i)))
-                .setPositiveButton("Neues Profil", (d, w) -> editor(null))
+                .setItems(names, null)
+                .setPositiveButton("Neues Profil", null)
                 .setNegativeButton("Schließen", null)
                 .show();
+        Runnable saved = () -> {
+            management.dismiss();
+            chooser.dismiss();
+            choose();
+        };
+        management.getListView().setOnItemClickListener((parent, view, i, id) ->
+                editor(all.get(i), saved));
+        management.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> editor(null, saved));
     }
 
-    private void editor(Profile source) {
+    private void editor(Profile source, Runnable saved) {
         Profile p = source == null ? Profile.selected(screen) : source;
         boolean create = source == null;
         ScrollView scroll = new ScrollView(screen);
@@ -117,6 +126,7 @@ final class ProfileDialog {
                                         noise.getSelectedItem().toString());
                         Profile.save(screen, edited, create ? null : p.name());
                         dialog.dismiss();
+                        saved.run();
                     } catch (Exception e) {
                         Toast.makeText(
                                         screen,

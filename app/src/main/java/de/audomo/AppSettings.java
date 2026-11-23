@@ -25,9 +25,10 @@ final class AppSettings {
         prefs = Profile.prefs(screen);
     }
 
-    private final class Page {
+    final class Page {
         final LinearLayout rows = screen.column();
         final Dialog dialog;
+        final ScrollView scroll = new ScrollView(screen);
 
         Page(String title) {
             dialog = new Dialog(screen, android.R.style.Theme_Material_NoActionBar);
@@ -40,7 +41,6 @@ final class AppSettings {
             back.setOnClickListener(v -> dialog.dismiss());
             header.addView(back, screen.lp(48, 48));
             header.addView(screen.text(title, 22, MainActivity.INK), screen.weight());
-            ScrollView scroll = new ScrollView(screen);
             scroll.addView(rows);
             page.addView(scroll);
             dialog.setContentView(page);
@@ -83,6 +83,10 @@ final class AppSettings {
     }
 
     void show() {
+        show(0);
+    }
+
+    void show(int scrollY) {
         Page p = new Page("Einstellungen");
         p.group("Aufnahme");
         p.liveRow(
@@ -120,13 +124,11 @@ final class AppSettings {
                 () -> CalendarNames.ids(screen).size() + " Kalender ausgewählt",
                 () -> screen.startActivity(new Intent(screen, CalendarSettings.class)));
         p.liveRow(
-                "Dateinamen",
-                () -> CalendarNames.template(screen),
-                () ->
-                        screen.startActivity(
-                                new Intent(screen, CalendarSettings.class)
-                                        .putExtra("focusTemplate", true)));
+                "Dateiname und Ordner",
+                () -> CalendarNames.template(screen) + " · " + CalendarNames.folderMode(screen).label,
+                () -> screen.startActivity(new Intent(screen, NamingSettings.class)));
         p.group("Dateien");
+        p.row("Ordner verwalten", "Anlegen, umbenennen, verschieben und löschen", () -> new FolderSettings(screen).show());
         p.liveRow(
                 "Speicher und Import",
                 () -> prefs.contains("documentTree") ? "Android-Ordner gewählt" : "App-Speicher",
@@ -136,11 +138,10 @@ final class AppSettings {
                 "Gelöschte Aufnahmen",
                 () -> {
                     p.dialog.dismiss();
-                    screen.trashView = true;
-                    screen.showLibrary();
+                    screen.openTrash(p.scroll.getScrollY());
                 });
         p.group("Cloud und Uploads");
-        p.row("Uploadziele", "Verbindungen und Standardziel", () -> upload(null));
+        p.row("Uploadziele", "Verbindungen und Standardziel", this::uploadTargets);
         p.row(
                 "Upload-Warteschlange",
                 "Fortschritt und Fehler",
@@ -181,6 +182,7 @@ final class AppSettings {
         p.row("Diagnose", "Ereignisse und Export", this::diagnostics);
         p.row("Einrichtung", "Berechtigungen und Schnellzugriff", this::onboarding);
         p.dialog.show();
+        if (scrollY != 0) p.scroll.post(() -> p.scroll.scrollTo(0, scrollY));
     }
 
     void onboarding() {
@@ -202,7 +204,7 @@ final class AppSettings {
                         screen.requestPermissions(
                                 new String[] {Manifest.permission.POST_NOTIFICATIONS}, 2));
         p.row("Kachel hinzufügen", "Android-Schnelleinstellungen", screen::addTile);
-        p.row("Cloudziel", "Optional", () -> upload(null));
+        p.row("Cloudziel", "Optional", this::uploadTargets);
         p.dialog.show();
     }
 
@@ -212,8 +214,8 @@ final class AppSettings {
                 : "Zugriff einrichten";
     }
 
-    void upload(SessionStore.Entry e) {
-        new CloudScreen(screen).show(e);
+    void uploadTargets() {
+        new CloudScreen(screen).manage(java.util.List.of());
     }
 
     void storage() {

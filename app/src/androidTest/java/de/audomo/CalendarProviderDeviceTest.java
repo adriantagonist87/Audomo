@@ -78,10 +78,92 @@ public class CalendarProviderDeviceTest {
             event(ctx, a, "Ganztägig", from - 12 * 3600000, 86400000, null, true, false);
             SharedPreferences prefs = Profile.prefs(isolated);
             prefs.edit().putString("calendars", a + "," + b).commit();
-            assertEquals("Serie", CalendarNames.at(isolated, point).get().event().title());
+            var winner = CalendarNames.at(isolated, point).get().event();
+            assertEquals("Serie", winner.title());
+            assertEquals("Priorität A", winner.calendarName());
             prefs.edit().putString("calendars", b + "," + a).commit();
-            assertEquals("Einzeltermin", CalendarNames.at(isolated, point).get().event().title());
+            winner = CalendarNames.at(isolated, point).get().event();
+            assertEquals("Einzeltermin", winner.title());
+            assertEquals("Priorität B", winner.calendarName());
             assertNull(CalendarNames.at(isolated, point.plusHours(2)).get().event());
+            var selectedDay =
+                    CalendarNames.day(
+                            isolated,
+                            point.toLocalDate(),
+                            ZoneId.of("Europe/Berlin"),
+                            new android.os.CancellationSignal());
+            var titles =
+                    selectedDay.appointments().stream()
+                            .map(item -> item.event().title())
+                            .collect(java.util.stream.Collectors.toList());
+            assertEquals(3, titles.size());
+            assertTrue(titles.containsAll(List.of("Serie", "Einzeltermin", "Ganztägig")));
+            assertEquals(
+                    1L,
+                    selectedDay.appointments().stream()
+                            .filter(item -> item.event().allDay())
+                            .count());
+            prefs.edit().putString("calendars", Long.toString(a)).commit();
+            assertFalse(
+                    CalendarNames.day(
+                                    isolated,
+                                    point.toLocalDate(),
+                                    ZoneId.of("America/Los_Angeles"),
+                                    new android.os.CancellationSignal())
+                            .appointments()
+                            .stream()
+                            .anyMatch(item -> item.event().calendar() == b));
+            long utcMidnight =
+                    point.toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+            event(
+                    ctx,
+                    a,
+                    "Früh am Folgetag",
+                    utcMidnight + 86400000L + 1800000L,
+                    600000,
+                    null,
+                    false,
+                    false);
+            event(ctx, a, "Ganztägig morgen", utcMidnight + 86400000L, 86400000, null, true, false);
+            var west =
+                    CalendarNames.day(
+                            isolated,
+                            point.toLocalDate(),
+                            ZoneId.of("America/Los_Angeles"),
+                            new android.os.CancellationSignal());
+            assertTrue(
+                    west.appointments().stream()
+                            .anyMatch(item -> item.event().title().equals("Früh am Folgetag")));
+            assertFalse(
+                    west.appointments().stream()
+                            .anyMatch(item -> item.event().title().equals("Ganztägig morgen")));
+            LocalDate autumn = LocalDate.of(2026, 10, 25);
+            ZoneId berlin = ZoneId.of("Europe/Berlin");
+            var repeated = autumn.atTime(2, 30).atZone(berlin);
+            event(
+                    ctx,
+                    a,
+                    "Frühe Winterzeitstunde",
+                    repeated.withEarlierOffsetAtOverlap().toInstant().toEpochMilli(),
+                    600000,
+                    null,
+                    false,
+                    false);
+            event(
+                    ctx,
+                    a,
+                    "Späte Winterzeitstunde",
+                    repeated.withLaterOffsetAtOverlap().toInstant().toEpochMilli(),
+                    600000,
+                    null,
+                    false,
+                    false);
+            var overlap =
+                    CalendarNames.day(isolated, autumn, berlin, new android.os.CancellationSignal())
+                            .appointments();
+            assertEquals(2, overlap.size());
+            assertEquals(3600000L, overlap.get(1).event().begin() - overlap.get(0).event().begin());
+            prefs.edit().putString("calendars", b + "," + a).commit();
             prefs.edit().putInt("after", 90).commit();
             assertEquals(
                     "Einzeltermin",
@@ -114,7 +196,7 @@ public class CalendarProviderDeviceTest {
         }
     }
 
-    private long event(
+    long event(
             Context ctx,
             long cal,
             String title,

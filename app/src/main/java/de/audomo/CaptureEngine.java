@@ -26,18 +26,29 @@ final class CaptureEngine {
         this.listener = listener;
     }
 
-    File run(String requested) throws Exception {
+    File run(String requested, RecordingDraft.Value draft) throws Exception {
         Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
         Profile profile = Profile.selected(app);
         OffsetDateTime start = OffsetDateTime.now();
         String template = CalendarNames.template(app);
-        boolean automatic = requested == null || requested.isBlank();
-        var match = CalendarNames.at(app, start);
+        CalendarNames.FolderMode mode = CalendarNames.folderMode(app);
+        String base = CalendarNames.baseFolder(app, mode);
+        CalendarNames.Event chosen = draft.event();
+        String custom =
+                chosen != null && (requested == null || requested.isBlank())
+                        ? draft.name()
+                        : requested;
+        boolean automatic = custom == null || custom.isBlank();
+        var match = chosen == null ? CalendarNames.at(app, start) : null;
+        String initial =
+                automatic
+                        ? (chosen == null
+                                ? CalendarNames.name(template, start, null)
+                                : CalendarNames.chosenName(template, start, chosen))
+                        : custom;
         File dir =
                 app.sessions.create(
-                        automatic ? CalendarNames.name(template, start, null) : requested,
-                        profile,
-                        start);
+                        initial, profile, start, CalendarNames.folder(base, mode, chosen));
         java.util.concurrent.CompletableFuture<Void> naming =
                 java.util.concurrent.CompletableFuture.completedFuture(null);
         JSONObject meta = SessionStore.metadata(dir);
@@ -59,25 +70,39 @@ final class CaptureEngine {
                         .put("clientRate", config.getClientFormat().getSampleRate());
             app.audioDetails = input.effects();
             SessionStore.storeMeta(dir, meta);
-            naming =
-                    match.thenAcceptAsync(result -> {
-                        try {
-                            CalendarNames.Event event = result.event();
-                            app.eventText = CalendarNames.describe(result);
-                            if (automatic && event != null) {
-                                String name =
-                                        app.sessions.uniqueName(
-                                                CalendarNames.name(template, start, event.title()),
-                                                dir);
-                                meta.put("name", name);
-                                SessionStore.storeMeta(dir, meta);
-                                app.activeName = name;
+            app.draft.consume(draft);
+            if (chosen != null)
+                app.eventText = CalendarNames.describe(new CalendarNames.Match(chosen, ""));
+            if (match != null)
+                naming =
+                        match.thenAcceptAsync(result -> {
+                            try {
+                                CalendarNames.Event event = result.event();
+                                app.eventText = CalendarNames.describe(result);
+                                if (event != null
+                                        && (automatic
+                                                || mode == CalendarNames.FolderMode.CALENDAR)) {
+                                    String folder = CalendarNames.folder(base, mode, event);
+                                    String proposed =
+                                            automatic
+                                                    ? CalendarNames.name(template, start, event)
+                                                    : SessionStore.fileName(custom, start);
+                                    synchronized (app.sessions) {
+                                        new LibraryFiles(app.sessions).ensureFolder(folder);
+                                        String name =
+                                                app.sessions.availableName(proposed, folder, dir);
+                                        meta.put("name", name).put("folder", folder);
+                                        SessionStore.storeMeta(dir, meta);
+                                        app.activeName = name;
+                                    }
+                                }
+                            } catch (Exception error) {
+                                app.eventText = "Kalenderzuordnung fehlgeschlagen";
+                                app.diagnostic(
+                                        "Name oder Ordner aus dem Kalender konnte nicht übernommen"
+                                                + " werden");
                             }
-                        } catch (Exception error) {
-                            app.eventText = "Kalendername nicht gesichert";
-                            app.diagnostic("Kalendername konnte nicht übernommen werden");
-                        }
-                    });
+                        });
             capture(input, encoder, ogg, dir, profile);
             listener.state(Audomo.State.FINALIZING);
             java.nio.file.Files.deleteIfExists(new File(dir, "reserve").toPath());
@@ -86,7 +111,7 @@ final class CaptureEngine {
             Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT);
             naming.join();
         }
-        return SessionStore.publish(dir, part, app.frames, false);
+        return app.sessions.publish(dir, part, app.frames, false);
     }
 
     static int applyGain(short[] block, int n, double gain) {
