@@ -1,47 +1,30 @@
-# Audomo für Android
+# <img src="app/src/main/res/drawable-nodpi/brand.png" width="64" height="64" alt="Audomo-App-Symbol"> Audomo
 
-Audomo nimmt Sprache als Ogg/Opus auf. Ein Kalendertermin kann den Dateinamen und den Zielordner bestimmen. Die Aufnahme bleibt lokal verfügbar, bis du selbst eine Ablageregel wählst. Über die Warteschlange lassen sich bestehende und neue Aufnahmen an einen oder mehrere Dienste übertragen.
+Audomo nimmt eure Projektbesprechungen auf und benennt die Audiodatei nach dem passenden Termin im Android-Kalender. So findet ihr auch Wochen später die Planungsrunde wieder, in der ihr eine Materialwahl oder einen Liefertermin vereinbart habt.
 
-Erstes Zielgerät ist das Samsung Galaxy S24 Ultra mit Android 14 und One UI 6.1. Audomo benötigt mindestens Android 14 (API 34) und ein Mikrofon. Die Bedienoberfläche ist deutsch.
+[Audomo für Android herunterladen](https://github.com/adriantagonist87/Audomo/releases/latest) · Ab Android 14
 
-## Installation
+## Besprechungen nur im gemeinsamen Einverständnis aufnehmen
 
-Auf dem Android-Gerät die APK aus dem offiziellen Release herunterladen und öffnen. Falls Android danach fragt, dem verwendeten Browser oder Dateimanager die Installation aus dieser Quelle erlauben. Zu jedem Release gehören die APK und ihre SHA-256-Prüfsumme. [Stabile Releases](https://github.com/adriantagonist87/Audomo/releases/latest) · [Prüfbericht zu 1.0.0](qa/RELEASE-1.0.0.md)
+> [!IMPORTANT]
+> Audomo wurde ausschließlich für Besprechungen entwickelt, die alle Beteiligten gemeinsam aufzeichnen möchten. Fragt vor dem Start jede Person, ob sie mit der Aufnahme einverstanden ist. Klärt auch, wer sie später anhören darf und ob sie in eure Projektcloud geladen werden soll. Kommt jemand dazu, pausiert die Aufnahme und fragt nach.
+>
+> In Deutschland macht sich strafbar, wer unbefugt aufnimmt, was eine andere Person in einer nichtöffentlichen Besprechung sagt. Auch wer eine so entstandene Aufnahme unbefugt nutzt oder Dritten zugänglich macht, kann sich strafbar machen. Dafür sieht das Gesetz eine Geldstrafe oder bis zu drei Jahre Freiheitsstrafe vor. [§ 201 Abs. 1 StGB – Verletzung der Vertraulichkeit des Wortes](https://www.gesetze-im-internet.de/stgb/__201.html)
 
-Die Testversionen bis 0.2.14 verwenden dieselbe Paketkennung mit einer anderen Signatur. Android kann die stabile Ausgabe deshalb auf dem Galaxy S24 mit installierter Testversion erst nach einer Deinstallation installieren. Eine Deinstallation entfernt private Aufnahmen, Warteschlange, Einstellungen und das Verzeichnis bestätigter Cloudkopien. Vor einem Wechsel die eigenen Daten sichern und die Sicherung prüfen. Wer das vollständige lokale Verzeichnis behalten möchte, kann die Testinstallation weiterverwenden. [Wechsel von der Testversion](docs/BEDIENUNG.md#wechsel-von-der-testversion)
+## Vom Kalendertermin zur Aufnahme
 
-## Die drei Reiter
+Im Kalender „Werkstattumbau“ steht um zehn Uhr die „Planungsrunde“. Ist dieser Kalender in Audomo ausgewählt, erscheint die laufende Besprechung schon beim Öffnen der App. Mit der Dateinamenvorlage „Termintitel“ steht dort bereits `Planungsrunde.ogg`. Ein Tipp auf den grünen Aufnahmeknopf genügt. Soll ein anderer Termin den Namen liefern, tippt auf „Aktueller Kalendertermin“ und wählt ihn in der Tagesansicht aus.
 
-| Aufnehmen | Wiedergeben | Warteschlange |
-|---|---|---|
-| Aufnahme starten, pausieren und speichern. Ein Tipp auf den Kalendertermin öffnet den Tag zur Auswahl des nächsten Namens. | Aufnahmen suchen, anhören, umbenennen, verschieben, auswählen oder hochladen. Speicherorte erscheinen am Eintrag. | Status pro Aufnahme und Ziel prüfen. Nach rechts wischen priorisiert, nach links wischen entfernt den Auftrag. Mehrfachauswahl und Leeren sind im selben Reiter erreichbar. |
+<p>
+  <a href="docs/bilder/tagesansicht.png"><img src="docs/bilder/tagesansicht.png" width="245" alt="Tagesansicht des Kalenders Werkstattumbau mit der Planungsrunde von 10:00 bis 10:50 Uhr"></a>
+  <a href="docs/bilder/dateiname.png"><img src="docs/bilder/dateiname.png" width="245" alt="Vor dem Aufnahmestart stehen die aktuelle Planungsrunde und ihr Dateiname Planungsrunde.ogg schon fest"></a>
+  <a href="docs/bilder/wiedergabe.png"><img src="docs/bilder/wiedergabe.png" width="245" alt="Gespeicherte Planungsrunde.ogg im Ordner Werkstattumbau mit geöffnetem Player"></a>
+</p>
 
-Der Cloud-Upload unterstützt Dropbox, WebDAV, FTP, FTPS und SFTP. Automatische Übertragung lässt sich einschalten und in Minuten verzögern. Die App vergleicht den Inhalt der übertragenen Datei, bevor sie die Cloudkopie bestätigt. [Bedienungsanleitung mit Einstellungen, Ablage und Dropbox-Einrichtung](docs/BEDIENUNG.md)
+Wer für jedes Projekt einen Kalender führt, kann denselben Namen auch für den Aufnahmeordner nutzen. Wählt dazu in „Einstellungen“ unter „Dateiname und Ordner“ die Option „Unterordner je Kalender“. Audomo legt den Ordner bei der ersten Aufnahme an. In diesem Beispiel findet ihr das Gespräch anschließend unter `Werkstattumbau/Planungsrunde.ogg`.
 
-## Selbst bauen
+## Nach der Besprechung
 
-Das Repository direkt in Android Studio öffnen. Der Quellcode verwendet Java 17. Der getestete Build nutzt Android Studio JBR 25.0.4, SDK Platform 37, Build Tools 36.0.0, Gradle Wrapper 9.6.0 und Android Gradle Plugin 9.5.2. minSdk und targetSdk sind 34. Ein frischer Checkout benötigt beim ersten Build Zugriff auf Google Maven, Maven Central und die Gradle-Distribution.
+Unter „Wiedergeben“ könnt ihr eine Passage noch einmal anhören, ein paar Sekunden zurückspringen oder das Abspieltempo ändern. Die Aufnahme wird zunächst auf dem Gerät gespeichert. Wenn ihr einen gemeinsamen Ablageort vereinbart habt, markiert die gewünschten Aufnahmen und wählt „Cloud Upload“. Für regelmäßige Runden lässt sich der Upload auch automatisch starten, auf Wunsch mit einigen Minuten Verzögerung. [Bedienungsanleitung und unterstützte Cloud-Dienste](docs/BEDIENUNG.md)
 
-```sh
-git clone https://github.com/adriantagonist87/Audomo.git
-cd Audomo
-# macOS mit Android Studio und SDK am Standardort
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-export ANDROID_HOME="$HOME/Library/Android/sdk"
-./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-```
-
-Die Test-APK liegt unter `app/build/outputs/apk/debug/app-debug.apk`. Nach dem Start eines Testemulators mit `adb devices -l` dessen Seriennummer ermitteln und gezielt installieren, etwa mit `adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk`. ADB liegt in `$ANDROID_HOME/platform-tools`.
-
-## Weiterentwicklung
-
-| Einstieg | Inhalt |
-|---|---|
-| [AGENTS.md](AGENTS.md) und [Entwicklungsübergabe](docs/ENTWICKLUNG.md) | Einstieg für Menschen und KI, Quellkarte, Produktentscheidungen, Daten und Nebenläufigkeit |
-| [Testanleitung](docs/TESTEN.md) und [Freigabeprotokoll](qa/RELEASE-1.0.0.md) | Reproduzierbare Prüfwege, Geräte und bekannte Grenzen |
-| [Release-Handbuch](docs/RELEASE.md) | Versionieren, signieren, Prüfsummen, Veröffentlichung und Updates |
-| [Featurematrix mit Implementierungsnachweisen](qa/ANFORDERUNGSABGLEICH.md) und [Designentscheidungen](qa/MOCKUPABGLEICH.md) | 122 Feature-IDs und 52 Gestaltungseinträge mit historischem Stand |
-| [Geräteprotokoll](qa/GERAETETEST.md) und [Abnahmefälle](qa/ABNAHME-0.2.md) | Messwerte, Bildbelege und verbleibende Geräteprüfungen |
-| [Architekturentscheidung](ADR-001.md) | Bewertung der ursprünglichen Quellbasis und Entwurf des Aufnahmepfads |
-
-Der Audomo-Quellcode steht unter Apache License 2.0. Für die Bildmarke, Schrift und eingebundenen Abhängigkeiten gelten die jeweiligen Hinweise. [Lizenz](LICENSE) · [Drittanbieter und Assets](DRITTANBIETER.md)
+Wer noch die frühere Testversion 0.2.x nutzt, sollte vor dem Wechsel die Aufnahmen sichern. Die stabile Ausgabe verwendet einen eigenen Signierschlüssel. [Anleitung für den Wechsel](docs/BEDIENUNG.md#wechsel-von-der-testversion)

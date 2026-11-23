@@ -4,9 +4,11 @@ Für jeden Befund App-Version, API-Level, Gerätemodell, Einstieg, erwartetes un
 
 ## Auf dem Entwicklungsrechner
 
-Mit dem JDK und SDK aus der [Buildanleitung](../README.md#selbst-bauen) im Repository ausführen.
+Das Repository als Android-Studio-Projekt öffnen. Der geprüfte Build verwendet Android Studio JBR 25.0.4, Android SDK Platform 37, Build Tools 36.0.0, Gradle Wrapper 9.6.0 und Android Gradle Plugin 9.5.2. Der Java-Quellcode verwendet Sprachstufe 17, minSdk und targetSdk sind 34. Der erste Build lädt Abhängigkeiten über Google Maven, Maven Central und die Gradle-Distribution. Unter macOS mit SDK am Standardort im Repository ausführen.
 
 ```sh
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export ANDROID_HOME="$HOME/Library/Android/sdk"
 ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:assembleRelease :app:lintRelease
 ```
 
