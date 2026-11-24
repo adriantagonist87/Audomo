@@ -10,6 +10,8 @@ Auf Wunsch des Nutzers wurde ein bestehender, zuvor fehlgeschlagener Auftrag im 
 
 Im separaten API-34-Emulator führte eine neue Aufnahme mit zeitverzögerter Automatik selbständig zu einem Uploadauftrag. Ein absichtlich falscher Zugang beim lokalen FTP-Dienst erzeugte einen Fehler samt Android-Benachrichtigung. Nach Korrektur des Testzugangs wiederholte Android die Übertragung selbständig, bestätigte den Dateiinhalt und entfernte die Fehlermeldung. Die Prüfung verwendete weder eine erzwungene Jobausführung noch die manuelle Wiederholtaste. [Automatikregression](../app/src/androidTest/java/de/audomo/AutomaticUploadDeviceTest.java)
 
+Der abschließende lokale Stand bestand 14 JVM-Tests und 23 Instrumentierungstests auf API 34. Zusätzlich blieb ein fehlgeschlagener Verbindungstest im separat bedienten Emulator bis zum Schließen lesbar. Der auf dem S24 bestätigte Build enthält den IPv4-Ausweichpfad und den sichtbaren Verbindungsdialog. Die abschließende Erweiterung der Dropbox-Fehlertexte wurde lokal gebaut und getestet. Vor deren Installation endete die WLAN-Verbindung.
+
 ## Warteschlange auswählen, priorisieren und leeren mit Version 0.2.14
 
 Im S24-Ultra-Emulator mit Android 14 wurde eine 0.2.13-Installation mit einem bestätigten FTP-Upload und drei wartenden Aufträgen aktualisiert. Ein Rechtswisch zog einen Auftrag vor. Seine Position blieb nach Beenden des App-Prozesses erhalten. Nach Rückkehr des WLANs bestätigten die Eingangszeiten des lokalen FTP-Dienstes die geänderte Reihenfolge. Der per Linkswisch entfernte Auftrag wurde übersprungen.
