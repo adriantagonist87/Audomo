@@ -316,6 +316,11 @@ final class CloudScreen {
         AlertDialog dialog = dialog("Speicherorte", page);
         page.addView(s.text(entry.name(), 16, MainActivity.INK));
         if (!entry.cloudOnly()) page.addView(s.text("Lokal · " + (entry.folder().isEmpty() ? "Aufnahmen" : entry.folder()), 14, MainActivity.DIM));
+        if (entry.trashed() == 0 && (!entry.cloudOnly() || jobs.stream().anyMatch(UploadQueue.Job::canRename)))
+            button(page, "Umbenennen", () -> {
+                dialog.dismiss();
+                new LibraryActions(s, new LibraryFiles(((Audomo)s.getApplication()).sessions)).rename(entry);
+            });
         for (UploadQueue.Job job : jobs) {
             String provider = job.provider().isEmpty() ? "Cloud" : job.provider();
             page.addView(s.text(provider + " · " + job.confirmedPath(), 15, MainActivity.INK));

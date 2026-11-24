@@ -47,6 +47,38 @@ public class DropboxRequestDeviceTest {
     }
 
     @Test
+    public void renameUsesOriginalFolderAndReportsConflictWithoutOverwriting() throws Exception {
+        int[] calls = {0};
+        OkHttpClient local = new OkHttpClient.Builder().addInterceptor(chain -> {
+            boolean login = chain.request().url().encodedPath().equals("/oauth2/token");
+            if (!login) {
+                calls[0]++;
+                assertEquals("/2/files/move_v2", chain.request().url().encodedPath());
+                assertTrue(chain.request().body().isOneShot());
+                okio.Buffer buffer = new okio.Buffer();
+                chain.request().body().writeTo(buffer);
+                try {
+                    JSONObject body = new JSONObject(buffer.readUtf8());
+                    assertEquals("/Archiv/Alt.ogg", body.getString("from_path"));
+                    assertEquals("/Archiv/Neu.ogg", body.getString("to_path"));
+                    assertFalse(body.getBoolean("autorename"));
+                } catch (JSONException error) { throw new IOException(error); }
+            }
+            boolean conflict = calls[0] == 2;
+            return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
+                    .code(conflict ? 409 : 200).message("fixture").body(ResponseBody.create(null,
+                            login ? "{\"access_token\":\"synthetic\"}" : conflict
+                            ? "{\"error_summary\":\"to/conflict/file/..\"}" : "{}")).build();
+        }).build();
+        CloudConfig t = new CloudConfig(UUID.randomUUID().toString(), "Dropbox", "qa", 443, "", "/", "");
+        try (DropboxFiles remote = new DropboxFiles(t, "synthetic", n -> {}, local)) {
+            remote.renameFile("/Archiv/Alt.ogg", "/Archiv/Neu.ogg", "hash");
+            assertThrows(RemoteFiles.Conflict.class, () -> remote.renameFile("/Archiv/Alt.ogg", "/Archiv/Neu.ogg", "hash"));
+            assertEquals(2, calls[0]);
+        }
+    }
+
+    @Test
     public void quotaErrorDoesNotBecomeAnOverwritePrompt() throws Exception {
         var client = DropboxFiles.dropboxHttp(null);
         assertTrue(client.retryOnConnectionFailure());

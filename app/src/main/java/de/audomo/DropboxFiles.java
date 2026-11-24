@@ -114,7 +114,8 @@ final class DropboxFiles extends RemoteFiles {
                         .header("Authorization", "Bearer " + bearer);
         RequestBody body = content ? data : RequestBody.create(JSON, args.toString());
         if (content) b.header("Dropbox-API-Arg", header(args));
-        boolean mutates = content || method.equals("create_folder_v2") || method.equals("delete_v2");
+        boolean mutates = content || method.equals("create_folder_v2") || method.equals("delete_v2")
+                || method.equals("move_v2");
         b.post(mutates ? oneShot(body) : body);
         return client.newCall(b.build()).execute();
     }
@@ -259,6 +260,16 @@ final class DropboxFiles extends RemoteFiles {
                     requireDropbox(r);
                 }
             }
+        }
+    }
+
+    void renameFile(String from, String to, String expected) throws Exception {
+        progress.beforeCommit();
+        JSONObject args = new JSONObject().put("from_path", from).put("to_path", to)
+                .put("autorename", false);
+        try (Response r = request("move_v2", args, null)) {
+            if (r.code() == 409 && errorSummary(r).startsWith("to/conflict")) throw new Conflict();
+            requireDropbox(r);
         }
     }
 

@@ -63,7 +63,7 @@ public class LibraryUiDeviceTest {
             var window = inst.getUiAutomation().getRootInActiveWindow();
             if (window != null)
                 for (var node : window.findAccessibilityNodeInfosByText(text)) {
-                    if (!text.contentEquals(node.getText() == null ? "" : node.getText())
+                    if (!text.equalsIgnoreCase(node.getText() == null ? "" : node.getText().toString())
                             && !text.equals(node.getContentDescription())
                             && !(text + ", ausgewählt").equals(node.getContentDescription()))
                         continue;
@@ -264,6 +264,12 @@ public class LibraryUiDeviceTest {
             await(() -> find(root, Button.class, "Umbenennen") != null);
             assertNotNull(find(root, Button.class, "Upload"));
             shot(ctx, "dateiaktionen");
+            ui(() -> find(root, Button.class, "Umbenennen").performClick());
+            inst.getUiAutomation().waitForIdle(250, 5000);
+            var dialog = inst.getUiAutomation().getRootInActiveWindow();
+            assertFalse(dialog.findAccessibilityNodeInfosByText("Aufnahme umbenennen").isEmpty());
+            assertTrue(dialog.findAccessibilityNodeInfosByText("Auf diesem Gerät").stream().anyMatch(AccessibilityNodeInfo::isChecked));
+            choice("Abbrechen");
             ui(() -> find(root, ImageButton.class, "Abspielen").performClick());
             await(() -> find(root, ImageButton.class, "Pause") != null);
             ui(() -> find(root, ImageButton.class, "Pause").performClick());

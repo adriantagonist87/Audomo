@@ -63,6 +63,15 @@ abstract class RemoteFiles implements AutoCloseable {
         try (InputStream in = guarded(raw)) { in.transferTo(out); }
     }
 
+    // A case-insensitive backend may resolve both spellings to the same object.
+    String renameHash(String path, boolean caseOnly) throws Exception {
+        if (caseOnly && children(parent(path)).stream().noneMatch(item -> item.name().equals(leaf(path))))
+            return null;
+        return hash(path);
+    }
+
+    abstract void renameFile(String from, String to, String expected) throws Exception;
+
     abstract void deleteIfMatches(String path, String expected) throws Exception;
 
     abstract void put(File source, String path, boolean replace, String expectedHash)
@@ -277,6 +286,25 @@ abstract class RemoteFiles implements AutoCloseable {
             }
         }
 
+        void renameFile(String from, String to, String expected) throws Exception {
+            String etag;
+            try (Response r = client.newCall(request(from).get().build()).execute()) {
+                require(r);
+                etag = r.header("ETag");
+                if (etag == null || etag.startsWith("W/")
+                        || !expected.equals(LibraryFiles.digest(guarded(r.body().byteStream()))))
+                    throw new IOException("Cloudkopie wurde extern geändert");
+            }
+            Request move = request(from).method("MOVE", null)
+                    .header("Destination", request(to).build().url().toString())
+                    .header("Overwrite", "F").header("If-Match", etag).build();
+            progress.beforeCommit();
+            try (Response r = client.newCall(move).execute()) {
+                if (r.code() == 412 && hash(to) != null) throw new Conflict();
+                require(r);
+            }
+        }
+
         void deleteIfMatches(String path, String expected) throws Exception {
             String etag;
             try (Response r = client.newCall(request(path).get().build()).execute()) {
@@ -407,6 +435,11 @@ abstract class RemoteFiles implements AutoCloseable {
             }
         }
 
+        void renameFile(String from, String to, String expected) throws Exception {
+            progress.beforeCommit();
+            if (!ftp.rename(from, to)) throw error();
+        }
+
         void deleteIfMatches(String path, String expected) throws Exception {
             String actual = hash(path);
             if (actual == null) return;
@@ -522,6 +555,11 @@ abstract class RemoteFiles implements AutoCloseable {
                 } catch (SftpException ignored) {
                 }
             }
+        }
+
+        void renameFile(String from, String to, String expected) throws Exception {
+            progress.beforeCommit();
+            channel.rename(literal(from), literal(to));
         }
 
         void deleteIfMatches(String path, String expected) throws Exception {

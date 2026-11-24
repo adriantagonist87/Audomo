@@ -1,5 +1,13 @@
 # Audomo · Teststand vom 24.11.2026
 
+## Aufnahmen nachträglich umbenennen mit Version 1.0.2
+
+Im Android-14-Emulator wurde eine synthetische Aufnahme in der Dateiliste gewählt, die Umbenennung abgebrochen und anschließend mit einem neuen Namen gespeichert. Die Liste und die gespeicherten Metadaten zeigten den neuen Namen. Mit einem freigegebenen Android-Dokumentordner wurde die umbenannte Datei über den Dokumentprovider zurückgelesen und ihr SHA-256 verglichen.
+
+Die lokalen Testserver führten die serverseitige Umbenennung über WebDAV, FTP, FTPS und SFTP aus. Nach Erfolg lieferte nur der neue Pfad den erwarteten Dateiinhalt. Der Katalogtest umfasste eine rein entfernte Aufnahme in einem außerhalb der App verschobenen Ordner, einen bereits belegten Namen, eine verlorene Serverantwort und zwei getrennte Cloudziele. Beim selektiven Umbenennen behielt das zweite Ziel seinen bisherigen Namen. Ein geplanter Erstupload behielt seine Fälligkeit. Für Dropbox prüfte ein simulierter Transport die Pfade und das Verhalten bei Namenskonflikten. Für einen schreibenden Test im persönlichen Dropbox-Konto liegt noch kein Ergebnis vor.
+
+Der finale Build bestand 14 JVM-Tests und alle 24 instrumentierten Tests der Kernprüfung auf API 34. Dazu kam die separate Prüfung mit dem Android-Dokumentprovider. Nach erneuter Eingabe der Zugangsdaten wiederholte Audomo den fehlgeschlagenen Testupload ohne einen manuellen Start. Die Android-Fehlerbenachrichtigung verschwand nach der Bestätigung.
+
 ## Dropbox auf dem Galaxy S24 Ultra mit Version 1.0.1
 
 Mit 0.2.14 brach auf dem physischen S24 unter Android 14 der Verbindungsaufbau zur ersten IPv6-Adresse vor dem TLS-Handshake ab. DNS lieferte außerdem IPv4. Die automatische Verarbeitung und der Android-Fehlerkanal waren eingerichtet. Android hatte weitere Auftragsversuche mit wachsendem Abstand vorgesehen.
@@ -10,7 +18,7 @@ Auf Wunsch des Nutzers wurde ein bestehender, zuvor fehlgeschlagener Auftrag im 
 
 Im separaten API-34-Emulator führte eine neue Aufnahme mit zeitverzögerter Automatik selbständig zu einem Uploadauftrag. Ein absichtlich falscher Zugang beim lokalen FTP-Dienst erzeugte einen Fehler samt Android-Benachrichtigung. Nach Korrektur des Testzugangs wiederholte Android die Übertragung selbständig, bestätigte den Dateiinhalt und entfernte die Fehlermeldung. Die Prüfung verwendete weder eine erzwungene Jobausführung noch die manuelle Wiederholtaste. [Automatikregression](../app/src/androidTest/java/de/audomo/AutomaticUploadDeviceTest.java)
 
-Der abschließende lokale Stand bestand 14 JVM-Tests und 23 Instrumentierungstests auf API 34. Zusätzlich blieb ein fehlgeschlagener Verbindungstest im separat bedienten Emulator bis zum Schließen lesbar. Der auf dem S24 bestätigte Build enthält den IPv4-Ausweichpfad und den sichtbaren Verbindungsdialog. Die abschließende Erweiterung der Dropbox-Fehlertexte wurde lokal gebaut und getestet. Vor deren Installation endete die WLAN-Verbindung.
+Der abschließende lokale Stand bestand 14 JVM-Tests und 23 Instrumentierungstests auf API 34. Zusätzlich blieb ein fehlgeschlagener Verbindungstest im separat bedienten Emulator bis zum Schließen lesbar. Der auf dem S24 bestätigte Build enthält den IPv4-Ausweichpfad und den sichtbaren Verbindungsdialog. Nach Wiederherstellung der WLAN-Verbindung wurde der finale 1.0.1-Build mit den ergänzten Fehlertexten als Update installiert. Mit diesem Build las das S24 die vorhandene 28,4-MiB-Cloudkopie erneut und bestätigte ihre Prüfsumme. Die Zahl der Schreibversuche blieb unverändert.
 
 ## Warteschlange auswählen, priorisieren und leeren mit Version 0.2.14
 

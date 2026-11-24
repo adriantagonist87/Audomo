@@ -121,6 +121,41 @@ public class CloudCatalogDeviceTest {
             assertEquals("", queue.job(id).availability());
             SessionStore.Entry ghost = catalog.known().get(id);
             assertEquals("Unbekannt", ghost.folder());
+            // An off-device rename must keep the reconciled directory, even after clearing the queue.
+            queue.remove(List.of(queue.job(id).id()));
+            assertFalse(queue.job(id).inQueue());
+            String collision = t.base() + "/Unbekannt/Besetzt.ogg";
+            ftp.put(original, collision, false, null);
+            folders.files.rename(ghost, "Besetzt", false, List.of(queue.job(id)));
+            driver.drive(queue, id, "Konflikt");
+            assertEquals(hash, ftp.hash(moved));
+            assertEquals(hash, ftp.hash(collision));
+            assertEquals(ghost.name(), catalog.known().get(id).name());
+            queue.resolve(queue.job(id), 2);
+            assertEquals(moved, queue.job(id).path());
+            ftp.deleteIfMatches(collision, hash);
+            folders.files.rename(ghost, "Ergebnis.ogg", false, List.of(queue.job(id)));
+            driver.drive(queue, id, "Hochgeladen");
+            assertNull(ftp.hash(moved));
+            moved = t.base() + "/Unbekannt/Ergebnis.ogg";
+            assertEquals(moved, queue.job(id).path());
+            assertEquals(hash, ftp.hash(moved));
+            ghost = catalog.known().get(id);
+            assertEquals("Ergebnis.ogg", ghost.name());
+            assertNull(store.byId(id));
+            // Simulate a lost response after the server completed the move. Recovery only reads.
+            String afterDisconnect = t.base() + "/Unbekannt/Wiedergefunden.ogg";
+            ftp.renameFile(moved, afterDisconnect, hash);
+            synchronized (queue) {
+                folders.files.rename(ghost, "Wiedergefunden", false, List.of(queue.job(id)));
+                queue.sent(queue.job(id).id());
+            }
+            driver.drive(queue, id, "Hochgeladen");
+            assertEquals(afterDisconnect, queue.job(id).path());
+            assertEquals("Wiedergefunden.ogg", catalog.known().get(id).name());
+            assertEquals(hash, ftp.hash(afterDisconnect));
+            moved = afterDisconnect;
+            ghost = catalog.known().get(id);
             ftp.deleteIfMatches(moved, hash);
             CloudReconcile.run(store, t);
             assertEquals("Cloudkopie fehlt", queue.job(id).availability());
@@ -131,7 +166,8 @@ public class CloudCatalogDeviceTest {
                 ftp.put(foreign, moved, false, null);
                 CloudReconcile.run(store, t);
                 assertEquals("Cloudkopie geändert", queue.job(id).availability());
-                assertThrows(IOException.class, () -> catalog.restore(ghost, queue.job(id)));
+                SessionStore.Entry missing = ghost;
+                assertThrows(IOException.class, () -> catalog.restore(missing, queue.job(id)));
                 assertNull(store.byId(id));
                 ftp.deleteIfMatches(moved, LibraryFiles.digest(new FileInputStream(foreign)));
             } finally {
@@ -148,7 +184,35 @@ public class CloudCatalogDeviceTest {
             driver.drive(queue, id, "Hochgeladen");
             assertEquals(moved, queue.job(id).path());
             assertEquals(hash, ftp.hash(moved));
-            ftp.deleteIfMatches(moved, hash);
+            CloudConfig second = new CloudConfig(UUID.randomUUID().toString(), "FTP", t.host(),
+                    t.port(), "qa", t.base() + "/Zweitablage", "");
+            ftp.ensureFolder(second.base());
+            second.save(app, secret);
+            try {
+                queue.enqueueSelected(store, List.of(id), second);
+                driver.drive(queue, id, "Hochgeladen");
+                UploadQueue.Job other = queue.job(id);
+                assertEquals(second.id(), other.target());
+                assertEquals(hash, ftp.hash(other.path()));
+                SessionStore.Entry local = store.byId(id);
+                assertThrows(IllegalArgumentException.class, () -> folders.files.rename(local, "a/b", true, List.of()));
+                folders.files.rename(local, "Nur auf dem Gerät", true, List.of());
+                assertEquals("Nur auf dem Gerät.ogg", store.byId(id).name());
+                assertEquals(hash, ftp.hash(moved));
+                UploadQueue.Job firstCopy = queue.jobs().stream().filter(j -> j.rec().equals(id)
+                        && j.target().equals(t.id())).findFirst().orElseThrow();
+                folders.files.rename(store.byId(id), "Gemeinsam", true, List.of(firstCopy));
+                driver.driveJob(queue, firstCopy.id(), "Hochgeladen");
+                assertEquals("Gemeinsam.ogg", store.byId(id).name());
+                assertEquals(t.base() + "/Unbekannt/Gemeinsam.ogg", queue.byId(firstCopy.id()).path());
+                assertNull(ftp.hash(moved));
+                assertEquals(other, queue.byId(other.id()));
+                assertEquals(hash, ftp.hash(other.path()));
+                ftp.deleteIfMatches(queue.byId(firstCopy.id()).path(), hash);
+                ftp.deleteIfMatches(other.path(), hash);
+            } finally {
+                app.getSharedPreferences("credentials", 0).edit().remove(second.id()).commit();
+            }
         } finally {
             queue.getWritableDatabase().delete("jobs", "rec=?", new String[] {id});
             queue.getWritableDatabase().delete("recordings", "rec=?", new String[] {id});

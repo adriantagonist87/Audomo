@@ -107,8 +107,12 @@ public class ProtocolDeviceTest {
             assertEquals(hash, r.hash(path));
             r.put(sample, path, true, hash);
             assertEquals(hash, r.hash(path));
-            r.deleteIfMatches(path, hash);
+            String renamed = dir + "/März – Ergebnis.ogg";
+            r.renameFile(path, renamed, hash);
             assertNull(r.hash(path));
+            assertEquals(hash, r.hash(renamed));
+            r.deleteIfMatches(renamed, hash);
+            assertNull(r.hash(renamed));
         } finally {
             Files.deleteIfExists(sample.toPath());
         }

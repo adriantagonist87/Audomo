@@ -84,7 +84,7 @@ public class StorageProviderDeviceTest {
                     hash, LibraryFiles.digest(ctx.getContentResolver().openInputStream(first)));
             DocumentStorage.deliver(individual, source);
             assertEquals(first.toString(), SessionStore.metadata(dir).getString("deliveredUri"));
-            lib.change(store.list().get(0), "Sicherung", folder, false);
+            lib.rename(store.list().get(0), "Sicherung", true, List.of());
             Uri next = Uri.parse(SessionStore.metadata(dir).getString("deliveredUri"));
             assertNotEquals(first, next);
             assertEquals(hash, LibraryFiles.digest(ctx.getContentResolver().openInputStream(next)));

@@ -88,6 +88,50 @@ final class LibraryFiles {
         return meta;
     }
 
+    static String renameStem(String input, String extension) {
+        String stem = input.strip();
+        if (!extension.isEmpty() && stem.toLowerCase(Locale.ROOT).endsWith(extension.toLowerCase(Locale.ROOT)))
+            stem = stem.substring(0, stem.length() - extension.length());
+        if (stem.isBlank()) throw new IllegalArgumentException("Bitte einen Dateinamen eingeben");
+        if (!stem.equals(SessionStore.cleanComponent(stem)))
+            throw new IllegalArgumentException("Ungültiger oder zu langer Dateiname");
+        return stem;
+    }
+
+    String rename(SessionStore.Entry entry, String input, boolean local, List<UploadQueue.Job> targets)
+            throws Exception {
+        String ext = extension(entry.name());
+        String stem = renameStem(input, ext);
+        String name = stem + ext;
+        synchronized (store) {
+            if (!local && targets.isEmpty()) throw new IOException("Bitte einen Speicherort auswählen");
+            if (entry.trashed() != 0 || (local && entry.cloudOnly()))
+                throw new IOException("Aufnahme an diesem Speicherort nicht verfügbar");
+            if (local) checked(entry);
+            if (local || entry.cloudOnly()) {
+                if (!name.equals(store.availableName(name, entry.folder(), entry.file().getParentFile())))
+                    throw new IOException("Dieser Name ist im Aufnahmeordner bereits vergeben");
+            }
+            UploadQueue queue = UploadQueue.get(store.context);
+            queue.checkRenameTargets(entry.id(), targets);
+            boolean changedLocal = local && !entry.name().equals(name);
+            if (changedLocal) change(entry, stem, entry.folder(), false);
+            int count;
+            try {
+                count = queue.renameTargets(entry.id(), targets, name);
+            } catch (Exception error) {
+                if (changedLocal) throw new IOException("Lokal umbenannt. Cloudauftrag fehlgeschlagen: "
+                        + Audomo.cause(error), error);
+                throw error;
+            }
+            List<String> result = new ArrayList<>();
+            if (changedLocal) result.add("Auf diesem Gerät umbenannt");
+            if (count > 0) result.add(count == 1 ? "1 Cloudauftrag in der Warteschlange"
+                    : count + " Cloudaufträge in der Warteschlange");
+            return result.isEmpty() ? "Die ausgewählten Dateien heißen bereits so" : String.join(" · ", result);
+        }
+    }
+
     void change(SessionStore.Entry e, String stem, String folder, boolean trash) throws Exception {
         synchronized (store) {
             FolderManager.checkWritable(prefs, e.folder());
@@ -98,7 +142,7 @@ final class LibraryFiles {
                 meta = checked(e);
             }
             String name = e.name();
-            if (stem != null) name = title(stem) + extension(name);
+            if (stem != null) name = stem + extension(name);
             if (!folders().contains(folder)) throw new IOException("Zielordner fehlt");
             if (!trash) name = store.availableName(name, folder, e.file().getParentFile());
             meta.put("displayName", name)

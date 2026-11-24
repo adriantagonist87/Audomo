@@ -182,6 +182,7 @@ record CloudConfig(
         if (Profile.prefs(c).getString("defaultTarget", "").isEmpty())
             edit.putString("defaultTarget", id);
         if (!edit.commit()) throw new IOException("Ziel nicht gesichert");
+        if (found && !secret.isEmpty()) UploadQueue.get(c).accessRenewed(id);
     }
 
     private static synchronized SecretKey key() throws Exception {

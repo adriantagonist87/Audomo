@@ -75,6 +75,7 @@ public final class UploadDetailsDialog extends DialogFragment {
         String phase =
                 switch (job.action()) {
                     case "move" -> "Verschieben";
+                    case "rename" -> "Umbenennen";
                     case "delete" -> "Cloudkopie löschen";
                     default -> "Upload";
                 };
@@ -139,7 +140,9 @@ public final class UploadDetailsDialog extends DialogFragment {
                     action("Erneut versuchen", () -> control(() -> queue.resume(job.id())));
             case "Konflikt" -> {
                 action("Neuen Namen verwenden", () -> resolve(job, 0));
-                action(
+                if (job.action().equals("rename"))
+                    action("Bisherigen Cloudnamen behalten", () -> resolve(job, 2));
+                else action(
                         "Zieldatei überschreiben",
                         () ->
                                 new AlertDialog.Builder(screen)

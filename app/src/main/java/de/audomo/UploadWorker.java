@@ -65,7 +65,10 @@ public final class UploadWorker extends JobService {
             new Handler(Looper.getMainLooper())
                     .post(() -> {
                         synchronized (queue) {
-                            if (current.get()) jobFinished(p, queue.pendingNow());
+                            if (current.get()) {
+                                jobFinished(p, queue.pendingNow());
+                                queue.applyAccessChangeAfterBatch();
+                            }
                         }
                     });
         });
@@ -101,6 +104,7 @@ public final class UploadWorker extends JobService {
                         || s.startsWith("FTP-Serverantwort ")
                         || s.startsWith("SFTP-Verbindung")
                         || s.startsWith("Ziel erneut")
+                        || s.startsWith("Cloudziel ")
                         || s.startsWith("Quelle ")
                         || s.startsWith("Verifikation")
                         || s.startsWith("Netzregel"))) return s;
@@ -155,12 +159,44 @@ public final class UploadWorker extends JobService {
         check.check(0);
         File staging = null;
         try (RemoteFiles remote = RemoteFiles.open(t, CloudConfig.secret(c, t.id()), net, check)) {
+            if (j.action().equals("rename")) {
+                attempt.expectedHash = j.verified();
+                boolean caseOnly = j.origin().equalsIgnoreCase(j.path());
+                String source = remote.renameHash(j.origin(), caseOnly);
+                String destination = remote.renameHash(j.path(), caseOnly);
+                // A reply can be lost after the server moved the file but before the local commit.
+                boolean alreadyMoved = j.attempted() && source == null && j.verified().equals(destination);
+                if (!alreadyMoved) {
+                    if (!j.verified().equals(source))
+                        throw new IOException("Quelle in der Cloud fehlt oder wurde geändert");
+                    if (destination != null) {
+                        synchronized (q) { attempt.check(); q.conflict(j.id(), destination); }
+                        return;
+                    }
+                    synchronized (q) { attempt.check(); q.sent(j.id()); }
+                    try {
+                        remote.renameFile(j.origin(), j.path(), j.verified());
+                    } catch (RemoteFiles.Conflict conflict) {
+                        String existing = remote.renameHash(j.path(), caseOnly);
+                        if (existing == null) throw new IOException("Cloudziel hat den Namen abgelehnt");
+                        synchronized (q) { attempt.check(); q.conflict(j.id(), existing); }
+                        return;
+                    }
+                    if (!j.verified().equals(remote.renameHash(j.path(), caseOnly))
+                            || remote.renameHash(j.origin(), caseOnly) != null)
+                        throw new IOException("Verifikation der Cloud-Umbenennung fehlgeschlagen");
+                }
+                q.finishRename(app.sessions, j, attempt);
+                return;
+            }
             if (j.action().equals("verifyRemoval")) {
-                String destination = remote.hash(j.path());
+                boolean caseOnly = !j.origin().isEmpty() && !j.origin().equals(j.path())
+                        && j.origin().equalsIgnoreCase(j.path());
+                String destination = remote.renameHash(j.path(), caseOnly);
                 String previous =
                         j.confirmedPath().equals(j.path())
                                 ? destination
-                                : remote.hash(j.confirmedPath());
+                                : remote.renameHash(j.confirmedPath(), caseOnly);
                 q.finishRemoval(j, destination, previous);
                 return;
             }

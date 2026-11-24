@@ -82,32 +82,54 @@ final class LibraryActions {
 
     void rename(SessionStore.Entry e) {
         LinearLayout page = screen.column();
+        ScrollView scroll = new ScrollView(screen);
+        scroll.addView(page);
+        int inset = screen.dp(20);
+        page.setPadding(inset, screen.dp(8), inset, screen.dp(8));
+        String ext = LibraryFiles.extension(e.name());
         EditText edit = new EditText(screen);
+        edit.setHint("Dateiname");
         edit.setSingleLine();
-        edit.setText(
-                e.name()
-                        .substring(
-                                0, e.name().length() - LibraryFiles.extension(e.name()).length()));
-        edit.selectAll();
+        edit.setText(e.name().substring(0, e.name().length() - ext.length()));
+        edit.setSelectAllOnFocus(true);
         page.addView(edit);
-        Switch remote = cloudSwitch(page, List.of(e), "Cloudkopie ebenfalls umbenennen");
-        new AlertDialog.Builder(screen)
-                .setTitle("Umbenennen")
-                .setView(page)
-                .setNegativeButton("Abbrechen", null)
-                .setPositiveButton(
-                        "Speichern",
-                        (d, w) ->
-                                perform(
-                                        List.of(e),
-                                        entry ->
-                                                change(
-                                                        entry,
-                                                        edit.getText().toString(),
-                                                        entry.folder(),
-                                                        false,
-                                                        remote.isChecked())))
-                .show();
+        if (!ext.isEmpty()) page.addView(screen.text("Dateiendung " + ext + " bleibt erhalten", 14, MainActivity.DIM));
+        page.addView(screen.text("Speicherorte", 16, MainActivity.INK));
+        CheckBox local = new CheckBox(screen);
+        if (!e.cloudOnly()) {
+            local.setText("Auf diesem Gerät");
+            local.setChecked(true);
+            page.addView(local);
+        }
+        Map<CheckBox, UploadQueue.Job> choices = new LinkedHashMap<>();
+        for (UploadQueue.Job job : UploadQueue.get(screen).jobs()) {
+            if (!job.rec().equals(e.id()) || (!job.knownCopy() && !job.open())) continue;
+            CheckBox choice = new CheckBox(screen);
+            String provider = job.provider().isEmpty() ? "Cloud" : job.provider();
+            try { provider = CloudConfig.byId(screen, job.target()).uploadLabel(); }
+            catch (Exception missing) { /* Historical copies may outlive their connection. */ }
+            String status = !job.availability().isEmpty() ? job.availability() : job.state();
+            choice.setText(provider + "\n" + job.confirmedPath() + (job.canRename()
+                    ? (job.knownCopy() ? "" : " · Geplanter Upload") : " · " + status));
+            choice.setEnabled(job.canRename());
+            choice.setChecked(job.canRename() && e.cloudOnly());
+            page.addView(choice);
+            choices.put(choice, job);
+        }
+        AlertDialog dialog = new AlertDialog.Builder(screen)
+                .setTitle("Aufnahme umbenennen").setView(scroll)
+                .setNegativeButton("Abbrechen", null).setPositiveButton("Umbenennen", null).show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String input = edit.getText().toString();
+            try { LibraryFiles.renameStem(input, ext); }
+            catch (IllegalArgumentException invalid) { edit.setError(invalid.getMessage()); return; }
+            List<UploadQueue.Job> selected = new ArrayList<>();
+            choices.forEach((choice, job) -> { if (choice.isChecked()) selected.add(job); });
+            boolean onDevice = local.isChecked();
+            if (!onDevice && selected.isEmpty()) { screen.toast("Bitte einen Speicherort auswählen"); return; }
+            dialog.dismiss();
+            screen.runFiles(() -> files.rename(e, input, onDevice, selected));
+        });
     }
 
     private Switch cloudSwitch(LinearLayout page, List<SessionStore.Entry> list, String label) {

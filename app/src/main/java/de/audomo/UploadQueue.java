@@ -17,6 +17,7 @@ final class UploadQueue extends SQLiteOpenHelper {
     private static UploadQueue singleton;
     final Context context;
     private final Map<Long, Attempt> active = new HashMap<>();
+    private boolean restartAfterAccessChange;
 
     static final class Attempt {
         final long id;
@@ -139,6 +140,12 @@ final class UploadQueue extends SQLiteOpenHelper {
 
         boolean needsAttention() {
             return state.equals("Fehler") || state.equals("Konflikt") || !availability.isEmpty();
+        }
+
+        boolean canRename() {
+            return (knownCopy() && state.equals("Hochgeladen") && availability.isEmpty())
+                    || (!knownCopy() && action.equals("upload") && !attempted
+                            && (state.equals("Wartet") || state.equals("Fehler")));
         }
 
         String confirmedPath() {
@@ -323,6 +330,68 @@ final class UploadQueue extends SQLiteOpenHelper {
         if (pending()) schedule(false);
     }
 
+    synchronized void checkRenameTargets(String recording, List<Job> selected) throws IOException {
+        for (Job shown : selected) {
+            Job current = byId(shown.id);
+            if (current == null || !current.rec.equals(recording) || !current.canRename()
+                    || active.containsKey(current.id) || !current.confirmedPath().equals(shown.confirmedPath())
+                    || !current.verified.equals(shown.verified))
+                throw new IOException("Der Cloudauftrag hat sich geändert. Speicherorte erneut öffnen.");
+        }
+    }
+
+    synchronized int renameTargets(String recording, List<Job> selected, String name) throws IOException {
+        checkRenameTargets(recording, selected);
+        int changed = 0;
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            for (Job shown : selected) {
+                Job job = byId(shown.id);
+                String path = CloudConfig.path(RemoteFiles.parent(job.confirmedPath()) + "/" + name);
+                if (job.path.equals(path)) continue;
+                if (job.knownCopy()) {
+                    db.execSQL("UPDATE jobs SET action='rename',origin=path,path=?,inQueue=1,priority=0,"
+                                    + "notBefore=0,progress=0,attempted=0,replacement=NULL,error='',state='Wartet'"
+                                    + " WHERE id=?", new Object[]{path, job.id});
+                } else {
+                    db.execSQL("UPDATE jobs SET path=?,state='Wartet',error='' WHERE id=?",
+                            new Object[]{path, job.id});
+                }
+                changed++;
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+        if (changed > 0) schedule(false);
+        return changed;
+    }
+
+    void finishRename(SessionStore store, Job job, Attempt attempt) throws Exception {
+        synchronized (store) {
+            synchronized (this) {
+                attempt.check();
+                SQLiteDatabase db = getWritableDatabase();
+                db.beginTransaction();
+                try {
+                    updateCloudName(store, job);
+                    verified(job.id, job.verified);
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
+            }
+        }
+    }
+
+    private void updateCloudName(SessionStore store, Job job) throws Exception {
+        SessionStore.Entry local = store.byId(job.rec);
+        if (local == null || local.trashed() != 0)
+            getWritableDatabase().execSQL("UPDATE recordings SET name=? WHERE rec=?",
+                    new Object[]{RemoteFiles.leaf(job.path), job.rec});
+    }
+
     boolean hasCloud(String id) {
         return jobs().stream().anyMatch(j -> j.rec().equals(id) && j.knownCopy());
     }
@@ -501,14 +570,15 @@ final class UploadQueue extends SQLiteOpenHelper {
             for (long id : new LinkedHashSet<>(ids)) {
                 Job job = byId(id);
                 if (job == null || !job.inQueue) continue;
-                if (job.state.equals("Upload läuft") && committing(id)) {
+                boolean mayHaveRenamed = job.action.equals("rename") && job.attempted && !job.state.equals("Konflikt");
+                if ((job.state.equals("Upload läuft") && committing(id)) || mayHaveRenamed) {
                     // The server may already have published the file. Any recovery must only read
                     // it.
                     String expected =
-                            job.action.equals("delete") ? "" : active.get(id).expectedHash;
+                            mayHaveRenamed ? job.verified : job.action.equals("delete") ? "" : active.get(id).expectedHash;
                     db.execSQL(
                             "UPDATE jobs SET"
-                                + " inQueue=0,priority=0,action='verifyRemoval',replacement=? WHERE"
+                                + " inQueue=0,priority=0,notBefore=0,state='Wartet',action='verifyRemoval',replacement=? WHERE"
                                 + " id=?",
                             new Object[] {expected, id});
                     finishing++;
@@ -545,7 +615,17 @@ final class UploadQueue extends SQLiteOpenHelper {
         }
     }
 
-    synchronized void finishRemoval(Job job, String destinationHash, String previousHash) {
+    void finishRemoval(Job job, String destinationHash, String previousHash) throws Exception {
+        SessionStore store = ((Audomo) context).sessions;
+        synchronized (store) {
+            synchronized (this) {
+                finishRemoval(store, job, destinationHash, previousHash);
+            }
+        }
+    }
+
+    private void finishRemoval(SessionStore store, Job job, String destinationHash, String previousHash)
+            throws Exception {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
@@ -556,6 +636,7 @@ final class UploadQueue extends SQLiteOpenHelper {
             if (!originalStillPresent
                     && !job.replacement.isEmpty()
                     && job.replacement.equals(destinationHash)) {
+                if (!job.origin.isEmpty()) updateCloudName(store, job);
                 verified(job.id, destinationHash);
             } else if (job.replacement.isEmpty() && previousHash == null) {
                 db.delete("jobs", "id=?", new String[] {Long.toString(job.id)});
@@ -657,7 +738,7 @@ final class UploadQueue extends SQLiteOpenHelper {
         if (!"Konflikt".equals(j.state) || !j.equals(byId(j.id)))
             throw new IOException("Kein offener Konflikt");
         if (choice == 2) {
-            if (j.action.equals("move"))
+            if (j.action.equals("move") || j.action.equals("rename"))
                 getWritableDatabase()
                         .execSQL(
                                 "UPDATE jobs SET"
@@ -667,6 +748,8 @@ final class UploadQueue extends SQLiteOpenHelper {
             else stop(j.id, true);
             return;
         }
+        if (choice == 1 && j.action.equals("rename"))
+            throw new IOException("Für die Umbenennung einen freien Namen wählen.");
         String path = j.path;
         if (choice == 0) {
             String ext = LibraryFiles.extension(path);
@@ -692,6 +775,23 @@ final class UploadQueue extends SQLiteOpenHelper {
                                 + " END,replacement=CASE WHEN inQueue=0 THEN replacement ELSE ?"
                                 + " END,error='Namenskonflikt' WHERE id=?",
                         new Object[] {hash, id});
+    }
+
+    synchronized void accessRenewed(String target) {
+        ContentValues ready = new ContentValues();
+        ready.put("state", "Wartet");
+        ready.put("error", "");
+        int changed = getWritableDatabase().update("jobs", ready,
+                "target=? AND inQueue=1 AND state='Fehler'", new String[]{target});
+        if (changed == 0) return;
+        if (active.isEmpty()) schedule(true);
+        else restartAfterAccessChange = true;
+    }
+
+    synchronized void applyAccessChangeAfterBatch() {
+        if (!restartAfterAccessChange) return;
+        restartAfterAccessChange = false;
+        schedule(true);
     }
 
     synchronized int retryErrors() {

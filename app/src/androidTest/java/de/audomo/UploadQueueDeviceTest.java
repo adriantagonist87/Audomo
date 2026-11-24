@@ -98,6 +98,12 @@ public class UploadQueueDeviceTest {
                 UploadQueue.afterCapture(app, file);
                 assertEquals(originalJob, queue.job(id).id());
                 assertEquals(due, queue.job(id).notBefore());
+                LibraryFiles naming = new LibraryFiles(app.sessions);
+                naming.rename(e, "Später", false, List.of(queue.job(id)));
+                assertEquals("/Später.ogg", queue.job(id).path());
+                assertEquals(due, queue.job(id).notBefore());
+                assertEquals(path, app.sessions.byId(id).name());
+                naming.rename(e, path, false, List.of(queue.job(id)));
                 assertEquals(1, queue.enqueueSelected(app.sessions, List.of(id, id), target));
                 assertEquals(0, queue.job(id).notBefore());
                 assertEquals(originalJob, queue.job(id).id());
@@ -307,12 +313,16 @@ public class UploadQueueDeviceTest {
     }
 
     void drive(UploadQueue q, String id, String state) throws Exception {
+        driveJob(q, q.job(id).id(), state);
+    }
+
+    void driveJob(UploadQueue q, long jobId, String state) throws Exception {
         long until = SystemClock.elapsedRealtime() + 45000;
         while (SystemClock.elapsedRealtime() < until) {
-            if (state.equals(q.job(id).state())) return;
-            if (q.job(id).state().equals("Fehler")
-                    && !q.job(id).error().equals("Netzverbindung unterbrochen"))
-                fail(q.job(id).error());
+            if (state.equals(q.byId(jobId).state())) return;
+            if (q.byId(jobId).state().equals("Fehler")
+                    && !q.byId(jobId).error().equals("Netzverbindung unterbrochen"))
+                fail(q.byId(jobId).error());
             // Leave transient failures in the persistent queue for the scheduled retry.
             // In doze/batching, ask the test emulator to run the already scheduled job.
             try (var fd =
@@ -323,6 +333,6 @@ public class UploadQueueDeviceTest {
             }
             SystemClock.sleep(500);
         }
-        fail("Jobstatus " + q.job(id).state() + " statt " + state);
+        fail("Jobstatus " + q.byId(jobId).state() + " statt " + state);
     }
 }

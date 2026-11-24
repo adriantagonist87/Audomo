@@ -34,6 +34,14 @@ Unter „Einstellungen“ → „Ordner verwalten“ lassen sich Ordner und Unte
 
 In „Wiedergeben“ zeigt die rechte Spalte die Speicherorte jeder Aufnahme. Antippen öffnet die zugehörigen Dienste und Pfade. Eine bestätigte Cloudkopie bleibt nach der lokalen Papierkorbleerung im Katalog und lässt sich über „Lokal wiederherstellen“ zurückholen. Beim Update können ältere bestätigte Aufträge auch ohne lokale Sitzungsdaten übernommen werden. Dann bleibt der ursprüngliche Aufnahmezeitpunkt unbekannt.
 
+### Aufnahme umbenennen
+
+In „Wiedergeben“ die Aufnahme antippen und das Stiftsymbol „Umbenennen“ wählen. Liegt sie ausschließlich in der Cloud, öffnet ein Tipp auf die Aufnahme direkt „Speicherorte“. Dort steht ebenfalls „Umbenennen“.
+
+Den neuen Dateinamen eingeben und die gewünschten Speicherorte anhaken. „Auf diesem Gerät“ gilt auch für die von Audomo verwaltete Kopie im freigegebenen Android-Ordner. Jede Cloudkopie lässt sich einzeln auswählen. Ordner und Dateiendung bleiben erhalten. Bei einem geplanten Erstupload kann der neue Name schon vor der Übertragung festgelegt werden.
+
+Die lokale Änderung ist sofort sichtbar. Eine Cloud-Umbenennung erscheint in der Warteschlange. Audomo prüft den Dateiinhalt am neuen Pfad und übernimmt den Namen nach der Bestätigung. Ist der Name in der Cloud belegt, bleiben beide Dateien erhalten. In den Auftragsdetails kann man den bisherigen Cloudnamen behalten oder einen freien Namensvorschlag verwenden.
+
 Nach Änderungen außerhalb von Audomo in „Ordner verwalten“ den „Android-Ablageort abgleichen“ oder „Cloudpfade abgleichen“ wählen. Der Android-Abgleich durchsucht den freigegebenen Dokumentordner. Der Cloudabgleich prüft den gewählten Dienst unter dessen Basisordner. Für verschobene Kopien übernimmt Audomo einen neuen Pfad erst nach eindeutiger Zuordnung anhand der Prüfsumme. Fehlende, veränderte oder mehrdeutige Cloudkopien bleiben mit ihrem zuletzt bekannten Pfad sichtbar.
 
 Unter „Wiedergeben“ eine Aufnahme lange drücken, weitere Dateien markieren und „Cloud Upload“ antippen. In „Einstellungen“ → „Uploadziele“ → „Bestehende Aufnahmen hochladen“ lassen sich Aufnahmen aus mehreren Ordnern gemeinsam auswählen. Bei mehreren verbundenen Diensten lassen sich mehrere Ziele markieren und mit „Einreihen“ gemeinsam beauftragen. Den Fortschritt zeigt die Upload-Warteschlange. Aufnahmen im Papierkorb sind von der Auswahl ausgenommen.

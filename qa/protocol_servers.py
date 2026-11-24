@@ -112,6 +112,13 @@ class Dav(BaseHTTPRequestHandler):
             elif self.command=="GET":
                 if path.is_file():body=path.read_bytes()
                 else:code=404
+            elif self.command=="MOVE":
+                destination=urllib.parse.urlsplit(self.headers["Destination"])
+                target=local(roots["WebDAV"],urllib.parse.unquote(destination.path))
+                if destination.netloc != self.headers["Host"] or self.headers.get("Overwrite") != "F":code=400
+                elif not path.is_file():code=404
+                elif target.exists() or self.headers.get("If-Match")!=etag():code=412
+                else:path.rename(target);code=201
             elif self.command=="DELETE":
                 if not path.exists():code=404
                 elif self.headers.get("If-Match")!=etag():code=412
@@ -120,7 +127,7 @@ class Dav(BaseHTTPRequestHandler):
             if path.is_file():self.send_header("ETag",etag())
             self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body)
         except (OSError,ValueError):self.send_error(409)
-    do_GET=do_PUT=do_PROPFIND=do_MKCOL=do_DELETE=handle_method
+    do_GET=do_PUT=do_PROPFIND=do_MKCOL=do_MOVE=do_DELETE=handle_method
 
 class SecureDavServer(ThreadingHTTPServer):
     def process_request_thread(self, request, client_address):
