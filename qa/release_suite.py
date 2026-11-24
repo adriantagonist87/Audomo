@@ -35,7 +35,7 @@ classes = [
     "CaptureControlDeviceTest", "CalendarProviderDeviceTest", "CalendarDayDeviceTest",
     "LibraryDeviceTest", "LibraryUiDeviceTest", "OpusProfileDeviceTest", "ShareDeviceTest",
     "DropboxRequestDeviceTest", "DropboxLinkDeviceTest", "ProtocolDeviceTest",
-    "UploadQueueDeviceTest", "CloudCatalogDeviceTest",
+    "UploadQueueDeviceTest", "CloudCatalogDeviceTest", "AutomaticUploadDeviceTest",
 ]
 with tempfile.TemporaryDirectory() as temp, ExitStack() as cleanup:
     fixture = Path(temp) / "fixture"

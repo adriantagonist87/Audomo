@@ -1,4 +1,14 @@
-# Audomo · Teststand vom 23.11.2026
+# Audomo · Teststand vom 24.11.2026
+
+## Dropbox auf dem Galaxy S24 Ultra mit Version 1.0.1
+
+Mit 0.2.14 brach auf dem physischen S24 unter Android 14 der Verbindungsaufbau zur ersten IPv6-Adresse vor dem TLS-Handshake ab. DNS lieferte außerdem IPv4. Die automatische Verarbeitung und der Android-Fehlerkanal waren eingerichtet. Android hatte weitere Auftragsversuche mit wachsendem Abstand vorgesehen.
+
+Der korrigierte Client erreichte über IPv4 nach dem IPv6-Timeout sowohl die OAuth-Erneuerung als auch den eingerichteten Dropbox-Ordner mit HTTP 200. Die Prüfung gelang auf der Standardroute und mit expliziter Bindung an dasselbe Android-Netz. Beim Test aus den Uploadzielen zeigte das Telefon erst den laufenden Verbindungsversuch und danach die bis zum Schließen sichtbare Bestätigung.
+
+Auf Wunsch des Nutzers wurde ein bestehender, zuvor fehlgeschlagener Auftrag im bereits eingerichteten Konto wiederholt. Das Telefon übertrug die Datei über eine mehrteilige Dropbox-Sitzung, las sie vollständig zurück und speicherte den Auftrag als „Hochgeladen“. Der bestätigte SHA-256 stimmte mit dem separat auf dem Telefon berechneten Wert des lokalen Originals überein.
+
+Im separaten API-34-Emulator führte eine neue Aufnahme mit zeitverzögerter Automatik selbständig zu einem Uploadauftrag. Ein absichtlich falscher Zugang beim lokalen FTP-Dienst erzeugte einen Fehler samt Android-Benachrichtigung. Nach Korrektur des Testzugangs wiederholte Android die Übertragung selbständig, bestätigte den Dateiinhalt und entfernte die Fehlermeldung. Die Prüfung verwendete weder eine erzwungene Jobausführung noch die manuelle Wiederholtaste. [Automatikregression](../app/src/androidTest/java/de/audomo/AutomaticUploadDeviceTest.java)
 
 ## Warteschlange auswählen, priorisieren und leeren mit Version 0.2.14
 

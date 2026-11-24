@@ -114,7 +114,8 @@ public final class CaptureService extends Service {
                     app.diagnostic("Warnung · Kopie im Zielordner ausstehend");
                 }
                 try {
-                    UploadQueue.afterCapture(app, file);
+                    String upload = UploadQueue.afterCapture(app, file);
+                    if (!upload.isEmpty()) note += "\n" + upload;
                 } catch (Exception e) {
                     note += " · Uploadauftrag ausstehend";
                     app.diagnostic("Uploadauftrag konnte nicht geplant werden");

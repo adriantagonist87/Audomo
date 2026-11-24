@@ -40,6 +40,11 @@ public final class UploadWorker extends JobService {
                 if (attempt == null) continue;
                 try {
                     transfer(this, queue, j, p.getNetwork(), current, attempt);
+                    synchronized (queue) {
+                        UploadQueue.Job result = queue.byId(j.id());
+                        if (result != null && result.inQueue() && result.state().equals("Konflikt"))
+                            notifyError(j.id(), j.provider(), "Dateiname am Ziel bereits vergeben", true);
+                    }
                 } catch (Exception e) {
                     String message = safeError(e);
                     synchronized (queue) {
@@ -50,8 +55,7 @@ public final class UploadWorker extends JobService {
                                 current.get() ? message : "");
                         if (current.get()
                                 && !attempt.finishOnly
-                                && j.inQueue()
-                                && !message.equals(j.error())) notifyError(j.id());
+                                && j.inQueue()) notifyError(j.id(), j.provider(), message, false);
                     }
                 } finally {
                     queue.release(attempt);
@@ -82,10 +86,14 @@ public final class UploadWorker extends JobService {
     }
 
     static String safeError(Exception e) {
+        if (e instanceof DropboxFiles.Failure) return e.getMessage();
+        if (e instanceof java.net.UnknownHostException) return "Servername konnte nicht aufgelöst werden";
+        if (e instanceof java.net.SocketTimeoutException) return "Zeitüberschreitung bei der Serververbindung";
+        if (e instanceof java.net.ConnectException) return "Server nicht erreichbar";
         if (e instanceof javax.net.ssl.SSLException) return "TLS-Verbindung nicht bestätigt";
         if (e instanceof com.jcraft.jsch.SftpException)
             return "SFTP-Server konnte den Vorgang nicht abschließen";
-        if (e instanceof java.net.SocketException || e instanceof java.net.SocketTimeoutException)
+        if (e instanceof java.net.SocketException)
             return "Netzverbindung unterbrochen";
         String s = e.getMessage();
         if (s != null
@@ -250,7 +258,7 @@ public final class UploadWorker extends JobService {
         }
     }
 
-    void notifyError(long job) {
+    private void notifyError(long job, String provider, String reason, boolean conflict) {
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) return;
         NotificationManager manager = getSystemService(NotificationManager.class);
@@ -274,20 +282,21 @@ public final class UploadWorker extends JobService {
                         (int) job,
                         retry,
                         PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        manager.notify(
-                "upload",
-                (int) job,
-                new Notification.Builder(this, "upload-errors")
-                        .setContentTitle("Upload unterbrochen")
-                        .setContentText("Audomo versucht es erneut.")
-                        .setVisibility(Notification.VISIBILITY_PUBLIC)
-                        .setSmallIcon(R.drawable.ic_upload)
-                        .setContentIntent(open)
-                        .setAutoCancel(true)
-                        .addAction(
-                                new Notification.Action.Builder(null, "Erneut versuchen", again)
-                                        .build())
-                        .addAction(new Notification.Action.Builder(null, "Details", open).build())
-                        .build());
+        String text = reason + (reason.endsWith(".") ? " " : ". ")
+                + (conflict ? "Bitte in der Warteschlange entscheiden."
+                        : "Audomo versucht es automatisch erneut.");
+        Notification.Builder notice = new Notification.Builder(this, "upload-errors")
+                .setContentTitle((provider.isEmpty() ? "Cloud" : provider) + "-Upload benötigt Aufmerksamkeit")
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setOnlyAlertOnce(true)
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
+                .setSmallIcon(R.drawable.ic_audomo_notification)
+                .setContentIntent(open)
+                .setAutoCancel(true);
+        if (!conflict)
+            notice.addAction(new Notification.Action.Builder(null, "Erneut versuchen", again).build());
+        notice.addAction(new Notification.Action.Builder(null, "Details", open).build());
+        manager.notify("upload", (int) job, notice.build());
     }
 }

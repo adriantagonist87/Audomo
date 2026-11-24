@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.io.*;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 final class DropboxFiles extends RemoteFiles {
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8"),
@@ -17,7 +18,16 @@ final class DropboxFiles extends RemoteFiles {
     private final String bearer;
 
     DropboxFiles(CloudConfig c, String refresh, Network network, Progress check) throws Exception {
-        this(c, refresh, check, http(network));
+        this(c, refresh, check, dropboxHttp(network));
+    }
+
+    static OkHttpClient dropboxHttp(Network network) {
+        // Some networks publish an IPv6 address that never connects. Let OkHttp try the
+        // other DNS results on the same Android network, including a working IPv4 route.
+        return http(network).newBuilder()
+                .retryOnConnectionFailure(true)
+                .connectTimeout(6, TimeUnit.SECONDS)
+                .build();
     }
 
     DropboxFiles(CloudConfig c, String refresh, Progress check, OkHttpClient transport)
@@ -43,9 +53,41 @@ final class DropboxFiles extends RemoteFiles {
                                         .post(form)
                                         .build())
                         .execute()) {
-            require(r);
+            requireDropbox(r);
             return new JSONObject(r.body().string());
         }
+    }
+
+    static final class Failure extends IOException {
+        Failure(String message) { super(message); }
+    }
+
+    private static String errorSummary(Response response) throws IOException {
+        try {
+            JSONObject json = new JSONObject(response.peekBody(8192).string());
+            return json.optString("error_summary", json.optString("error", ""));
+        } catch (org.json.JSONException ignored) {
+            return "";
+        }
+    }
+
+    private static void requireDropbox(Response response) throws IOException {
+        if (response.isSuccessful()) return;
+        String reason = errorSummary(response);
+        String message;
+        if (reason.startsWith("missing_scope") || reason.startsWith("insufficient_permissions"))
+            message = "Dropbox-Berechtigungen fehlen. Zugang erneut freigeben.";
+        else if (reason.startsWith("invalid_grant") || response.code() == 401)
+            message = "Dropbox-Anmeldung abgelaufen. Zugang erneut verbinden.";
+        else if (reason.contains("insufficient_space"))
+            message = "Der Speicherplatz in Dropbox reicht nicht aus.";
+        else if (reason.startsWith("path/not_found"))
+            message = "Dropbox findet den eingestellten Zielpfad nicht.";
+        else if (response.code() == 429)
+            message = "Dropbox begrenzt momentan die Zahl der Anfragen.";
+        else
+            message = "Dropbox hat die Anfrage abgelehnt (HTTP " + response.code() + ").";
+        throw new Failure(message);
     }
 
     private static String header(JSONObject json) {
@@ -70,9 +112,22 @@ final class DropboxFiles extends RemoteFiles {
                                         + ".dropboxapi.com/2/files/"
                                         + method)
                         .header("Authorization", "Bearer " + bearer);
-        if (content) b.header("Dropbox-API-Arg", header(args)).post(data);
-        else b.post(RequestBody.create(JSON, args.toString()));
+        RequestBody body = content ? data : RequestBody.create(JSON, args.toString());
+        if (content) b.header("Dropbox-API-Arg", header(args));
+        boolean mutates = content || method.equals("create_folder_v2") || method.equals("delete_v2");
+        b.post(mutates ? oneShot(body) : body);
         return client.newCall(b.build()).execute();
+    }
+
+    // A connect failure before sending the request may try another address. After a write
+    // starts, only the queue may retry it, after verifying the existing remote content.
+    private static RequestBody oneShot(RequestBody body) {
+        return new RequestBody() {
+            @Override public boolean isOneShot() { return true; }
+            @Override public MediaType contentType() { return body.contentType(); }
+            @Override public long contentLength() throws IOException { return body.contentLength(); }
+            @Override public void writeTo(okio.BufferedSink sink) throws IOException { body.writeTo(sink); }
+        };
     }
 
     void test() throws Exception {
@@ -83,7 +138,7 @@ final class DropboxFiles extends RemoteFiles {
                                 .put("path", config.base().equals("/") ? "" : config.base())
                                 .put("limit", 1),
                         null)) {
-            require(r);
+            requireDropbox(r);
         }
     }
 
@@ -95,10 +150,10 @@ final class DropboxFiles extends RemoteFiles {
                     throw new IOException("Ziel ist kein Ordner");
                 return;
             }
-            if (r.code() != 409 || !r.body().string().contains("not_found")) require(r);
+            if (r.code() != 409 || !errorSummary(r).startsWith("path/not_found")) requireDropbox(r);
         }
         try (Response r = request("create_folder_v2", new JSONObject().put("path", path), null)) {
-            require(r);
+            requireDropbox(r);
         }
     }
 
@@ -108,7 +163,7 @@ final class DropboxFiles extends RemoteFiles {
         JSONObject args = new JSONObject().put("path", path.equals("/") ? "" : path);
         while (true) {
             try (Response r = request(method, args, null)) {
-                require(r);
+                requireDropbox(r);
                 JSONObject page = new JSONObject(r.body().string());
                 org.json.JSONArray entries = page.getJSONArray("entries");
                 for (int i = 0; i < entries.length(); i++) {
@@ -136,8 +191,8 @@ final class DropboxFiles extends RemoteFiles {
                                         .post(RequestBody.create(null, new byte[0]))
                                         .build())
                         .execute()) {
-            if (r.code() == 409 && r.body().string().contains("not_found")) return false;
-            require(r);
+            if (r.code() == 409 && errorSummary(r).startsWith("path/not_found")) return false;
+            requireDropbox(r);
             copyTo(r.body().byteStream(), out);
             return true;
         }
@@ -152,7 +207,7 @@ final class DropboxFiles extends RemoteFiles {
                         .put("strict_conflict", true);
         if (replace) {
             try (Response r = request("get_metadata", new JSONObject().put("path", path), null)) {
-                require(r);
+                requireDropbox(r);
                 args.put(
                         "mode",
                         new JSONObject()
@@ -163,8 +218,8 @@ final class DropboxFiles extends RemoteFiles {
         }
         if (f.length() <= 8 * 1024 * 1024) {
             try (Response r = request("upload", args, body(f))) {
-                if (r.code() == 409) throw new Conflict();
-                require(r);
+                if (r.code() == 409 && errorSummary(r).startsWith("path/conflict")) throw new Conflict();
+                requireDropbox(r);
             }
             return;
         }
@@ -177,7 +232,7 @@ final class DropboxFiles extends RemoteFiles {
                             "upload_session/start",
                             new JSONObject(),
                             RequestBody.create(BYTES, data))) {
-                require(r);
+                requireDropbox(r);
                 id = new JSONObject(r.body().string()).getString("session_id");
             }
             long pos = data.length;
@@ -200,8 +255,8 @@ final class DropboxFiles extends RemoteFiles {
                                 last ? "upload_session/finish" : "upload_session/append_v2",
                                 req,
                                 RequestBody.create(BYTES, data))) {
-                    if (last && r.code() == 409) throw new Conflict();
-                    require(r);
+                    if (last && r.code() == 409 && errorSummary(r).startsWith("path/conflict")) throw new Conflict();
+                    requireDropbox(r);
                 }
             }
         }
@@ -210,8 +265,8 @@ final class DropboxFiles extends RemoteFiles {
     void deleteIfMatches(String path, String expected) throws Exception {
         JSONObject meta;
         try (Response r = request("get_metadata", new JSONObject().put("path", path), null)) {
-            if (r.code() == 409 && r.body().string().contains("not_found")) return;
-            require(r);
+            if (r.code() == 409 && errorSummary(r).startsWith("path/not_found")) return;
+            requireDropbox(r);
             meta = new JSONObject(r.body().string());
         }
         if (!expected.equals(hash(path))) throw new IOException("Cloudkopie wurde extern geändert");
@@ -222,7 +277,7 @@ final class DropboxFiles extends RemoteFiles {
                                 .put("path", meta.getString("id"))
                                 .put("parent_rev", meta.getString("rev")),
                         null)) {
-            require(r);
+            requireDropbox(r);
         }
     }
 

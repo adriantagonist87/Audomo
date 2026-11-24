@@ -48,6 +48,8 @@ Ein Wisch nach rechts setzt einen wartenden oder fehlgeschlagenen Auftrag an die
 
 Antippen öffnet die Auftragsdetails mit Zielpfad, Fehlerursache und den für diesen Auftrag verfügbaren Aktionen. „Jetzt freigeben“ hebt die Aufnahmeverzögerung auf. „Überspringen“ nimmt den Auftrag aus der automatischen Verarbeitung. „Auftrag abbrechen“ beendet auch eine laufende Übertragung, solange der Dienst den endgültigen Zielinhalt noch nicht bestätigt. In der Abschlussphase prüft Audomo das Ergebnis. „Erneut versuchen“ gibt abgebrochene, ausgelassene und fehlgeschlagene Aufträge wieder frei. „Fehler wiederholen“ gibt alle fehlgeschlagenen Aufträge gemeinsam frei.
 
+Nach dem Speichern zeigt Audomo das automatische Uploadziel und bei einer Verzögerung die früheste Startzeit. Scheitert die Übertragung, steht der Grund in der Android-Benachrichtigung und in den Auftragsdetails. Unter „Aufnehmen“ öffnet „Uploads prüfen“ die Warteschlange. Vorübergehende Verbindungsfehler versucht Android mit wachsendem Abstand erneut. Bei Namenskonflikten ist eine Entscheidung in den Details nötig.
+
 „Cloudkopie prüfen“ liest die gespeicherte Datei beim Dienst und vergleicht ihren SHA-256-Wert mit der bestätigten Aufnahme. Bei Abweichungen zeigt Audomo, ob die Datei fehlt oder sich geändert hat. Von dort sind der Cloudpfadabgleich und bei fehlender Kopie das erneute Hochladen erreichbar. „Weitere Uploadziele wählen“ ergänzt Ziele für dieselbe Aufnahme. Zwei Ziele erhalten zwei unabhängig steuerbare Aufträge. Ab Version 0.2.12 zeigt die Detailansicht auch die gezählten Versuche und die Zeitpunkte von Versuch und Prüfung.
 
 Automatische Uploads sind anfangs ausgeschaltet. Ein Ziel wird in „Uploadziele“ eingerichtet. Dropbox verwendet einen öffentlichen App-Key und OAuth mit PKCE. Für SFTP wird der öffentliche Hostschlüssel des vorgesehenen Servers benötigt. FTPS verwendet explizites TLS, WebDAV HTTPS. Zugangsdaten liegen AES-GCM-verschlüsselt mit einem Schlüssel aus dem Android-Keystore. Erst nach vollständigem Rücklesen und SHA-256-Vergleich gilt eine Übertragung als bestätigt.
@@ -57,6 +59,8 @@ Unter „Einstellungen“ → „Uploadziele“ → „Upload-Verzögerung“ gi
 ## Dropbox verbinden
 
 In „Einstellungen“ → „Uploadziele“ → „Ziel hinzufügen“ → „Dropbox“ den Zielordner wählen und „Mit Dropbox verbinden“ antippen. Nach der Freigabe im Browser oder in der installierten Dropbox-App kehrt Android zu Audomo zurück. Audomo speichert den Zugang verschlüsselt und zeigt das Ziel an. Beim Abbruch bleibt die Einrichtung zur erneuten Anmeldung geöffnet.
+
+Um die Verbindung zu prüfen, unter „Uploadziele“ das gespeicherte Dropbox-Ziel antippen und „Verbindung testen“ wählen. Der Dialog zeigt erst den laufenden Test und anschließend das Ergebnis, bis du ihn schließt. Er prüft die Anmeldung und den lesenden Zugriff auf den Zielordner. Ob eine bestimmte Audiodatei vollständig übertragen wurde, zeigt „Hochgeladen“ im jeweiligen Auftrag.
 
 Der öffentliche App-Key für Audomo ist im Standard-Build hinterlegt. Wer eine eigene Ausgabe veröffentlichen möchte, registriert diese einmalig bei Dropbox. In der App Console „Create app“, „Scoped access“ und „App folder“ wählen. Unter „Permissions“ die Rechte `files.metadata.read`, `files.content.read` und `files.content.write` aktivieren und speichern. Unter „Settings“ den öffentlichen „App key“ kopieren. [Dropbox App Console](https://www.dropbox.com/developers/apps) · [OAuth bei Dropbox](https://developers.dropbox.com/oauth-guide)
 

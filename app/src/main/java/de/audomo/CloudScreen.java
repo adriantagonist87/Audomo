@@ -123,7 +123,7 @@ final class CloudScreen {
                         }
                         actions.dismiss();
                         if (index == 3) { reconcile(t); return; }
-                        if (index == 0) test(t);
+                        if (index == 0) test(t, () -> CloudConfig.secret(s, t.id()));
                         else {
                             p.edit().putString("defaultTarget", t.id()).apply();
                             d.dismiss();
@@ -213,15 +213,7 @@ final class CloudScreen {
                     try {
                         CloudConfig target = config(type, old, host, port, user, base, pin);
                         String input = pass.getText().toString();
-                        s.runFiles(() -> {
-                            String credential =
-                                    credential(target, old, input);
-                            try (RemoteFiles remote =
-                                    RemoteFiles.open(target, credential, null, n -> {})) {
-                                remote.test();
-                            }
-                            return "Verbindung und Zielordner bestätigt";
-                        });
+                        test(target, () -> credential(target, old, input));
                     } catch (Exception e) {
                         fail(e);
                     }
@@ -289,13 +281,24 @@ final class CloudScreen {
         return t;
     }
 
-    private void test(CloudConfig t) {
-        s.runFiles(() -> {
-            try (RemoteFiles r =
-                    RemoteFiles.open(t, CloudConfig.secret(s, t.id()), null, n -> {})) {
-                r.test();
+    private void test(CloudConfig target, java.util.concurrent.Callable<String> credential) {
+        AlertDialog result = new AlertDialog.Builder(s)
+                .setTitle(target.protocol() + " · Verbindung testen")
+                .setMessage("Anmeldung und Zielordner werden geprüft …")
+                .setPositiveButton("Schließen", null)
+                .show();
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            String message;
+            try (RemoteFiles remote = RemoteFiles.open(target, credential.call(), null, n -> {})) {
+                remote.test();
+                message = "Verbindung und Zielordner bestätigt.";
+            } catch (Exception e) {
+                message = "Verbindungstest fehlgeschlagen. " + UploadWorker.safeError(e);
             }
-            return "Verbindung und Zielordner bestätigt";
+            String completed = message;
+            s.runOnUiThread(() -> {
+                if (!s.isDestroyed() && result.isShowing()) result.setMessage(completed);
+            });
         });
     }
 

@@ -47,6 +47,31 @@ public class DropboxRequestDeviceTest {
     }
 
     @Test
+    public void quotaErrorDoesNotBecomeAnOverwritePrompt() throws Exception {
+        var client = DropboxFiles.dropboxHttp(null);
+        assertTrue(client.retryOnConnectionFailure());
+        OkHttpClient local = client.newBuilder().addInterceptor(chain -> {
+            boolean token = chain.request().url().encodedPath().equals("/oauth2/token");
+            if (!token) assertTrue(chain.request().body().isOneShot());
+            String body = token ? "{\"access_token\":\"synthetic\"}"
+                    : "{\"error_summary\":\"path/insufficient_space/..\"}";
+            return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
+                    .code(token ? 200 : 409).message("fixture")
+                    .body(ResponseBody.create(null, body)).build();
+        }).build();
+        CloudConfig t = new CloudConfig(UUID.randomUUID().toString(), "Dropbox", "qa", 443, "", "/", "");
+        File sample = File.createTempFile("qa-quota-", ".ogg",
+                InstrumentationRegistry.getInstrumentation().getTargetContext().getCacheDir());
+        try (DropboxFiles remote = new DropboxFiles(t, "synthetic", n -> {}, local)) {
+            DropboxFiles.Failure error = assertThrows(DropboxFiles.Failure.class,
+                    () -> remote.put(sample, "/Probe.ogg", false, null));
+            assertTrue(UploadWorker.safeError(error).contains("Speicherplatz"));
+        } finally {
+            java.nio.file.Files.deleteIfExists(sample.toPath());
+        }
+    }
+
+    @Test
     public void refreshAndChunkOffsetsWithLocalTransport() throws Exception {
         final int chunk = 8 * 1024 * 1024;
         File f =
@@ -82,6 +107,7 @@ public class DropboxRequestDeviceTest {
                                                 request.header("Authorization"));
                                         JSONObject arguments =
                                                 new JSONObject(request.header("Dropbox-API-Arg"));
+                                        assertTrue(request.body().isOneShot());
                                         long length = request.body().contentLength();
                                         switch (path) {
                                             case "/2/files/upload_session/start":

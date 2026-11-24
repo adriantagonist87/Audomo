@@ -26,6 +26,9 @@ public class MainActivity extends Activity {
     private LinearLayout root, body, controls;
     private TextView name, timer, status, note, mic, format, recordTab, libraryTab, queueTab;
     private Wave wave;
+    private Button uploadAttention;
+    private long nextUploadCheck;
+    private boolean checkingUploads;
     private View recordLine, libraryLine, queueLine;
     private QueueDashboard dashboard;
     private TextView calendar, calendarHeading;
@@ -78,6 +81,10 @@ public class MainActivity extends Activity {
                                 Audomo.duration(
                                         idle && app.state != Audomo.State.FAILED ? 0 : app.frames));
                         long now = SystemClock.elapsedRealtime();
+                        if (now >= nextUploadCheck && !checkingUploads) {
+                            nextUploadCheck = now + 5000;
+                            refreshUploadAttention();
+                        }
                         CalendarNames.Event chosen = app.draft.get().event();
                         if (idle && chosen == null && now >= nextPreview) {
                             nextPreview = now + 15000;
@@ -233,6 +240,26 @@ public class MainActivity extends Activity {
         libraryTab.setSelected(toLibrary);
     }
 
+    private void refreshUploadAttention() {
+        checkingUploads = true;
+        app.uploadControls.execute(() -> {
+            long count;
+            try {
+                count = UploadQueue.get(this).attentionCount();
+            } catch (android.database.sqlite.SQLiteException unavailable) {
+                count = -1;
+            }
+            long total = count;
+            runOnUiThread(() -> {
+                checkingUploads = false;
+                if (isDestroyed() || uploadAttention == null || total < 0) return;
+                uploadAttention.setVisibility(total > 0 ? View.VISIBLE : View.GONE);
+                if (total > 0) uploadAttention.setText(total == 1 ? "1 Upload prüfen · Warteschlange öffnen"
+                        : total + " Uploads prüfen · Warteschlange öffnen");
+            });
+        });
+    }
+
     private void showRecorder() {
         trashView = false;
         switchTab(false);
@@ -315,6 +342,10 @@ public class MainActivity extends Activity {
             if (app.ready()) openLibrary();
         });
         content.addView(note);
+        uploadAttention = button("", v -> openQueue());
+        uploadAttention.setVisibility(View.GONE);
+        content.addView(uploadAttention);
+        nextUploadCheck = 0;
         controls = row();
         controls.setGravity(Gravity.CENTER);
         body.addView(controls, lp(-1, 85));

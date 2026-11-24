@@ -337,20 +337,26 @@ final class UploadQueue extends SQLiteOpenHelper {
         clearErrorNotice(id);
     }
 
-    static void afterCapture(Audomo app, File f) throws Exception {
+    static String afterCapture(Audomo app, File f) throws Exception {
         synchronized (app.sessions) {
             org.json.JSONObject meta = SessionStore.metadata(f.getParentFile());
             String id = meta.optString("autoTarget");
-            if (id.isEmpty() || meta.optBoolean("autoQueued")) return;
+            if (id.isEmpty() || meta.optBoolean("autoQueued")) return "";
+            String planned = "";
             if (Profile.prefs(app).getBoolean("autoUpload", false)) {
                 CloudConfig t = CloudConfig.byId(app, id);
                 SessionStore.Entry e = SessionStore.entry(f.getParentFile());
-                if (e == null || e.trashed() != 0) return;
-                get(app).enqueueBatch(
-                                List.of(e), List.of(t), meta.optLong("uploadNotBefore", 0), false);
+                if (e == null || e.trashed() != 0) return "";
+                long due = meta.optLong("uploadNotBefore", 0);
+                int added = get(app).enqueueBatch(List.of(e), List.of(t), due, false);
+                if (added > 0) planned = t.protocol() + "-Upload eingereiht"
+                        + (due > System.currentTimeMillis() ? " · frühestens "
+                                + java.time.Instant.ofEpochMilli(due).atZone(java.time.ZoneId.systemDefault())
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) : "");
             }
             meta.put("autoQueued", true);
             SessionStore.storeMeta(f.getParentFile(), meta);
+            return planned;
         }
     }
 
@@ -403,6 +409,12 @@ final class UploadQueue extends SQLiteOpenHelper {
                                 .build());
             }
         } else if (!timerFired && timer != null) scheduler.cancel(DELAY_TIMER);
+    }
+
+    long attentionCount() {
+        return android.database.DatabaseUtils.longForQuery(getReadableDatabase(),
+                "SELECT COUNT(*) FROM jobs WHERE inQueue=1 AND (state IN ('Fehler','Konflikt')"
+                        + " OR availability!='')", null);
     }
 
     boolean pendingNow() {
