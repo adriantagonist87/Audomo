@@ -526,10 +526,19 @@ final class LibraryView {
         });
         header.addView(toggleAll, screen.lp(48, 48));
         header.addView(screen.button("Abbrechen", v -> endSelection()));
+        SessionStore.Entry single = picked.size() == 1 ? picked.get(0) : null;
         if (picked.stream().anyMatch(SessionStore.Entry::cloudOnly)) {
-            panel.addView(screen.text("Für Dateiaktionen zuerst die Cloudaufnahme lokal wiederherstellen.", 14, MainActivity.DIM));
-            if (picked.size() == 1) panel.addView(screen.button("Speicherorte", v -> new CloudScreen(screen)
-                    .locations(picked.get(0), uploads.getOrDefault(picked.get(0).id(), List.of()))));
+            if (single != null) {
+                List<UploadQueue.Job> copies = uploads.getOrDefault(single.id(), List.of());
+                LinearLayout cloudActions = screen.row();
+                panel.addView(cloudActions);
+                if (copies.stream().anyMatch(UploadQueue.Job::canRename))
+                    action(cloudActions, "Umbenennen", R.drawable.ic_edit, v -> actions.rename(single));
+                cloudActions.addView(screen.button("Speicherorte", v -> new CloudScreen(screen)
+                        .locations(single, copies)), screen.weight());
+            } else {
+                panel.addView(screen.text("Für gemeinsame Dateiaktionen zuerst die Cloudaufnahmen lokal wiederherstellen.", 14, MainActivity.DIM));
+            }
             return;
         }
         if (!trash) {
@@ -538,6 +547,8 @@ final class LibraryView {
             action(uploads, "Cloud Upload", R.drawable.ic_upload, v -> screen.upload(picked));
             uploads.getChildAt(0).setEnabled(!picked.isEmpty());
             if (picked.isEmpty()) uploads.setAlpha(0.45f);
+            if (single != null)
+                action(uploads, "Umbenennen", R.drawable.ic_edit, v -> actions.rename(single));
         }
         LinearLayout bar = screen.row();
         panel.addView(bar);

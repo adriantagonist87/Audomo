@@ -221,6 +221,7 @@ final class LibraryActions {
 
     void more(View anchor, List<SessionStore.Entry> entries) {
         PopupMenu menu = new PopupMenu(screen, anchor);
+        if (entries.size() == 1) item(menu, "Umbenennen", () -> rename(entries.get(0)));
         item(menu, "Kopieren", () -> relocate(entries, true));
         item(menu, "Verschieben", () -> relocate(entries, false));
         item(menu, "In den Papierkorb", () -> trash(entries, false));

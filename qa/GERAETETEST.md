@@ -1,5 +1,11 @@
 # Audomo · Teststand vom 25.11.2026
 
+## Umbenennen im Auswahlmodus mit Version 1.0.3
+
+Auf dem Galaxy S24 Ultra wurde 1.0.3 als Update installiert und die installierte APK per SHA-256 geprüft. Die bisherigen Aufnahme-Einträge blieben erhalten. Nach langem Drücken einer Aufnahme erschien „Umbenennen“ in der unteren Aktionsleiste und als erster Eintrag unter „Mehr“. Über das Menü öffnete sich die Namenseingabe mit den Speicherorten „Auf diesem Gerät“ und „Dropbox“. „Abbrechen“ führte zur selben Auswahl zurück.
+
+Im Android-14-Emulator bestand die Regression mit 24 instrumentierten Tests. Sie prüft jetzt ausdrücklich „Mehr“ bei einer und bei zwei markierten Aufnahmen. Eine reine Cloudaufnahme ließ sich über die Aktionsleiste zur Namenseingabe öffnen. [Auswahlmenü mit Testaufnahme](api34/umbenennen-mehr-1.0.3.webp)
+
 ## Aufnahmen nachträglich umbenennen mit Version 1.0.2
 
 Am 25.11. erhielt das Galaxy S24 Ultra mit Android 14 die Version 1.0.2 (Build 22) als Update von 1.0.1. Die installierte APK stimmte per SHA-256 mit der getesteten APK überein. Alle zuvor vorhandenen lokalen Aufnahme-Einträge waren nach dem Update vorhanden. In „Wiedergeben“ ließ sich bei einer lokal und in Dropbox gespeicherten Aufnahme über „Speicherorte“ der Dialog „Umbenennen“ öffnen. Beide Speicherorte waren einzeln wählbar. „Abbrechen“ führte zurück zur Liste.

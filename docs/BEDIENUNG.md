@@ -36,7 +36,7 @@ In „Wiedergeben“ zeigt die rechte Spalte die Speicherorte jeder Aufnahme. An
 
 ### Aufnahme umbenennen
 
-In „Wiedergeben“ die Aufnahme antippen und das Stiftsymbol „Umbenennen“ wählen. Liegt sie ausschließlich in der Cloud, öffnet ein Tipp auf die Aufnahme direkt „Speicherorte“. Dort steht ebenfalls „Umbenennen“.
+In „Wiedergeben“ eine Aufnahme lange drücken. Sobald „1 ausgewählt“ erscheint, unten auf „Umbenennen“ tippen. Bei einer lokalen Aufnahme steht „Umbenennen“ auch an erster Stelle im Menü „Mehr“. Ein kurzer Tipp auf die Aufnahme öffnet die Zeilenaktionen mit dem Stiftsymbol oder bei einer reinen Cloudaufnahme die „Speicherorte“. [Ansicht im Menü „Mehr“](../qa/api34/umbenennen-mehr-1.0.3.webp)
 
 Den neuen Dateinamen eingeben und die gewünschten Speicherorte anhaken. „Auf diesem Gerät“ gilt auch für die von Audomo verwaltete Kopie im freigegebenen Android-Ordner. Jede Cloudkopie lässt sich einzeln auswählen. Ordner und Dateiendung bleiben erhalten. Bei einem geplanten Erstupload kann der neue Name schon vor der Übertragung festgelegt werden.
 

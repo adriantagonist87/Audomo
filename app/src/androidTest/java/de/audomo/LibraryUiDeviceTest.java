@@ -288,8 +288,23 @@ public class LibraryUiDeviceTest {
             ui(() ->
                     list.getOnItemLongClickListener()
                             .onItemLongClick(list, list.getChildAt(0), 0, 0));
+            await(() -> find(root, TextView.class, "1 ausgewählt") != null);
+            assertTrue(find(root, Button.class, "Umbenennen").isEnabled());
+            ui(() -> find(root, Button.class, "Mehr").performClick());
+            choice("Umbenennen");
+            assertFalse(inst.getUiAutomation().getRootInActiveWindow()
+                    .findAccessibilityNodeInfosByText("Aufnahme umbenennen").isEmpty());
+            choice("Abbrechen");
             ui(() -> list.performItemClick(list.getChildAt(1), 1, 1));
             await(() -> find(root, TextView.class, "2 ausgewählt") != null);
+            assertNull(find(root, Button.class, "Umbenennen"));
+            ui(() -> find(root, Button.class, "Mehr").performClick());
+            inst.getUiAutomation().waitForIdle(250, 5000);
+            var multipleMenu = inst.getUiAutomation().getRootInActiveWindow();
+            assertFalse(multipleMenu.findAccessibilityNodeInfosByText("Kopieren").isEmpty());
+            assertTrue(multipleMenu.findAccessibilityNodeInfosByText("Umbenennen").isEmpty());
+            inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+            await(activity::hasWindowFocus);
             shot(ctx, "mehrfachauswahl");
             assertTrue(find(root, Button.class, "Cloud Upload").isEnabled());
             choice("Cloud Upload");
