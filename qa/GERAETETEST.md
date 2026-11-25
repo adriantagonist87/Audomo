@@ -1,6 +1,8 @@
-# Audomo · Teststand vom 24.11.2026
+# Audomo · Teststand vom 25.11.2026
 
 ## Aufnahmen nachträglich umbenennen mit Version 1.0.2
+
+Am 25.11. erhielt das Galaxy S24 Ultra mit Android 14 die Version 1.0.2 (Build 22) als Update von 1.0.1. Die installierte APK stimmte per SHA-256 mit der getesteten APK überein. Alle zuvor vorhandenen lokalen Aufnahme-Einträge waren nach dem Update vorhanden. In „Wiedergeben“ ließ sich bei einer lokal und in Dropbox gespeicherten Aufnahme über „Speicherorte“ der Dialog „Umbenennen“ öffnen. Beide Speicherorte waren einzeln wählbar. „Abbrechen“ führte zurück zur Liste.
 
 Im Android-14-Emulator wurde eine synthetische Aufnahme in der Dateiliste gewählt, die Umbenennung abgebrochen und anschließend mit einem neuen Namen gespeichert. Die Liste und die gespeicherten Metadaten zeigten den neuen Namen. Mit einem freigegebenen Android-Dokumentordner wurde die umbenannte Datei über den Dokumentprovider zurückgelesen und ihr SHA-256 verglichen.
 
