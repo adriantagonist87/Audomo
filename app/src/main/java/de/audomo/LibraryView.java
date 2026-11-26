@@ -44,6 +44,8 @@ final class LibraryView {
     private SessionStore.Entry selected;
     private View playerRowActions;
     private ExoPlayer player;
+    private PlaybackOutput output;
+    private AlertDialog outputWarning;
     private String query = "";
     private ImageButton play, back, forward;
     private SeekBar seek;
@@ -758,13 +760,27 @@ final class LibraryView {
             screen.toast("Zuerst Aufnahme beenden");
             return;
         }
-        if (player != null && player.isPlaying()) {
+        if (player != null && player.getPlayWhenReady() && player.getPlaybackState() != Player.STATE_ENDED) {
             player.pause();
             return;
         }
+        requestPlay(false);
+    }
+
+    private void requestPlay(boolean confirmed) {
+        if (selected == null || !app.ready() || !play.isShown()) return;
+        var routes = PlaybackOutput.routes(screen);
+        boolean strict = prefs.getBoolean(PlaybackOutput.BLUETOOTH_ONLY, false);
+        if (!(confirmed && !strict) && !PlaybackOutput.allowsAll(routes, strict)) {
+            warnAboutOutput();
+            return;
+        }
         if (player == null) {
-            player = new ExoPlayer.Builder(screen).build();
-            player.setAudioAttributes(AudioAttributes.DEFAULT, true);
+            output = new PlaybackOutput(screen, wasPlaying -> {
+                if (wasPlaying) screen.toast("Wiedergabe pausiert · Audioausgang gewechselt");
+                else warnAboutOutput();
+            });
+            player = output.player;
             player.setMediaItem(MediaItem.fromUri(Uri.fromFile(selected.file())));
             player.setSkipSilenceEnabled(prefs.getBoolean("skipSilence", false));
             player.setPlaybackSpeed(prefs.getFloat("speed", 1));
@@ -797,7 +813,29 @@ final class LibraryView {
             player.prepare();
         }
         if (player.getPlaybackState() == Player.STATE_ENDED) player.seekTo(0);
-        player.play();
+        output.start(routes, confirmed && !strict);
+    }
+
+    private void warnAboutOutput() {
+        if (outputWarning != null || !play.isShown() || screen.isFinishing()) return;
+        boolean strict = prefs.getBoolean(PlaybackOutput.BLUETOOTH_ONLY, false);
+        AlertDialog.Builder dialog = new AlertDialog.Builder(screen);
+        if (strict) {
+            dialog.setTitle("Bluetooth-Ausgabe erforderlich")
+                    .setMessage("Wähle in der Android-Medienausgabe dein Bluetooth-Audiogerät und drücke erneut auf Play.")
+                    .setNegativeButton("Schließen", null);
+        } else {
+            dialog.setTitle("Ohne Kopfhörer abspielen?")
+                    .setMessage("Die Aufnahme könnte über einen Lautsprecher hörbar sein. Möchtest du sie trotzdem abspielen?")
+                    .setNegativeButton("Abbrechen", null)
+                    .setPositiveButton("Trotzdem abspielen", (d, which) -> {
+                        d.dismiss();
+                        requestPlay(true);
+                    });
+        }
+        outputWarning = dialog.create();
+        outputWarning.setOnDismissListener(d -> { if (outputWarning == d) outputWarning = null; });
+        outputWarning.show();
     }
 
     private final Runnable update =
@@ -815,8 +853,13 @@ final class LibraryView {
 
     void stop() {
         handler.removeCallbacks(update);
-        if (player != null) {
-            player.release();
+        if (outputWarning != null) {
+            outputWarning.dismiss();
+            outputWarning = null;
+        }
+        if (output != null) {
+            output.release();
+            output = null;
             player = null;
         }
         if (play != null) {

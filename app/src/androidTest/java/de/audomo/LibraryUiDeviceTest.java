@@ -104,6 +104,16 @@ public class LibraryUiDeviceTest {
         }
     }
 
+    private AccessibilityNodeInfo windowWith(String label) {
+        long deadline = SystemClock.elapsedRealtime() + 5000;
+        do {
+            var window = inst.getUiAutomation().getRootInActiveWindow();
+            if (window != null && !window.findAccessibilityNodeInfosByText(label).isEmpty()) return window;
+            SystemClock.sleep(50);
+        } while (SystemClock.elapsedRealtime() < deadline);
+        throw new AssertionError("Dialog fehlt: " + label);
+    }
+
     private void assertSortMenu(String key, String direction) throws java.util.concurrent.TimeoutException {
         inst.waitForIdleSync();
         var automation = inst.getUiAutomation();
@@ -253,6 +263,7 @@ public class LibraryUiDeviceTest {
         int originalSort = prefs.getInt("sort", 1);
         boolean originalDescending = prefs.getBoolean("descending", true);
         boolean originalSilence = prefs.getBoolean("skipSilence", false);
+        boolean originalBluetoothOnly = prefs.getBoolean(PlaybackOutput.BLUETOOTH_ONLY, false);
         float originalSpeed = prefs.getFloat("speed", 1);
         prefs.edit()
                 .putInt("skipSeconds", 5)
@@ -260,6 +271,7 @@ public class LibraryUiDeviceTest {
                 .putBoolean("descending", true)
                 .putFloat("speed", 1)
                 .putBoolean("skipSilence", false)
+                .putBoolean(PlaybackOutput.BLUETOOTH_ONLY, false)
                 .commit();
         List<MainActivity> openedTabs = new ArrayList<>();
         MainActivity screen = null;
@@ -338,13 +350,35 @@ public class LibraryUiDeviceTest {
             shot(ctx, "dateiaktionen");
             ui(() -> find(root, Button.class, "Umbenennen").performClick());
             inst.getUiAutomation().waitForIdle(250, 5000);
-            var dialog = inst.getUiAutomation().getRootInActiveWindow();
-            assertFalse(dialog.findAccessibilityNodeInfosByText("Aufnahme umbenennen").isEmpty());
+            var dialog = windowWith("Aufnahme umbenennen");
             assertTrue(dialog.findAccessibilityNodeInfosByText("Auf diesem Gerät").stream().anyMatch(AccessibilityNodeInfo::isChecked));
             choice("Abbrechen");
             ui(() -> find(root, ImageButton.class, "Abspielen").performClick());
+            // The isolated API 34 emulator uses its built-in speaker.
+            shot(ctx, "kopfhoerer-rueckfrage");
+            windowWith("Ohne Kopfhörer abspielen?");
+            touch(root.getWidth() * .1f, root.getWidth() * .1f, root.getHeight() * .12f);
+            await(activity::hasWindowFocus);
+            assertNotNull(find(root, ImageButton.class, "Abspielen"));
+            assertEquals(0, find(root, SeekBar.class, null).getProgress());
+            ui(() -> find(root, ImageButton.class, "Abspielen").performClick());
+            choice("Trotzdem abspielen");
             await(() -> find(root, ImageButton.class, "Pause") != null);
             ui(() -> find(root, ImageButton.class, "Pause").performClick());
+            ui(() -> find(root, ImageButton.class, "Abspielen").performClick());
+            choice("Abbrechen");
+            choice("Einstellungen");
+            choice("Wiedergabe");
+            choice("Audioausgang");
+            choice("Nur Bluetooth");
+            choice("Zurück");
+            choice("Zurück");
+            ui(() -> find(root, ImageButton.class, "Abspielen").performClick());
+            inst.getUiAutomation().waitForIdle(250, 5000);
+            var strictWarning = windowWith("Bluetooth-Ausgabe erforderlich");
+            assertTrue(strictWarning.findAccessibilityNodeInfosByText("Trotzdem abspielen").isEmpty());
+            inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+            await(activity::hasWindowFocus);
             ui(() -> find(root, Button.class, "Sprung 5 s").performClick());
             choice("15 Sekunden");
             await(() -> find(root, ImageButton.class, "15 Sekunden vor") != null);
@@ -523,6 +557,7 @@ public class LibraryUiDeviceTest {
                     .putInt("skipSeconds", originalStep)
                     .putFloat("speed", originalSpeed)
                     .putBoolean("skipSilence", originalSilence)
+                    .putBoolean(PlaybackOutput.BLUETOOTH_ONLY, originalBluetoothOnly)
                     .commit();
             try (var stream = Files.walk(temp.toPath())) {
                 for (Path path :

@@ -18,9 +18,15 @@ Unter „Vibration“ hat jedes Ereignis eine Taste „Testen“. Ein langer Imp
 
 „Wiedergeben“ öffnet die lokale Liste. Über das Sortiersymbol lassen sich Feld und Reihenfolge direkt wählen, etwa „Datum“ und „Neueste zuerst“. Die beiden aktiven Einträge sind hervorgehoben. Einen Eintrag auswählen und anschließend Play drücken. Die Dateiaktionen ermöglichen Teilen, externes Öffnen und Exportieren über den Android-Dateidialog. Originale liegen im privaten dauerhaften App-Speicher. Eine Deinstallation entfernt diesen Speicher. Zum Aufbewahren außerhalb der App „Datei exportieren“ verwenden.
 
+### Besprechungen mit Kopfhörern anhören
+
+Bei „Play“ prüft Audomo den Medienausgang. Über Bluetooth-Audio, kabelgebundene Kopfhörer und USB-Headsets beginnt die Wiedergabe direkt. Für den Handylautsprecher oder einen unbekannten Ausgang fragt Audomo „Ohne Kopfhörer abspielen?“. „Trotzdem abspielen“ gilt für diesen Start. „Abbrechen“, Android-Zurück und ein Tipp außerhalb lassen die Aufnahme stumm. Auch nach einer Pause wird der Ausgang erneut geprüft. [Rückfrage im Player](../qa/api34/kopfhoerer-rueckfrage-1.1.1.webp)
+
+Unter „Einstellungen“ → „Wiedergabe“ → „Audioausgang“ sperrt „Nur Bluetooth“ die Lautsprecher-Ausnahme. In der Android-Medienausgabe muss ein Bluetooth-Audiogerät für Medien ausgewählt sein. Auch ein Bluetooth-Lautsprecher oder eine Freisprechanlage kann diesen Ton wiedergeben. Bricht die geschützte Verbindung ab, pausiert der Player. Nach dem erneuten Verbinden entscheidet ein Tipp auf Play über das Fortsetzen.
+
 ## Einstellungen und Dateien
 
-Das Zahnrad ist in allen drei Reitern an derselben Stelle. Die Kategorie „Wiedergabe“ enthält Tempo, Sprungintervall und das Überspringen stiller Passagen. Diagnose und Einstellungsdateien stehen unter „Sicherung und Diagnose“. Android-Zurück oder der Pfeil oben führt in die vorherige Menüebene. [Einstellungsübersicht](../qa/api34/einstellungen-1.1.0.webp)
+Das Zahnrad ist in allen drei Reitern an derselben Stelle. Die Kategorie „Wiedergabe“ enthält den Audioausgang, Tempo, Sprungintervall und das Überspringen stiller Passagen. Diagnose und Einstellungsdateien stehen unter „Sicherung und Diagnose“. Android-Zurück oder der Pfeil oben führt in die vorherige Menüebene. [Einstellungsübersicht](../qa/api34/einstellungen-1.1.0.webp)
 
 Unter „Dateien und Ordner“ → „Speicher und Import“ lässt sich ein Android-Dokumentordner freigeben. Audomo sichert eine Aufnahme zuerst im privaten Speicher, kopiert sie in den ausgewählten Ordner und liest die Kopie zur SHA-256-Prüfung zurück. Bei einem Zugriffsfehler bleibt die private Sicherung erhalten.
 

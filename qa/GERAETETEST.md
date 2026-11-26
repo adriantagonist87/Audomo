@@ -1,5 +1,11 @@
 # Audomo · Teststand vom 26.11.2026
 
+## Audioausgang im Player mit Version 1.1.1
+
+Auf dem Galaxy S24 Ultra meldete Android 14 das verbundene Bluetooth-Gerät als aktiven A2DP-Medienausgang. Der freigegebene Hörtest verwendete eine zwei Sekunden lange synthetische MP3 aus dem Testpaket. Im Modus „Nur Bluetooth“ blieb der Player bis zur Bestätigung des Ausgangs am eigenen AudioTrack stumm, gab den Ton frei und erreichte das Dateiende. Der Test stellte die vorherige Einstellung wieder her. Eine physische Trennung während der Wiedergabe wurde in diesem Lauf nicht gemessen.
+
+Im separaten API-34-Emulator mit Lautsprecherausgabe ließ sich die Rückfrage durch Außentipp abbrechen. „Trotzdem abspielen“ startete das Testaudio. Nach Pause und erneutem Play erschien die Rückfrage wieder. „Nur Bluetooth“ war über das Wiedergabemenü erreichbar und ließ auf dem Lautsprecher keine Ausnahme zu. Die Bibliotheks-, Backup- und Ausgangstests bestanden. [Rückfrage im Player](api34/kopfhoerer-rueckfrage-1.1.1.webp)
+
 ## Dashboard und Einstellungen mit Version 1.1.0
 
 Auf dem Galaxy S24 Ultra mit Android 14 und One UI 6.1 wurde die Test-APK als Update installiert. Ihre Prüfsumme stimmte mit dem Build überein. Alle lokalen Sitzungseinträge waren nach der Installation vorhanden. Wischen wechselte vorwärts und rückwärts zwischen den Reitern. Das Zahnrad öffnete die Einstellungsübersicht, „Kalender und Dateinamen“ die passende Unterseite. Android-Zurück führte zur Übersicht. Ein Tipp bei geöffnetem Player auf den dahinterliegenden Reiter schloss den Player und ließ die Dateiliste sichtbar.

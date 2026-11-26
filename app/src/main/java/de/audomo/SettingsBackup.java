@@ -10,7 +10,7 @@ import java.util.*;
 
 final class SettingsBackup {
     static final List<String> BOOLEAN =
-            List.of("haptic", "descending", "skipSilence", "wifiOnly", "mirrorFolders");
+            List.of("haptic", "descending", "skipSilence", "wifiOnly", "mirrorFolders", PlaybackOutput.BLUETOOTH_ONLY);
     static final Map<String, Integer> LIMITS =
             Map.of(
                     "before",

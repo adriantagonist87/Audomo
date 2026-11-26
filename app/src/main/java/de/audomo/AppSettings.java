@@ -121,7 +121,7 @@ final class AppSettings {
         Page p = new Page("Einstellungen");
         p.group("Besprechungen");
         p.row(R.drawable.ic_mic, "Aufnahme und Klang", "Mikrofon, Aufnahmeprofile und Nicht stören", this::recording);
-        p.row(R.drawable.ic_play, "Wiedergabe", "Tempo, Sprungintervall und stille Passagen", this::playback);
+        p.row(R.drawable.ic_play, "Wiedergabe", "Audioausgang, Tempo und Sprungintervall", this::playback);
         p.row(R.drawable.ic_calendar_day, "Kalender und Dateinamen", "Kalender auswählen, Dateinamen und Ordner festlegen", this::calendar);
         p.row(R.drawable.ic_folder, "Dateien und Ordner", "Speicherorte, Import und Papierkorb", () -> files(p, 0));
         p.row(R.drawable.ic_upload, "Cloud und Uploads", "Ziele, Automatik und Warteschlange", () -> cloud(p));
@@ -145,6 +145,15 @@ final class AppSettings {
 
     private void playback() {
         Page p = new Page("Wiedergabe");
+        String[] outputs = {"Lautsprecher nur nach Rückfrage", "Nur Bluetooth"};
+        p.liveRow(R.drawable.ic_shield, "Audioausgang",
+                () -> outputs[prefs.getBoolean(PlaybackOutput.BLUETOOTH_ONLY, false) ? 1 : 0],
+                () -> new AlertDialog.Builder(screen).setTitle("Audioausgang")
+                        .setSingleChoiceItems(outputs, prefs.getBoolean(PlaybackOutput.BLUETOOTH_ONLY, false) ? 1 : 0,
+                                (dialog, index) -> {
+                                    prefs.edit().putBoolean(PlaybackOutput.BLUETOOTH_ONLY, index == 1).apply();
+                                    dialog.dismiss();
+                                }).setNegativeButton("Abbrechen", null).show());
         p.liveRow(R.drawable.ic_play, "Wiedergabetempo", () -> PlaybackOptions.speedLabel(prefs),
                 () -> PlaybackOptions.speed(screen, speed -> {}));
         p.liveRow(R.drawable.ic_forward, "Sprungintervall", () -> prefs.getInt("skipSeconds", 5) + " Sekunden",
