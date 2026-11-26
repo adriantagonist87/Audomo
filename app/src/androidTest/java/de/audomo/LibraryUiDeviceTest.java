@@ -28,6 +28,8 @@ public class LibraryUiDeviceTest {
     private final Instrumentation inst = InstrumentationRegistry.getInstrumentation();
 
     private <T extends View> T find(View root, Class<T> cls, String label) {
+        if (root.getParent() instanceof DashboardPager
+                && root.getImportantForAccessibility() == View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS) return null;
         if (cls.isInstance(root)
                 && (label == null
                         || label.equals(root.getContentDescription())
@@ -132,25 +134,15 @@ public class LibraryUiDeviceTest {
         fail("Aktive Sortierung fehlt: " + key + ", " + direction);
     }
 
-    private MainActivity openTab(MainActivity from, String label, Class<? extends MainActivity> target,
-            List<MainActivity> opened) {
-        Instrumentation.ActivityMonitor monitor = inst.addMonitor(target.getName(), null, false);
-        try {
-            ui(() -> find(from.getWindow().getDecorView(), TextView.class, label).performClick());
-            MainActivity to = (MainActivity) inst.waitForMonitorWithTimeout(monitor, 5000);
-            assertNotNull("Android hat den Reiter nicht geöffnet: " + label, to);
-            opened.add(to);
-            await(to::hasWindowFocus);
-            assertEquals(from.getTaskId(), to.getTaskId());
-            return to;
-        } finally {
-            inst.removeMonitor(monitor);
-        }
+    private MainActivity openTab(MainActivity from, String label, int target) {
+        ui(() -> find(from.getWindow().getDecorView(), TextView.class, label).performClick());
+        await(() -> from.dashboardIndex() == target && from.pager().position() == target);
+        return from;
     }
 
     private void backTo(MainActivity expected, String label) {
         inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
-        await(() -> expected.hasWindowFocus()
+        await(() -> expected.hasWindowFocus() && expected.pager().position() == expected.dashboardIndex()
                 && find(expected.getWindow().getDecorView(), View.class, label) != null);
     }
 
@@ -169,23 +161,90 @@ public class LibraryUiDeviceTest {
         inst.waitForIdleSync();
     }
 
-    private MainActivity swipeTab(MainActivity from, String label, Class<? extends MainActivity> target,
-            boolean left, List<MainActivity> opened) {
+    private MainActivity swipeTab(MainActivity from, String label, int target, boolean left) {
         View root = from.getWindow().getDecorView();
         TextView tab = find(root, TextView.class, label);
         int[] position = new int[2];
         ui(() -> tab.getLocationOnScreen(position));
-        Instrumentation.ActivityMonitor monitor = inst.addMonitor(target.getName(), null, false);
+        touch(root.getWidth() * (left ? .75f : .25f), root.getWidth() * (left ? .25f : .75f),
+                position[1] + tab.getHeight() / 2f);
+        await(() -> from.dashboardIndex() == target && from.pager().position() == target);
+        return from;
+    }
+
+    private void pointer(long down, int action, float x, float y) {
+        MotionEvent event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0);
+        event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        inst.sendPointerSync(event);
+        event.recycle();
+    }
+
+    private void dragAndHold(long down, float from, float to, float y) {
+        for (int i = 1; i <= 8; i++) {
+            SystemClock.sleep(18);
+            pointer(down, MotionEvent.ACTION_MOVE, from + (to - from) * i / 8, y);
+        }
+        // Give input resampling two stationary samples at the end of the drag.
+        for (int i = 0; i < 2; i++) {
+            SystemClock.sleep(24);
+            pointer(down, MotionEvent.ACTION_MOVE, to, y);
+        }
+        inst.waitForIdleSync();
+    }
+
+    private int[] location(View view) {
+        int[] result = new int[2];
+        view.getLocationOnScreen(result);
+        return result;
+    }
+
+    @Test public void bodyAndUnderlineTrackHeldDragWhileHeaderStaysFixed() throws Exception {
+        Context ctx = inst.getTargetContext();
+        MainActivity host = (MainActivity)inst.startActivitySync(new Intent(ctx, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         try {
-            touch(root.getWidth() * (left ? .75f : .25f), root.getWidth() * (left ? .25f : .75f),
-                    position[1] + tab.getHeight() / 2f);
-            MainActivity next = (MainActivity)inst.waitForMonitorWithTimeout(monitor, 5000);
-            assertNotNull(next);
-            opened.add(next);
-            await(next::hasWindowFocus);
-            return next;
+            await(host::hasWindowFocus);
+            openTab(host, "Wiedergeben", MainActivity.LIBRARY);
+            DashboardPager pager = host.pager();
+            View root = host.getWindow().getDecorView();
+            View[] fixed = {find(root, TextView.class, "Audomo"), find(root, ImageButton.class, "Einstellungen"),
+                    find(root, TextView.class, "Aufnehmen"), find(root, TextView.class, "Wiedergeben"),
+                    find(root, TextView.class, "Warteschlange")};
+            int[][] before = Arrays.stream(fixed).map(this::location).toArray(int[][]::new);
+            int width = pager.getWidth();
+            float y = location(pager)[1] + pager.getHeight() * .6f;
+            long down = SystemClock.uptimeMillis();
+            pointer(down, MotionEvent.ACTION_DOWN, width * .75f, y);
+            dragAndHold(down, width * .75f, width * .35f, y);
+            ui(() -> assertEquals("Seitenposition bei gehaltenem Finger", 1.4f, pager.position(), .01f));
+            ui(() -> {
+                for (int i = 0; i < fixed.length; i++) assertArrayEquals(before[i], location(fixed[i]));
+                assertEquals(-width * .4f, pager.pages[1].getTranslationX(), 2);
+                assertEquals(width * .6f, pager.pages[2].getTranslationX(), 2);
+                assertEquals(MainActivity.LIBRARY, host.dashboardIndex());
+            });
+            DashboardPager.Strip strip = find(root, DashboardPager.Strip.class, null);
+            int lineY = location(strip)[1] + strip.getHeight() / 2;
+            float centerStart = before[3][0] + fixed[3].getWidth() / 2f;
+            float centerEnd = before[4][0] + fixed[4].getWidth() / 2f;
+            android.graphics.Bitmap screenshot = inst.getUiAutomation().takeScreenshot();
+            int first = -1, last = -1;
+            for (int x = 0; x < screenshot.getWidth(); x++) {
+                if (screenshot.getPixel(x, lineY) != MainActivity.ACCENT) continue;
+                if (first < 0) first = x;
+                last = x;
+            }
+            screenshot.recycle();
+            assertTrue("Unterstrich fehlt", first >= 0);
+            assertEquals(centerStart + (centerEnd - centerStart) * .4f, (first + last) / 2f, 3);
+            shot(ctx, "dashboard-wischbewegung-1.1.9");
+            dragAndHold(down, width * .35f, width * .65f, y);
+            await(() -> Math.abs(pager.position() - 1.1f) < .01f);
+            pointer(down, MotionEvent.ACTION_CANCEL, width * .65f, y);
+            await(() -> pager.position() == MainActivity.LIBRARY);
+            backTo(host, "Aufnahme starten");
         } finally {
-            inst.removeMonitor(monitor);
+            ui(host::finish);
         }
     }
 
@@ -194,33 +253,31 @@ public class LibraryUiDeviceTest {
         Context ctx = inst.getTargetContext();
         var prefs = Profile.prefs(ctx);
         Integer original = prefs.contains("queueFilter") ? prefs.getInt("queueFilter", 1) : null;
-        List<MainActivity> opened = new ArrayList<>();
+        MainActivity host = (MainActivity)inst.startActivitySync(new Intent(ctx, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         try {
             prefs.edit().putInt("queueFilter", 0).commit();
-            MainActivity recorder = (MainActivity)inst.startActivitySync(new Intent(ctx, MainActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            opened.add(recorder);
+            MainActivity recorder = host;
             await(recorder::hasWindowFocus);
-            MainActivity library = swipeTab(recorder, "Aufnehmen", LibraryActivity.class, true, opened);
-            MainActivity queue = swipeTab(library, "Wiedergeben", QueueActivity.class, true, opened);
+            MainActivity library = swipeTab(recorder, "Aufnehmen", MainActivity.LIBRARY, true);
+            MainActivity queue = swipeTab(library, "Wiedergeben", MainActivity.QUEUE, true);
             choice("Filter: Alle Aufträge");
             choice("Zu prüfen");
             await(() -> find(queue.getWindow().getDecorView(), Button.class, "Filter: Zu prüfen") != null);
             var adapter = find(queue.getWindow().getDecorView(), QueueSwipeList.class, null).getAdapter();
             assertEquals(AdapterView.INVALID_ROW_ID, adapter.getItemId(adapter.getCount()));
-            MainActivity again = swipeTab(queue, "Warteschlange", LibraryActivity.class, false, opened);
-            MainActivity restored = openTab(again, "Warteschlange", QueueActivity.class, opened);
+            MainActivity again = swipeTab(queue, "Warteschlange", MainActivity.LIBRARY, false);
+            MainActivity restored = openTab(again, "Warteschlange", MainActivity.QUEUE);
             await(() -> find(restored.getWindow().getDecorView(), Button.class, "Filter: Zu prüfen") != null);
-            MainActivity direct = openTab(restored, "Aufnehmen", MainActivity.class, opened);
+            MainActivity direct = openTab(restored, "Aufnehmen", MainActivity.RECORD);
             backTo(restored, "Filter: Zu prüfen");
-            assertTrue(direct.isFinishing() || direct.isDestroyed());
+            assertSame(recorder, direct);
             backTo(again, "Aufnahmen sortieren");
             backTo(queue, "Filter: Zu prüfen");
             backTo(library, "Aufnahmen sortieren");
             backTo(recorder, "Aufnahme starten");
         } finally {
-            Collections.reverse(opened);
-            for (MainActivity item : opened) ui(item::finish);
+            ui(host::finish);
             if (original == null) prefs.edit().remove("queueFilter").commit();
             else prefs.edit().putInt("queueFilter", original).commit();
         }
@@ -255,16 +312,15 @@ public class LibraryUiDeviceTest {
         var prefs = Profile.prefs(ctx);
         Integer original = prefs.contains("queueFilter") ? prefs.getInt("queueFilter", 1) : null;
         String target = "QA-Queue-" + UUID.randomUUID();
-        List<MainActivity> opened = new ArrayList<>();
+        MainActivity host = (MainActivity)inst.startActivitySync(new Intent(ctx, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         try {
             prefs.edit().remove("queueFilter").commit();
             long finished = addQueueJob(queue, target, "Planungsrunde", "Hochgeladen", "");
             addQueueJob(queue, target, "Abstimmung", "Hochgeladen", "");
-            MainActivity recorder = (MainActivity)inst.startActivitySync(new Intent(ctx, MainActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            opened.add(recorder);
+            MainActivity recorder = host;
             await(recorder::hasWindowFocus);
-            MainActivity dashboard = openTab(recorder, "Warteschlange", QueueActivity.class, opened);
+            MainActivity dashboard = openTab(recorder, "Warteschlange", MainActivity.QUEUE);
             View root = dashboard.getWindow().getDecorView();
             assertQueueView(root, 0, "Keine offenen Aufträge");
             assertFalse(find(root, Button.class, "Auswählen").isShown());
@@ -316,11 +372,11 @@ public class LibraryUiDeviceTest {
             assertFalse(find(root, Button.class, "Entfernen").isShown());
             backTo(recorder, "Aufnahme starten");
             await(() -> find(recorder.getWindow().getDecorView(), Button.class, "3 Uploads prüfen · Warteschlange öffnen") != null);
-            MainActivity review = openTab(recorder, "3 Uploads prüfen · Warteschlange öffnen", QueueActivity.class, opened);
+            MainActivity review = openTab(recorder, "3 Uploads prüfen · Warteschlange öffnen", MainActivity.QUEUE);
             assertQueueView(review.getWindow().getDecorView(), 3, "3 Aufträge");
             assertEquals(3, prefs.getInt("queueFilter", -1));
             backTo(recorder, "Aufnahme starten");
-            MainActivity again = openTab(recorder, "Warteschlange", QueueActivity.class, opened);
+            MainActivity again = openTab(recorder, "Warteschlange", MainActivity.QUEUE);
             assertQueueView(again.getWindow().getDecorView(), 0, "Keine wartenden Aufträge");
             assertEquals(1, queue.remove(List.of(finished, missing), true).removed());
             assertTrue(queue.byId(finished).knownCopy());
@@ -332,8 +388,7 @@ public class LibraryUiDeviceTest {
                 assertEquals("Fehler", queue.byId(later).state());
             }
         } finally {
-            Collections.reverse(opened);
-            for (MainActivity item : opened) ui(item::finish);
+            ui(host::finish);
             queue.getWritableDatabase().delete("jobs", "target=?", new String[]{target});
             if (original == null) prefs.edit().remove("queueFilter").commit();
             else prefs.edit().putInt("queueFilter", original).commit();
@@ -395,7 +450,6 @@ public class LibraryUiDeviceTest {
                 .putBoolean("skipSilence", false)
                 .putBoolean(PlaybackOutput.BLUETOOTH_ONLY, false)
                 .commit();
-        List<MainActivity> openedTabs = new ArrayList<>();
         MainActivity screen = null;
         try {
             for (int i = 0; i <= 500; i++) {
@@ -441,7 +495,7 @@ public class LibraryUiDeviceTest {
                                     new Intent(ctx, MainActivity.class)
                                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             MainActivity recorder = screen;
-            MainActivity activity = openTab(recorder, "Wiedergeben", LibraryActivity.class, openedTabs);
+            MainActivity activity = openTab(recorder, "Wiedergeben", MainActivity.LIBRARY);
             View root = activity.getWindow().getDecorView();
             await(() ->
                     find(root, ListView.class, null) != null
@@ -628,8 +682,8 @@ public class LibraryUiDeviceTest {
                     });
                 }
             }
-            MainActivity nextRecorder = openTab(activity, "Aufnehmen", MainActivity.class, openedTabs);
-            MainActivity nextLibrary = openTab(nextRecorder, "Wiedergeben", LibraryActivity.class, openedTabs);
+            MainActivity nextRecorder = openTab(activity, "Aufnehmen", MainActivity.RECORD);
+            MainActivity nextLibrary = openTab(nextRecorder, "Wiedergeben", MainActivity.LIBRARY);
             View nextRoot = nextLibrary.getWindow().getDecorView();
             await(() -> find(nextRoot, ImageButton.class, "Aufnahmen sortieren") != null);
             ui(() -> find(nextRoot, ImageButton.class, "Aufnahmen sortieren").performClick());
@@ -653,15 +707,12 @@ public class LibraryUiDeviceTest {
             inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             await(() -> find(nextRoot, ImageButton.class, "Abspielen") == null);
             assertNotNull(find(nextRoot, ListView.class, null));
-            openTab(nextLibrary, "Aufnehmen", MainActivity.class, openedTabs);
+            openTab(nextLibrary, "Aufnehmen", MainActivity.RECORD);
             backTo(nextLibrary, "Aufnahmen sortieren");
             backTo(nextRecorder, "Aufnahme starten");
             backTo(activity, "Aufnahmen sortieren");
             backTo(recorder, "Aufnahme starten");
         } finally {
-            Collections.reverse(openedTabs);
-            for (MainActivity tab : openedTabs)
-                ui(() -> { if (!tab.isDestroyed()) tab.finish(); });
             if (screen != null) {
                 MainActivity activity = screen;
                 ui(activity::finish);

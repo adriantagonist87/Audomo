@@ -9,7 +9,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 final class QueueDashboard {
-    static final String REVIEW_ISSUES = "de.audomo.extra.REVIEW_UPLOAD_ISSUES";
     private static final int ALL = 0, OPEN = 1, REVIEW = 2, WAITING = 3;
     private static final String[] FILTERS = {"Alle Aufträge", "Offene Aufträge", "Zu prüfen", "Wartend"};
     private static final String[] EMPTY = {"Noch keine Uploadaufträge", "Keine offenen Aufträge",
@@ -36,8 +35,7 @@ final class QueueDashboard {
     QueueDashboard(MainActivity screen, LinearLayout body, Bundle state) {
         this.screen = screen;
         app = (Audomo) screen.getApplication();
-        reviewingIssues = state == null ? screen.getIntent().getBooleanExtra(REVIEW_ISSUES, false)
-                : state.getBoolean("queueReviewingIssues");
+        reviewingIssues = state != null && state.getBoolean("queueReviewingIssues");
         filter = activeFilter();
         if (state != null) {
             selecting = state.getBoolean("queueSelecting");

@@ -203,7 +203,7 @@ public final class UploadDetailsDialog extends DialogFragment {
                                     .show());
         }
         action("Weitere Uploadziele wählen", () -> moreTargets(job));
-        if (!(screen instanceof QueueActivity))
+        if (screen.dashboardIndex() != MainActivity.QUEUE)
             action(
                     "Zur Warteschlange",
                     () -> {

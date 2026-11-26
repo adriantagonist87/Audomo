@@ -46,7 +46,7 @@ Das Zahnrad ist in allen drei Reitern an derselben Stelle. Die Kategorie „Wied
 
 Unter „Dateien und Ordner“ → „Speicher und Import“ lässt sich ein Android-Dokumentordner freigeben. Audomo sichert eine Aufnahme zuerst im privaten Speicher, kopiert sie in den ausgewählten Ordner und liest die Kopie zur SHA-256-Prüfung zurück. Bei einem Zugriffsfehler bleibt die private Sicherung erhalten.
 
-„Aufnehmen“ ist die Startansicht. Beim Wischen nach links gleitet der nächste Reiter von rechts ins Bild. Wischen nach rechts führt zum linken Nachbarn. Ein Tipp auf den Reiternamen springt direkt dorthin. In der Warteschlange die Wischgeste auf der Reiterleiste, der Überschrift oder auf freier Fläche beginnen. Auf einem Auftrag gelten dessen Wischaktionen.
+„Aufnehmen“ ist die Startansicht. Beim seitlichen Wischen folgt der Inhalt deinem Finger. Logo, Zahnrad und Reiternamen behalten ihren Platz. Der lavendelfarbene Unterstrich wandert zwischen den Reitern mit. Ziehst du ein Stück zur Seite und wieder zurück, bleibt die bisherige Seite geöffnet. Ein Tipp auf den Reiternamen springt direkt dorthin. In der Warteschlange die Wischgeste auf der Reiterleiste, der Überschrift oder auf freier Fläche beginnen. Auf einem Auftrag gelten dessen Wischaktionen.
 
 Android-Zurück folgt den tatsächlich besuchten Ansichten. Wer von „Aufnehmen“ direkt auf „Warteschlange“ tippt und dann zu „Wiedergeben“ wischt, kommt mit Zurück erst zur Warteschlange und danach zu „Aufnehmen“. Ein offener Player, eine Mehrfachauswahl oder eine Suche wird zuerst geschlossen. Aus dem Papierkorb geht es zurück zur Bibliothek oder zu den Einstellungen, je nach Einstieg.
 

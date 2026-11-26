@@ -90,13 +90,13 @@ final class LibraryView {
                                     e -> LibraryFiles.extension(e.name()),
                                     String.CASE_INSENSITIVE_ORDER)));
 
-    LibraryView(MainActivity screen, LinearLayout page, List<SessionStore.Entry> entries) {
+    LibraryView(MainActivity screen, LinearLayout page, List<SessionStore.Entry> entries, boolean trash) {
         this.screen = screen;
         app = (Audomo) screen.getApplication();
         all = entries;
         prefs = Profile.prefs(screen);
         actions = new LibraryActions(screen, new LibraryFiles(app.sessions));
-        trash = screen.trashView;
+        this.trash = trash;
         step = prefs.getInt("skipSeconds", 5);
         LinearLayout heading = screen.row();
         page.addView(heading);
@@ -606,6 +606,11 @@ final class LibraryView {
             filter();
             return true;
         });
+    }
+
+    void refreshPreferences() {
+        step = prefs.getInt("skipSeconds", 5);
+        filter();
     }
 
     private void filter() {

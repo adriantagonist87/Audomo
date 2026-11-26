@@ -1,5 +1,13 @@
 # Audomo · Teststand vom 27.11.2026
 
+## Dashboard mit Version 1.1.9
+
+Auf dem Galaxy S24 Ultra wurde 1.1.9 im Leerlauf über die vorhandene 1.1.8 installiert. Ein Wisch wechselte den Reiter. Android-Zurück führte zur Ausgangsseite. Die Bildschirmkoordinaten von Wortmarke, Zahnrad und Reitern waren vor und nach beiden Übergängen gleich.
+
+Im API-34-Emulator hielt der Instrumentierungstest die Geste zwischen „Wiedergeben“ und „Warteschlange“ bei 40 Prozent an. Die Bibliothek war um 40 Prozent der Bildschirmbreite nach links verschoben, die Warteschlange stand bei 60 Prozent. Der im Bildschirmbild gemessene Mittelpunkt des Unterstrichs lag auf derselben relativen Position zwischen den beiden Reitern. Richtungswechsel und Abbruch führten zur Bibliothek zurück. Ein kurzer, langsam losgelassener Wisch beließ die Aufnahmeansicht geöffnet. [Bildschirmaufnahme aus dem Emulator](api34/dashboard-wischen-1.1.9.webp)
+
+Nach dem direkten Sprung von „Aufnehmen“ zur Warteschlange und einem Wisch zur Bibliothek wurde der App-Prozess im Hintergrund beendet. Android stellte beim Öffnen die Bibliothek wieder her. Zweimal Zurück führte über die Warteschlange zur Aufnahmeansicht. Die vollständige Prüfreihe bestand mit 30 Gerätetests auf API 34 und 14 JVM-Tests. Android Lint meldete keine Fehler.
+
 ## App-Sperre mit Version 1.1.8
 
 Auf dem Android-14-Emulator wurden die Aktivierung ohne eingerichtete Gerätesperre, die Bestätigung mit einer Test-PIN, ein registrierter und ein unbekannter simulierter Fingerabdruck sowie die Alternative „Muster verwenden“ geprüft. Das Ausschalten gelang nach Bestätigung des Android-Musters. Beim nächsten Kaltstart öffnete sich Audomo wieder direkt.

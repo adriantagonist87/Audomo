@@ -19,18 +19,23 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class MainActivity extends ProtectedActivity {
-    private static final String EXTRA_PREVIOUS_TAB = "de.audomo.extra.PREVIOUS_TAB";
+    static final int RECORD = 0, LIBRARY = 1, QUEUE = 2;
     static final int BG = 0xff0d0b2b, PANEL = 0xff242039, LINE = 0xff39354f;
     static final int INK = 0xfffaf8ff, DIM = 0xffc2bed1, ACCENT = 0xffbd9eff;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Audomo app;
-    private LinearLayout root, body, controls;
+    private LinearLayout controls;
+    private ScrollView recorderScroll;
+    private DashboardPager pager;
+    private int activeTab;
+    private boolean resetLibrary, resetQueue, libraryTrash;
+    private List<SessionStore.Entry> cachedEntries;
+    private int libraryRequest;
     private TextView name, timer, status, note, mic, format, recordTab, libraryTab, queueTab;
     private Wave wave;
     private Button uploadAttention;
     private long nextUploadCheck;
     private boolean checkingUploads;
-    private View recordLine, libraryLine, queueLine;
     private QueueDashboard dashboard;
     private TextView calendar, calendarHeading;
     private LinearLayout calendarButton;
@@ -38,7 +43,7 @@ public class MainActivity extends ProtectedActivity {
     private CalendarNames.Match previewEvent = new CalendarNames.Match(null, "");
     private long nextPreview, previewVersion;
     private boolean editing;
-    private boolean library, pendingStart, resumed;
+    private boolean pendingStart, resumed;
     private Profile currentProfile;
     private final SharedPreferences.OnSharedPreferenceChangeListener optionsChanged =
             (options, key) -> currentProfile = Profile.selected(this);
@@ -62,7 +67,7 @@ public class MainActivity extends ProtectedActivity {
                         handler.postDelayed(this, 1000);
                         return;
                     }
-                    if (pendingStart
+                    if (activeTab == RECORD && pendingStart
                             && resumed
                             && hasWindowFocus()
                             && app.ready()
@@ -73,66 +78,11 @@ public class MainActivity extends ProtectedActivity {
                     if (app.state != shown) {
                         if (!app.ready()) stopPlayer();
                         shown = app.state;
-                        if (library) showLibrary();
-                        else updateControls();
+                        if (activeTab == LIBRARY) readLibrary();
+                        if (controls != null) updateControls();
                     }
-                    if (!library) {
-                        boolean idle = app.ready();
-                        timer.setText(
-                                Audomo.duration(
-                                        idle && app.state != Audomo.State.FAILED ? 0 : app.frames));
-                        long now = SystemClock.elapsedRealtime();
-                        if (now >= nextUploadCheck && !checkingUploads) {
-                            nextUploadCheck = now + 5000;
-                            refreshUploadAttention();
-                        }
-                        CalendarNames.Event chosen = app.draft.get().event();
-                        if (idle && chosen == null && now >= nextPreview) {
-                            nextPreview = now + 15000;
-                            long version = ++previewVersion;
-                            CalendarNames.at(MainActivity.this, OffsetDateTime.now())
-                                    .thenAccept(result ->
-                                            runOnUiThread(() -> {
-                                                if (version == previewVersion)
-                                                    previewEvent = result;
-                                            }));
-                        }
-                        String heading = chosen == null ? "Aktueller Kalendertermin" : "Termin für die nächste Aufnahme";
-                        String appointment = chosen != null ? CalendarNames.describe(new CalendarNames.Match(chosen, ""))
-                                : idle || app.eventText.isEmpty() ? CalendarNames.describe(previewEvent) : app.eventText;
-                        String caption = heading.toUpperCase(Locale.GERMAN);
-                        if (!caption.contentEquals(calendarHeading.getText())) calendarHeading.setText(caption);
-                        if (!appointment.contentEquals(calendar.getText())) calendar.setText(appointment);
-                        String description = heading + " · " + appointment + " · Tagesansicht öffnen";
-                        if (!android.text.TextUtils.equals(description,calendarButton.getContentDescription()))
-                            calendarButton.setContentDescription(description);
-                        String active =
-                                !idle && !app.activeName.isEmpty() ? app.activeName : previewName();
-                        name.setText(active);
-                        name.setEnabled(idle);
-                        status.setText(
-                                switch (app.state) {
-                                    case RECORDING -> "Aufnahme läuft";
-                                    case PAUSED -> "Aufnahme pausiert";
-                                    case STARTING -> "Mikrofon wird geöffnet";
-                                    case FINALIZING -> "Aufnahme wird gesichert";
-                                    case RECOVERING -> "Aufnahmen werden geprüft";
-                                    case FAILED -> "Aufnahme unterbrochen";
-                                    default -> "Bereit zur Aufnahme";
-                                });
-                        String info = idle ? app.note : app.systemNote;
-                        if (app.state == Audomo.State.SAVED
-                                && app.note.startsWith("Gespeichert ·")
-                                && now - app.stateSince > 4500) info = "";
-                        if (app.spaceLow && !idle) info = "Wenig freier Speicherplatz";
-                        note.setText(info);
-                        note.setVisibility(info.isEmpty() ? View.GONE : View.VISIBLE);
-                        mic.setText(
-                                !idle && !app.route.isEmpty()
-                                        ? app.route
-                                        : "Mikrofonwunsch: " + currentProfile.mic());
-                        format.setText("Opus · " + currentProfile.kbps() + " kbit/s");
-                        if (app.state == Audomo.State.RECORDING) wave.sample(app.peak);
+                    if (activeTab == RECORD) {
+                        updateRecorder();
                     } else if (recordings != null) {
                         recordings.refreshStatus();
                     }
@@ -140,19 +90,77 @@ public class MainActivity extends ProtectedActivity {
                 }
             };
 
+    private void updateRecorder() {
+        boolean idle = app.ready();
+        timer.setText(
+                Audomo.duration(
+                        idle && app.state != Audomo.State.FAILED ? 0 : app.frames));
+        long now = SystemClock.elapsedRealtime();
+        if (now >= nextUploadCheck && !checkingUploads) {
+            nextUploadCheck = now + 5000;
+            refreshUploadAttention();
+        }
+        CalendarNames.Event chosen = app.draft.get().event();
+        if (idle && chosen == null && now >= nextPreview) {
+            nextPreview = now + 15000;
+            long version = ++previewVersion;
+            CalendarNames.at(MainActivity.this, OffsetDateTime.now())
+                    .thenAccept(result ->
+                            runOnUiThread(() -> {
+                                if (version == previewVersion)
+                                    previewEvent = result;
+                            }));
+        }
+        String heading = chosen == null ? "Aktueller Kalendertermin" : "Termin für die nächste Aufnahme";
+        String appointment = chosen != null ? CalendarNames.describe(new CalendarNames.Match(chosen, ""))
+                : idle || app.eventText.isEmpty() ? CalendarNames.describe(previewEvent) : app.eventText;
+        String caption = heading.toUpperCase(Locale.GERMAN);
+        if (!caption.contentEquals(calendarHeading.getText())) calendarHeading.setText(caption);
+        if (!appointment.contentEquals(calendar.getText())) calendar.setText(appointment);
+        String description = heading + " · " + appointment + " · Tagesansicht öffnen";
+        if (!android.text.TextUtils.equals(description,calendarButton.getContentDescription()))
+            calendarButton.setContentDescription(description);
+        String active =
+                !idle && !app.activeName.isEmpty() ? app.activeName : previewName();
+        name.setText(active);
+        name.setEnabled(idle);
+        status.setText(
+                switch (app.state) {
+                    case RECORDING -> "Aufnahme läuft";
+                    case PAUSED -> "Aufnahme pausiert";
+                    case STARTING -> "Mikrofon wird geöffnet";
+                    case FINALIZING -> "Aufnahme wird gesichert";
+                    case RECOVERING -> "Aufnahmen werden geprüft";
+                    case FAILED -> "Aufnahme unterbrochen";
+                    default -> "Bereit zur Aufnahme";
+                });
+        String info = idle ? app.note : app.systemNote;
+        if (app.state == Audomo.State.SAVED
+                && app.note.startsWith("Gespeichert ·")
+                && now - app.stateSince > 4500) info = "";
+        if (app.spaceLow && !idle) info = "Wenig freier Speicherplatz";
+        note.setText(info);
+        note.setVisibility(info.isEmpty() ? View.GONE : View.VISIBLE);
+        mic.setText(
+                !idle && !app.route.isEmpty()
+                        ? app.route
+                        : "Mikrofonwunsch: " + currentProfile.mic());
+        format.setText("Opus · " + currentProfile.kbps() + " kbit/s");
+        if (app.state == Audomo.State.RECORDING) wave.sample(app.peak);
+    }
+
     @Override
     protected void openContent(Bundle state) {
         app = (Audomo) getApplication();
         currentProfile = Profile.selected(this);
         preferences = new AppSettings(this);
         prefs().registerOnSharedPreferenceChangeListener(optionsChanged);
-        library = this instanceof LibraryActivity;
-        configureTabTransition();
+        activeTab = this instanceof LibraryActivity ? LIBRARY : this instanceof QueueActivity ? QUEUE : RECORD;
         String legacyDraft = state == null ? getIntent().getStringExtra("draftName") : state.getString("name");
         if (legacyDraft != null && !legacyDraft.isBlank() && app.draft.get().event() == null && app.draft.get().name().isEmpty())
             app.draft.name(legacyDraft);
         if (state != null) {
-            library = state.getBoolean("library");
+            activeTab = state.getInt("tab", state.getBoolean("library") ? LIBRARY : activeTab);
             trashView = state.getBoolean("trashView");
             ArrayList<Bundle> savedHistory = state.getParcelableArrayList("history", Bundle.class);
             if (savedHistory != null) history.addAll(savedHistory);
@@ -160,12 +168,15 @@ public class MainActivity extends ProtectedActivity {
             importFolder = state.getString("importFolder");
             pendingStart = state.getBoolean("pending");
         }
-        root = new DashboardGestures(this);
+        LinearLayout root = new DashboardGestures(this);
         root.setBackgroundColor(BG);
-        root.setPadding(dp(20), 0, dp(20), dp(12));
+        root.setPadding(0, 0, 0, dp(12));
         setContentView(root);
+        LinearLayout chrome = column();
+        chrome.setPadding(dp(20), 0, dp(20), 0);
+        root.addView(chrome);
         LinearLayout header = row();
-        root.addView(header, lp(-1, 60));
+        chrome.addView(header, lp(-1, 60));
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.drawable.brand);
         header.addView(logo, lp(34, 34));
@@ -177,29 +188,27 @@ public class MainActivity extends ProtectedActivity {
         settings.setOnClickListener(v -> preferences.show());
         header.addView(settings, lp(48, 48));
         LinearLayout tabs = row();
-        root.addView(tabs);
-        recordTab = tab("Aufnehmen", () -> { if (library || isQueuePage()) openTab(MainActivity.class); });
+        chrome.addView(tabs);
+        recordTab = tab("Aufnehmen", () -> swipeTo(RECORD));
         libraryTab = tab("Wiedergeben", this::openLibrary);
         tabs.addView(recordTab, weight());
         tabs.addView(libraryTab, weight());
-        queueTab = tab("Warteschlange", () -> { if (!isQueuePage()) openQueue(); });
+        queueTab = tab("Warteschlange", this::openQueue);
         tabs.addView(queueTab, weight());
-        LinearLayout indicator = row();
-        root.addView(indicator, lp(-1, 2));
-        recordLine = new View(this);
-        libraryLine = new View(this);
-        indicator.addView(recordLine, new LinearLayout.LayoutParams(0, -1, 1));
-        indicator.addView(libraryLine, new LinearLayout.LayoutParams(0, -1, 1));
-        queueLine = new View(this);
-        indicator.addView(queueLine, new LinearLayout.LayoutParams(0, -1, 1));
-        body = column();
-        root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
-        if (library) renderLibrary(state == null ? null : state.getBundle("libraryState"));
-        else if (isQueuePage()) showQueue(state);
-        else showRecorder();
-        if (state == null && "de.audomo.UPLOADS".equals(getIntent().getAction())) {
-            startActivity(new Intent(this, QueueActivity.class).putExtra("uploadJob", getIntent().getLongExtra("uploadJob", -1)));
-        } else if (isQueuePage() && state == null && getIntent().getLongExtra("uploadJob", -1) >= 0) {
+        DashboardPager.Strip indicator = new DashboardPager.Strip(this, recordTab, libraryTab, queueTab);
+        chrome.addView(indicator, lp(-1, 3));
+        pager = new DashboardPager(this, indicator, activeTab, this::warmPages);
+        root.addView(pager, new LinearLayout.LayoutParams(-1, 0, 1));
+        if (state == null && "de.audomo.UPLOADS".equals(getIntent().getAction()) && activeTab == RECORD) {
+            rememberPage(-1);
+            activeTab = QUEUE;
+            pager.select(QUEUE);
+            pager.move(QUEUE);
+        }
+        preparePage(activeTab, state);
+        if (activeTab == RECORD) restoreRecorderScroll(state);
+        updateBackHandler();
+        if (isQueuePage() && state == null && getIntent().getLongExtra("uploadJob", -1) >= 0) {
             UploadDetailsDialog.open(this, getIntent().getLongExtra("uploadJob", -1));
         }
         else if (state == null && !prefs().getBoolean("onboardingSeen", false)) {
@@ -220,25 +229,6 @@ public class MainActivity extends ProtectedActivity {
         t.setMinHeight(dp(48));
         t.setOnClickListener(v -> go.run());
         return t;
-    }
-
-    private void switchTab(boolean toLibrary) {
-        finishName();
-        stopPlayer();
-        recordings = null;
-        library = toLibrary;
-        updateBackHandler();
-        boolean record = !toLibrary && !isQueuePage();
-        recordLine.setBackgroundColor(record ? ACCENT : LINE);
-        queueLine.setBackgroundColor(isQueuePage() ? ACCENT : LINE);
-        queueTab.setTextColor(isQueuePage() ? ACCENT : DIM);
-        queueTab.setSelected(isQueuePage());
-        libraryLine.setBackgroundColor(toLibrary ? ACCENT : LINE);
-        body.removeAllViews();
-        recordTab.setTextColor(record ? ACCENT : DIM);
-        libraryTab.setTextColor(toLibrary ? ACCENT : DIM);
-        recordTab.setSelected(record);
-        libraryTab.setSelected(toLibrary);
     }
 
     private void refreshUploadAttention() {
@@ -262,13 +252,12 @@ public class MainActivity extends ProtectedActivity {
     }
 
     private void showRecorder() {
-        trashView = false;
-        switchTab(false);
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        body.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        LinearLayout body = pager.pages[RECORD];
+        recorderScroll = new ScrollView(this);
+        recorderScroll.setFillViewport(true);
+        body.addView(recorderScroll, new LinearLayout.LayoutParams(-1, 0, 1));
         LinearLayout content = column();
-        scroll.addView(content);
+        recorderScroll.addView(content);
         calendarButton = row();
         calendarButton.setMinimumHeight(dp(58));
         calendarButton.setFocusable(true);
@@ -343,8 +332,11 @@ public class MainActivity extends ProtectedActivity {
             if (app.ready()) openLibrary();
         });
         content.addView(note);
-        uploadAttention = button("", v -> openTab(new Intent(this, QueueActivity.class)
-                .putExtra(QueueDashboard.REVIEW_ISSUES, true)));
+        uploadAttention = button("", v -> {
+            Bundle review = new Bundle();
+            review.putBoolean("queueReviewingIssues", true);
+            visit(QUEUE, review, -1);
+        });
         uploadAttention.setVisibility(View.GONE);
         content.addView(uploadAttention);
         nextUploadCheck = 0;
@@ -470,19 +462,19 @@ public class MainActivity extends ProtectedActivity {
     }
 
     int dashboardIndex() {
-        return library ? 1 : isQueuePage() ? 2 : 0;
+        return activeTab;
     }
 
+    DashboardPager pager() { return pager; }
+
     void swipeTo(int index) {
-        switch (index) {
-            case 0 -> openTab(MainActivity.class);
-            case 1 -> openLibrary();
-            case 2 -> openQueue();
-        }
+        if (index == LIBRARY && trashView) openLibrary();
+        else if (index != activeTab) visit(index, null, -1);
+        else pager.settle();
     }
 
     boolean outsidePlayer(float x, float y) {
-        return recordings != null && recordings.outsidePlayer(x, y);
+        return activeTab == LIBRARY && recordings != null && recordings.outsidePlayer(x, y);
     }
 
     void closePlayer() {
@@ -565,63 +557,88 @@ public class MainActivity extends ProtectedActivity {
     }
 
     private boolean isQueuePage() {
-        return this instanceof QueueActivity && !library;
+        return activeTab == QUEUE;
     }
 
-    void openQueue() {
-        openTab(QueueActivity.class);
-    }
-
-    private void showQueue(Bundle state) {
-        switchTab(false);
-        dashboard = new QueueDashboard(this, body, state);
-    }
+    void openQueue() { swipeTo(QUEUE); }
 
     void openLibrary() {
-        if (!library) {
-            openTab(LibraryActivity.class);
-            return;
+        if (activeTab != LIBRARY || trashView) visit(LIBRARY, null, -1);
+    }
+
+    private void warmPages() {
+        if (pager == null || pager.position() != activeTab || isDestroyed() || isFinishing()) return;
+        for (int i = 0; i < pager.pages.length; i++) {
+            if (i != activeTab && (pager.pages[i].getChildCount() == 0
+                    || i == LIBRARY && resetLibrary || i == QUEUE && resetQueue)) preparePage(i, null);
         }
-        if (!trashView) return;
-        rememberPage(-1);
-        trashView = false;
-        renderLibrary(null);
     }
 
-    private void openTab(Class<? extends MainActivity> destination) {
-        openTab(new Intent(this, destination));
+    void preparePage(int index, Bundle state) {
+        if (index == RECORD) {
+            if (controls == null) showRecorder();
+            else updateControls();
+            updateRecorder();
+        } else if (index == QUEUE) {
+            if (dashboard == null || resetQueue || state != null) {
+                LinearLayout page = pager.pages[QUEUE];
+                page.removeAllViews();
+                dashboard = new QueueDashboard(this, page, state);
+                resetQueue = false;
+            } else dashboard.refresh();
+        } else if (pager.pages[LIBRARY].getChildCount() == 0 || resetLibrary || state != null) {
+            renderLibrary(state == null ? null : state.getBundle("libraryState"));
+            resetLibrary = false;
+        }
     }
 
-    private void openTab(Intent intent) {
-        if (openingTab) return;
-        openingTab = true;
+    private void restoreRecorderScroll(Bundle state) {
+        int y = state == null ? 0 : state.getInt("recordScroll");
+        recorderScroll.post(() -> { if (activeTab == RECORD) recorderScroll.scrollTo(0, y); });
+    }
+
+    private void visit(int index, Bundle state, int settingsScroll) {
+        rememberPage(settingsScroll);
+        displayPage(index, state);
+    }
+
+    private void displayPage(int index, Bundle state) {
         finishName();
-        startActivity(intent.putExtra(EXTRA_PREVIOUS_TAB, dashboardIndex()));
-    }
-
-    private void configureTabTransition() {
-        int previous = getIntent().getIntExtra(EXTRA_PREVIOUS_TAB, -1);
-        if (previous < 0 || previous == dashboardIndex()) return;
-        boolean movingRight = dashboardIndex() > previous;
-        int enter = movingRight ? R.anim.tab_in_right : R.anim.tab_in_left;
-        int exit = movingRight ? R.anim.tab_out_left : R.anim.tab_out_right;
-        int enterOnBack = movingRight ? R.anim.tab_in_left : R.anim.tab_in_right;
-        int exitOnBack = movingRight ? R.anim.tab_out_right : R.anim.tab_out_left;
-        overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, enter, exit, BG);
-        overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, enterOnBack, exitOnBack, BG);
+        if (activeTab == LIBRARY) {
+            stopPlayer();
+            resetLibrary = true;
+        }
+        if (isQueuePage()) resetQueue = true;
+        int previous = activeTab;
+        activeTab = index;
+        trashView = state != null && state.getBoolean("trashView");
+        if (Math.abs(index - previous) == 2) preparePage(LIBRARY, null);
+        if (index == LIBRARY && !resetLibrary && state == null && pager.pages[LIBRARY].getChildCount() > 0) {
+            if (recordings != null) recordings.refreshPreferences();
+            readLibrary();
+        }
+        preparePage(index, state);
+        if (index == RECORD) restoreRecorderScroll(state);
+        pager.select(index);
+        pager.settle();
+        updateBackHandler();
+        if (resumed) {
+            handler.removeCallbacks(refresh);
+            refresh.run();
+        }
     }
 
     void openTrash(int settingsScroll) {
         if (trashView) return;
-        rememberPage(settingsScroll);
-        trashView = true;
-        renderLibrary(null);
+        Bundle trash = new Bundle();
+        trash.putBoolean("trashView", true);
+        visit(LIBRARY, trash, settingsScroll);
     }
 
     void returnToLibrary() {
         if (!history.isEmpty()) {
             Bundle previous = history.get(history.size() - 1);
-            if (previous.getBoolean("library") && !previous.getBoolean("trashView")
+            if (previous.getInt("tab", -1) == LIBRARY && !previous.getBoolean("trashView")
                     && !previous.containsKey("settingsScroll")) {
                 restorePreviousPage();
                 return;
@@ -632,25 +649,24 @@ public class MainActivity extends ProtectedActivity {
 
     private void rememberPage(int settingsScroll) {
         Bundle page = new Bundle();
-        page.putBoolean("library", library);
+        page.putInt("tab", activeTab);
+        if (activeTab == RECORD && recorderScroll != null) page.putInt("recordScroll", recorderScroll.getScrollY());
         if (isQueuePage()) dashboard.save(page);
         page.putBoolean("trashView", trashView);
-        if (library) page.putBundle("libraryState", libraryState());
+        if (activeTab == LIBRARY) page.putBundle("libraryState", libraryState());
         if (settingsScroll >= 0) page.putInt("settingsScroll", settingsScroll);
         history.add(page);
     }
 
     private void restorePreviousPage() {
         Bundle page = history.remove(history.size() - 1);
-        trashView = page.getBoolean("trashView");
-        if (page.getBoolean("library")) renderLibrary(page.getBundle("libraryState"));
-        else if (this instanceof QueueActivity) showQueue(page);
-        else showRecorder();
+        displayPage(page.getInt("tab", page.getBoolean("library") ? LIBRARY
+                : this instanceof QueueActivity ? QUEUE : RECORD), page);
         if (page.containsKey("settingsScroll")) preferences.restoreFileSettings(page.getInt("settingsScroll"));
     }
 
     private void updateBackHandler() {
-        boolean needed = isQueuePage() || library || editing || !history.isEmpty();
+        boolean needed = activeTab != RECORD || editing || !history.isEmpty();
         if (needed == handlingBack) return;
         handlingBack = needed;
         if (needed) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
@@ -664,17 +680,17 @@ public class MainActivity extends ProtectedActivity {
             return;
         }
         if (isQueuePage() && dashboard.exitSelection()) return;
-        if (recordings != null && recordings.navigateBack()) return;
+        if (activeTab == LIBRARY && recordings != null && recordings.navigateBack()) return;
         if (!history.isEmpty()) restorePreviousPage();
         else if (this instanceof LibraryActivity || this instanceof QueueActivity) finish();
-        else showRecorder();
+        else displayPage(RECORD, null);
     }
 
     @SuppressWarnings("deprecation")
     @Override
     public void onBackPressed() {
         // Some navigation modes deliver Back through Activity rather than the window callback.
-        if (mayUseContent() && (isQueuePage() || library || editing || !history.isEmpty())) navigateBack();
+        if (mayUseContent() && (activeTab != RECORD || editing || !history.isEmpty())) navigateBack();
         else super.onBackPressed();
     }
 
@@ -682,27 +698,48 @@ public class MainActivity extends ProtectedActivity {
         return recordings == null ? loadingLibrary : recordings.saveState();
     }
 
-    void showLibrary() {
-        renderLibrary(library ? libraryState() : null);
+    private void renderLibrary(Bundle restore) {
+        stopPlayer();
+        recordings = null;
+        loadingLibrary = restore;
+        libraryTrash = activeTab == LIBRARY && trashView;
+        LinearLayout page = pager.pages[LIBRARY];
+        page.removeAllViews();
+        if (cachedEntries != null) buildLibrary(cachedEntries, restore);
+        else page.addView(text("Aufnahmen werden geladen …", 16, DIM));
+        readLibrary();
     }
 
-    private void renderLibrary(Bundle restore) {
-        switchTab(true);
-        loadingLibrary = restore;
-        LinearLayout page = column();
-        body.addView(page, new LinearLayout.LayoutParams(-1, -1));
+    private void buildLibrary(List<SessionStore.Entry> entries, Bundle state) {
+        stopPlayer();
+        LinearLayout page = pager.pages[LIBRARY];
+        page.removeAllViews();
+        recordings = new LibraryView(this, page, entries, libraryTrash);
+        if (state != null) recordings.restoreState(state);
+        loadingLibrary = null;
+    }
 
+    private void readLibrary() {
+        int request = ++libraryRequest;
         app.libraryFiles.execute(() -> {
             try {
                 List<SessionStore.Entry> entries = new CloudLibrary(app.sessions).library();
                 runOnUiThread(() -> {
-                    if (!library || page.getParent() != body || isDestroyed()) return;
-                    recordings = new LibraryView(this, page, entries);
-                    if (restore != null) recordings.restoreState(restore);
-                    loadingLibrary = null;
+                    if (request != libraryRequest || isDestroyed()) return;
+                    if (recordings == null || !entries.equals(cachedEntries)) {
+                        Bundle state = libraryState();
+                        cachedEntries = entries;
+                        buildLibrary(entries, state);
+                    }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> toast(Audomo.cause(e)));
+                runOnUiThread(() -> {
+                    if (request != libraryRequest || isDestroyed()) return;
+                    if (recordings == null) {
+                        pager.pages[LIBRARY].removeAllViews();
+                        pager.pages[LIBRARY].addView(text(Audomo.cause(e), 16, DIM));
+                    } else if (activeTab == LIBRARY) toast(Audomo.cause(e));
+                });
             }
         });
     }
@@ -789,7 +826,7 @@ public class MainActivity extends ProtectedActivity {
             String result = message;
             runOnUiThread(() -> {
                 if (isDestroyed()) return;
-                if (library) showLibrary();
+                if (activeTab == LIBRARY) renderLibrary(libraryState());
                 if (!result.isEmpty()) toast(result);
             });
         });
@@ -929,7 +966,7 @@ public class MainActivity extends ProtectedActivity {
     protected void resumeContent() {
         openingTab = false;
         app.draft.validate(this);
-        if (library && pausedLibrary != null) {
+        if (activeTab == LIBRARY && pausedLibrary != null) {
             renderLibrary(pausedLibrary);
             pausedLibrary = null;
         }
@@ -941,7 +978,7 @@ public class MainActivity extends ProtectedActivity {
     @Override
     protected void onPause() {
         resumed = false;
-        if (hasContent() && library) pausedLibrary = libraryState();
+        if (hasContent() && activeTab == LIBRARY) pausedLibrary = libraryState();
         handler.removeCallbacks(refresh);
         super.onPause();
     }
@@ -955,13 +992,14 @@ public class MainActivity extends ProtectedActivity {
     @Override
     protected void saveContent(Bundle state) {
         if (editing) app.draft.name(inlineName.getText().toString());
+        if (activeTab == RECORD) state.putInt("recordScroll", recorderScroll.getScrollY());
         if (isQueuePage()) dashboard.save(state);
         state.putBoolean("trashView", trashView);
         state.putParcelableArrayList("history", new ArrayList<>(history));
-        if (library) state.putBundle("libraryState", pausedLibrary != null ? pausedLibrary : libraryState());
+        if (activeTab == LIBRARY) state.putBundle("libraryState", pausedLibrary != null ? pausedLibrary : libraryState());
         if (export != null) state.putString("export", export.getAbsolutePath());
         state.putString("importFolder", importFolder);
-        state.putBoolean("library", library);
+        state.putInt("tab", activeTab);
         state.putBoolean("pending", pendingStart);
     }
 
