@@ -58,7 +58,9 @@ Beim Verschieben in den Papierkorb entfernt Audomo die ausstehenden Uploads dies
 
 Eine bereits bestätigte Cloudkopie bleibt beim lokalen Löschen erhalten. Soll sie ebenfalls gelöscht werden, aktiviere „Auch Cloudkopie löschen“ und bestätige die Cloudlöschung. Nimmt der Server im Moment des Löschens gerade die Datei an, prüft Audomo anschließend ihren Inhalt am Ziel. Eine vollständig übertragene Kopie bleibt unter „Speicherorte“ auffindbar.
 
-Die 30-Tage-Bereinigung des Papierkorbs wird separat aktiviert. Beim Import werden Quelldateien unverändert kopiert. Der Einstellungs-Export enthält keine Audioinhalte, Zugangscodes oder Passwörter.
+Das Papierkorb-Symbol links neben der Lupe im Reiter „Wiedergeben“ öffnet die gelöschten Aufnahmen. Android-Zurück führt zur vorherigen Bibliotheksansicht. Unter „Einstellungen“ → „Papierkorb“ kannst du den Papierkorb öffnen, die automatische Bereinigung nach 30 Tagen einstellen und ihn jederzeit leeren. Vor dem endgültigen Löschen zeigt Audomo die Anzahl der betroffenen Aufnahmen und fragt nach deiner Bestätigung. [Papierkorb-Einstellungen](../qa/api34/papierkorb-einstellungen-1.1.11.webp) · [Symbol in der Wiedergabeliste](../qa/api34/papierkorb-schnellzugriff-1.1.11.webp)
+
+Beim Import werden Quelldateien unverändert kopiert. Der Einstellungs-Export enthält keine Audioinhalte, Zugangscodes oder Passwörter.
 
 Unter „Einstellungen“ → „Dateien und Ordner“ → „Ordner verwalten“ lassen sich Ordner und Unterordner anlegen, umbenennen, verschieben oder löschen. Beim Löschen rückt der Inhalt in den übergeordneten Ordner. Die Auswahl für neue Aufnahmen und der Kalender-Basisordner folgen der Änderung. Vorhandene Cloudkopien werden auf Wunsch ebenfalls verschoben. Namenskollisionen werden vorab angezeigt.
 

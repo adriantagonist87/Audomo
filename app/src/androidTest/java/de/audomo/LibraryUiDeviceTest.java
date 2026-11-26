@@ -409,6 +409,93 @@ public class LibraryUiDeviceTest {
     }
 
     @Test
+    public void emptyTrashFromSettingsBeforeFirstVisitAndOpenFromLibrary() throws Exception {
+        Context ctx = inst.getTargetContext();
+        org.junit.Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
+        Audomo app = (Audomo)ctx.getApplicationContext();
+        SessionStore original = app.sessions;
+        File temp = Files.createTempDirectory(ctx.getCacheDir().toPath(), "qa-papierkorb-").toFile();
+        SessionStore fixtures = new SessionStore(new ContextWrapper(ctx) {
+            @Override public File getFilesDir() { return temp; }
+        });
+        MainActivity host = null;
+        try {
+            for (String title : List.of("Testaufnahme", "Besprechung")) {
+                File dir = new File(fixtures.root, title);
+                Files.createDirectories(dir.toPath());
+                try (InputStream in = inst.getContext().getAssets().open("testsignal.ogg")) {
+                    Files.copy(in, new File(dir, "audio.ogg").toPath());
+                }
+                SessionStore.storeMeta(dir, new JSONObject().put("name", "audio.ogg")
+                        .put("displayName", title + ".ogg").put("frames", 48317)
+                        .put("start", OffsetDateTime.now().toString()));
+            }
+            File deleted = new File(fixtures.root, "Testaufnahme");
+            new LibraryFiles(fixtures).change(fixtures.byId("Testaufnahme"), null, "", true);
+            app.sessions = fixtures;
+            host = (MainActivity)inst.startActivitySync(new Intent(ctx, MainActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            MainActivity activity = host;
+            await(activity::hasWindowFocus);
+            choice("Einstellungen");
+            choice("Dateien und Ordner");
+            assertTrue(windowWith("Speicher und Import").findAccessibilityNodeInfosByText("Papierkorb").isEmpty());
+            choice("Zurück");
+            choice("Papierkorb");
+            windowWith("Nach 30 Tagen bereinigen");
+            shot(ctx, "papierkorb-einstellungen-1.1.11");
+            choice("Papierkorb leeren");
+            windowWith("1 Aufnahme wird endgültig vom Gerät gelöscht.");
+            choice("Abbrechen");
+            assertTrue(deleted.isDirectory());
+            choice("Papierkorb leeren");
+            windowWith("1 Aufnahme wird endgültig vom Gerät gelöscht.");
+            choice("Endgültig löschen");
+            await(() -> !deleted.exists());
+            assertNotNull(fixtures.byId("Besprechung"));
+            choice("Papierkorb leeren");
+            var close = windowWith("Der Papierkorb ist leer.")
+                    .findAccessibilityNodeInfosByViewId("android:id/button2").get(0);
+            assertEquals("SCHLIESSEN", close.getText().toString().toUpperCase(Locale.GERMAN));
+            assertTrue(close.performAction(AccessibilityNodeInfo.ACTION_CLICK));
+            choice("Papierkorb öffnen");
+            await(() -> activity.trashView && activity.hasWindowFocus());
+            inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+            windowWith("Nach 30 Tagen bereinigen");
+            choice("Zurück");
+            choice("Zurück");
+            backToLibraryViaShortcut(activity, ctx);
+        } finally {
+            if (host != null) ui(host::finish);
+            inst.waitForIdleSync();
+            app.libraryFiles.submit(() -> {}).get();
+            app.sessions = original;
+            try (var stream = Files.walk(temp.toPath())) {
+                for (Path file : stream.sorted(Comparator.reverseOrder())
+                        .collect(java.util.stream.Collectors.toList())) Files.deleteIfExists(file);
+            }
+        }
+    }
+
+    private void backToLibraryViaShortcut(MainActivity activity, Context ctx) throws Exception {
+        openTab(activity, "Wiedergeben", MainActivity.LIBRARY);
+        View root = activity.getWindow().getDecorView();
+        await(() -> find(root, ImageButton.class, "Papierkorb öffnen") != null);
+        ui(() -> {
+            ImageButton trash = find(root, ImageButton.class, "Papierkorb öffnen");
+            ImageButton search = find(root, ImageButton.class, "Aufnahmen durchsuchen");
+            ViewGroup toolbar = (ViewGroup)search.getParent();
+            assertSame(toolbar, trash.getParent());
+            assertEquals(toolbar.indexOfChild(search) - 1, toolbar.indexOfChild(trash));
+        });
+        shot(ctx, "papierkorb-schnellzugriff-1.1.11");
+        choice("Papierkorb öffnen");
+        await(() -> activity.trashView && find(root, TextView.class, "Der Papierkorb ist leer") != null);
+        backTo(activity, "Papierkorb öffnen");
+        assertFalse(activity.trashView);
+    }
+
+    @Test
     public void fiveHundredRowsSearchSelectionPlayerAndSettings() throws Exception {
         Context ctx = inst.getTargetContext();
         org.junit.Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
@@ -695,12 +782,11 @@ public class LibraryUiDeviceTest {
             ui(() -> reopened.performItemClick(reopened.getChildAt(0), 0, reopened.getItemIdAtPosition(0)));
             await(() -> find(nextRoot, ImageButton.class, "Abspielen") != null);
             choice("Einstellungen");
-            choice("Dateien und Ordner");
+            choice("Papierkorb");
             choice("Papierkorb öffnen");
             await(() -> find(nextRoot, TextView.class, "Der Papierkorb ist leer") != null);
             inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
-            choice("Speicher und Import");
-            choice("Zurück");
+            windowWith("Nach 30 Tagen bereinigen");
             choice("Zurück");
             choice("Zurück");
             await(() -> nextLibrary.hasWindowFocus() && find(nextRoot, ImageButton.class, "Abspielen") != null);

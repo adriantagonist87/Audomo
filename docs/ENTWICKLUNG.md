@@ -59,6 +59,12 @@ Beim nachträglichen Umbenennen übernimmt `LibraryFiles.rename` die lokale Änd
 
 Die [ursprüngliche Matrix](spezifikation/featurematrix_original.json), [Standardprofile](spezifikation/standardprofile_freigegeben.json), [Produktregeln](spezifikation/PRODUKTREGELN_UND_DATENMODELL.md) und der [ursprüngliche Abnahmeplan](spezifikation/ABNAHMEPLAN.md) sind historische Grundlagen. Der [Funktionsabgleich](../qa/ANFORDERUNGSABGLEICH.md) ordnet Module und Prüfungen je ID zu. Für den heutigen Stand zusätzlich die späteren Einträge im [Geräteprotokoll](../qa/GERAETETEST.md) und die [Grenzen von 1.0.0](../qa/RELEASE-1.0.0.md) lesen.
 
+### Papierkorb in Einstellungen und Bibliothek ab 1.1.11
+
+Der Papierkorb hat eine eigene Seite in `AppSettings`. Beim Leeren liest diese Seite die aktuell lokal als gelöscht markierten Sitzungen auf `Audomo.libraryFiles` und zeigt ihre Anzahl. Erst die Bestätigung übergibt diese Auswahl an `LibraryActions.perform` und `LibraryFiles.purge`. Damit gilt beim Leeren dieselbe Prüfung auf zwischenzeitlich geänderte oder wiederhergestellte Aufnahmen wie bei der Einzellöschung. Die Dateiliste im Dashboard kann dabei geschlossen sein.
+
+Das Papierkorb-Symbol in `LibraryView` und der Einstieg aus den Einstellungen verwenden beide `MainActivity.openTrash`. Der Verlauf hält fest, ob beim Zurückgehen zusätzlich die Papierkorb-Einstellungen geöffnet werden sollen.
+
 ### Papierkorb und Uploads ab 1.1.10
 
 `LibraryFiles.change` sichert beim Verschieben die Papierkorbmarkierung in der Sitzung und entfernt unter derselben Warteschlangensperre die ausstehenden Uploads für deren UUID. Die Entfernung zieht die Meldungen der einzelnen Zielaufträge zurück und plant die verbliebenen Fälligkeiten neu. Die Metadaten halten die Automatik für diese Aufnahme mit `autoQueued` für abgearbeitet. Eine spätere manuelle Auswahl darf einen neuen Auftrag erzeugen. Beim Wiederherstellen und beim endgültigen Löschen werden auch veraltete Aufträge früherer Versionen bereinigt.

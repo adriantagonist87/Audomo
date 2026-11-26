@@ -143,7 +143,8 @@ final class AppSettings {
                 });
         p.row(R.drawable.ic_play, "Wiedergabe", "Audioausgang, Tempo und Sprungintervall", this::playback);
         p.row(R.drawable.ic_calendar_day, "Kalender und Dateinamen", "Kalender auswählen, Dateinamen und Ordner festlegen", this::calendar);
-        p.row(R.drawable.ic_folder, "Dateien und Ordner", "Speicherorte, Import und Papierkorb", () -> files(p, 0));
+        p.row(R.drawable.ic_folder, "Dateien und Ordner", "Speicherorte und Import", this::files);
+        p.row(R.drawable.ic_delete, "Papierkorb", "Gelöschte Aufnahmen und automatische Bereinigung", () -> trash(p, 0));
         p.row(R.drawable.ic_upload, "Cloud und Uploads", "Ziele, Automatik und Warteschlange", () -> cloud(p));
         p.group("App und System");
         p.liveRow(R.drawable.ic_lock, "App-Sperre", () -> app.appLock.enabled() ? "Aktiv" : "Aus", this::appLock);
@@ -204,20 +205,24 @@ final class AppSettings {
         p.dialog.show();
     }
 
-    void restoreFileSettings(int scrollY) {
+    void restoreTrashSettings(int scrollY) {
         Page parent = settingsHome();
         parent.dialog.show();
-        files(parent, scrollY);
+        trash(parent, scrollY);
     }
 
-    private void files(Page parent, int scrollY) {
+    private void files() {
         Page p = new Page("Dateien und Ordner");
         p.group("Ablage und Import");
         p.row(R.drawable.ic_folder, "Ordner verwalten", "Ordner bearbeiten und Speicherorte abgleichen", () -> new FolderSettings(screen).show());
         p.liveRow(R.drawable.ic_folder, "Speicher und Import",
                 () -> prefs.contains("documentTree") ? "Android-Ordner gewählt" : "App-Speicher", this::storage);
         p.row(R.drawable.ic_forward, "Aufnahmen importieren", "Audiodateien auswählen", screen::pickImport);
-        p.group("Papierkorb");
+        p.dialog.show();
+    }
+
+    private void trash(Page parent, int scrollY) {
+        Page p = new Page("Papierkorb");
         p.row(R.drawable.ic_delete, screen.trashView ? "Zur Bibliothek" : "Papierkorb öffnen", "", () -> {
             p.dialog.dismiss();
             parent.dialog.dismiss();
@@ -226,9 +231,52 @@ final class AppSettings {
         });
         p.liveRow(R.drawable.ic_wait, "Nach 30 Tagen bereinigen",
                 () -> prefs.getBoolean("cleanTrash", false) ? "Aktiv" : "Aus", this::toggleCleanup);
-        if (screen.trashView) p.row(R.drawable.ic_delete, "Papierkorb leeren", "", screen::emptyTrash);
+        p.row(R.drawable.ic_delete, "Papierkorb leeren", "Aufnahmen endgültig vom Gerät löschen", this::emptyTrash);
         p.dialog.show();
         if (scrollY > 0) p.scroll.post(() -> p.scroll.scrollTo(0, scrollY));
+    }
+
+    private void emptyTrash() {
+        AlertDialog dialog = new AlertDialog.Builder(screen)
+                .setTitle("Papierkorb leeren?")
+                .setMessage("Aufnahmen werden gezählt …")
+                .setNegativeButton("Abbrechen", null)
+                .setPositiveButton("Endgültig löschen", null)
+                .show();
+        Button confirm = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        confirm.setEnabled(false);
+        LibraryFiles files = new LibraryFiles(app.sessions);
+        app.libraryFiles.execute(() -> {
+            List<SessionStore.Entry> entries = new ArrayList<>();
+            String message;
+            try {
+                synchronized (files.store) {
+                    for (SessionStore.Entry entry : files.store.list())
+                        if (entry.trashed() > 0) entries.add(entry);
+                }
+                message = entries.isEmpty() ? "Der Papierkorb ist leer."
+                        : (entries.size() == 1 ? "1 Aufnahme wird" : entries.size() + " Aufnahmen werden")
+                                + " endgültig vom Gerät gelöscht. Bestätigte Cloudkopien bleiben erhalten.";
+            } catch (Exception e) {
+                entries.clear();
+                message = "Papierkorb konnte nicht gelesen werden. " + Audomo.cause(e);
+            }
+            String result = message;
+            screen.runOnUiThread(() -> {
+                if (screen.isDestroyed() || screen.isFinishing() || !dialog.isShowing()) return;
+                dialog.setMessage(result);
+                if (entries.isEmpty()) {
+                    confirm.setVisibility(View.GONE);
+                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setText("Schließen");
+                } else {
+                    confirm.setEnabled(true);
+                    confirm.setOnClickListener(v -> {
+                        dialog.dismiss();
+                        new LibraryActions(screen, files).perform(entries, files::purge);
+                    });
+                }
+            });
+        });
     }
 
     private void toggleCleanup() {

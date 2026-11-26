@@ -107,6 +107,12 @@ final class LibraryView {
         heading.addView(titles, screen.weight());
         ImageButton search = screen.toolbarIcon("Aufnahmen durchsuchen", R.drawable.ic_search);
         sort = screen.toolbarIcon("Aufnahmen sortieren", R.drawable.ic_sort);
+        if (!trash) {
+            ImageButton bin = screen.toolbarIcon("Papierkorb öffnen", R.drawable.ic_delete);
+            bin.setTooltipText("Papierkorb öffnen");
+            bin.setOnClickListener(v -> screen.openTrash(-1));
+            heading.addView(bin, screen.lp(48, 48));
+        }
         heading.addView(search, screen.lp(48, 48));
         heading.addView(sort, screen.lp(48, 48));
 
@@ -335,12 +341,6 @@ final class LibraryView {
                 });
         refreshStatus();
         filter();
-    }
-
-    void emptyTrash() {
-        List<SessionStore.Entry> entries = all.stream().filter(e -> e.trashed() > 0).collect(java.util.stream.Collectors.toList());
-        if (entries.isEmpty()) screen.toast("Der Papierkorb ist leer");
-        else actions.trash(entries, true);
     }
 
     boolean outsidePlayer(float x, float y) {

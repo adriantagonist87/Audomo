@@ -481,10 +481,6 @@ public class MainActivity extends ProtectedActivity {
         if (recordings != null) recordings.closePlayer();
     }
 
-    void emptyTrash() {
-        if (recordings != null && trashView) recordings.emptyTrash();
-    }
-
     void haptics() {
         LinearLayout settings = column();
         settings.setPadding(dp(20), 0, dp(20), 0);
@@ -662,7 +658,7 @@ public class MainActivity extends ProtectedActivity {
         Bundle page = history.remove(history.size() - 1);
         displayPage(page.getInt("tab", page.getBoolean("library") ? LIBRARY
                 : this instanceof QueueActivity ? QUEUE : RECORD), page);
-        if (page.containsKey("settingsScroll")) preferences.restoreFileSettings(page.getInt("settingsScroll"));
+        if (page.containsKey("settingsScroll")) preferences.restoreTrashSettings(page.getInt("settingsScroll"));
     }
 
     private void updateBackHandler() {

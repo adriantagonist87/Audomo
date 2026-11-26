@@ -1,5 +1,11 @@
 # Audomo · Teststand vom 27.11.2026
 
+## Papierkorb-Menü mit Version 1.1.11
+
+Auf dem Galaxy S24 Ultra waren beim ersten Aufruf unter „Einstellungen“ → „Papierkorb“ die drei Aktionen „Papierkorb öffnen“, „Nach 30 Tagen bereinigen“ und „Papierkorb leeren“ sichtbar. Das Symbol unmittelbar links der Suchlupe in „Wiedergeben“ öffnete den Papierkorb. Android-Zurück führte wieder zur Liste. Die Prüfung am S24 bestand aus Menüaufrufen. Die Regression der Version 1.1.11 bestand mit 33 Gerätetests auf API 34 und 14 JVM-Tests. Android Lint meldete keine Fehler.
+
+Auf dem API-34-Emulator wurde ein eigener Bestand mit einer aktiven und einer gelöschten Testaufnahme verwendet. Vor dem ersten Besuch der Papierkorbliste zeigte das Einstellungsmenü beim Leeren genau eine betroffene Aufnahme an. Abbrechen erhielt die Datei. Nach der Bestätigung war der Papierkorb leer und die aktive Aufnahme weiterhin vorhanden. Beim erneuten Antippen erschien die Meldung „Der Papierkorb ist leer“. Auch der Rückweg aus der Papierkorbliste zum Einstellungsuntermenü und von dort zum zuvor geöffneten Player wurde geprüft. [Einstellungen](api34/papierkorb-einstellungen-1.1.11.webp) · [Wiedergabeliste](api34/papierkorb-schnellzugriff-1.1.11.webp)
+
 ## Papierkorb und Uploads mit Version 1.1.10
 
 Auf dem Android-14-Emulator wurde eine Aufnahme mit neun Sekunden automatischer Uploadverzögerung beendet und im regulären Papierkorbdialog gelöscht. Der Auftrag verschwand vor seiner Fälligkeit. Nach Ablauf der Frist fand sich weder eine Android-Fehlermeldung für den Auftrag noch die Datei auf dem lokalen FTP-Testserver. Nach der Wiederherstellung blieb die Aufnahme lokal. Ein separater Test mit falschem FTP-Passwort löste weiterhin die Fehlerbenachrichtigung und nach Korrektur den automatischen Wiederanlauf aus.
