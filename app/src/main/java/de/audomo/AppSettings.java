@@ -27,11 +27,12 @@ final class AppSettings {
 
     final class Page {
         final LinearLayout rows = screen.column();
+        private LinearLayout card;
         final Dialog dialog;
         final ScrollView scroll = new ScrollView(screen);
 
         Page(String title) {
-            dialog = new Dialog(screen, android.R.style.Theme_Material_NoActionBar);
+            dialog = new Dialog(screen, R.style.AudomoTheme);
             LinearLayout page = screen.column();
             page.setBackgroundColor(MainActivity.BG);
             page.setPadding(screen.dp(16), 0, screen.dp(16), 0);
@@ -49,163 +50,221 @@ final class AppSettings {
         }
 
         void group(String title) {
-            TextView t = screen.text(title.toUpperCase(Locale.GERMAN), 11, MainActivity.ACCENT);
-            t.setPadding(0, screen.dp(12), 0, screen.dp(3));
+            TextView t = screen.text(title, 14, MainActivity.DIM);
+            t.setPadding(screen.dp(4), screen.dp(16), 0, screen.dp(6));
             rows.addView(t);
+            card = null;
         }
 
         void row(String title, String status, Runnable click) {
-            liveRow(title, () -> status, click);
+            row(R.drawable.ic_folder, title, status, click);
         }
 
-        void liveRow(String title, java.util.function.Supplier<String> getStatus, Runnable click) {
-            String status = getStatus.get();
+        void row(int icon, String title, String status, Runnable click) {
+            liveRow(icon, title, () -> status, click);
+        }
+
+        void liveRow(int icon, String title, java.util.function.Supplier<String> getStatus, Runnable click) {
+            if (card == null || card.getParent() != rows) {
+                card = screen.column();
+                card.setBackground(screen.surface(MainActivity.PANEL, 14));
+                card.setClipToOutline(true);
+                rows.addView(card);
+            } else {
+                View line = new View(screen);
+                line.setBackgroundColor(MainActivity.LINE);
+                LinearLayout.LayoutParams lp = screen.lp(-1, 1);
+                lp.leftMargin = screen.dp(52);
+                card.addView(line, lp);
+            }
             LinearLayout row = screen.row();
-            row.setMinimumHeight(screen.dp(49));
+            row.setPadding(screen.dp(14), screen.dp(8), screen.dp(12), screen.dp(8));
+            row.setMinimumHeight(screen.dp(54));
+            android.util.TypedValue ripple = new android.util.TypedValue();
+            if (screen.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true))
+                row.setBackgroundResource(ripple.resourceId);
+            ImageView symbol = new ImageView(screen);
+            symbol.setImageResource(icon);
+            symbol.setColorFilter(MainActivity.INK);
+            symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            row.addView(symbol, screen.lp(23, 23));
             LinearLayout labels = screen.column();
+            labels.setPadding(screen.dp(14), 0, screen.dp(8), 0);
             labels.addView(screen.text(title, 16, MainActivity.INK));
-            if (!status.isEmpty()) {
-                TextView value = screen.text(status, 13, MainActivity.DIM);
+            TextView value = screen.text(getStatus.get(), 13, MainActivity.DIM);
+            if (value.length() > 0) {
                 labels.addView(value);
-                row.getViewTreeObserver()
-                        .addOnWindowFocusChangeListener(focus -> {
-                            if (focus) value.setText(getStatus.get());
-                        });
+                row.getViewTreeObserver().addOnWindowFocusChangeListener(focus -> {
+                    if (focus && row.isAttachedToWindow()) value.setText(getStatus.get());
+                });
             }
             row.addView(labels, screen.weight());
-            row.addView(screen.text("›", 22, MainActivity.ACCENT));
-            row.setOnClickListener(v -> click.run());
-            rows.addView(row);
-            View line = new View(screen);
-            line.setBackgroundColor(MainActivity.LINE);
-            rows.addView(line, screen.lp(-1, 1));
+            ImageView arrow = new ImageView(screen);
+            arrow.setImageResource(R.drawable.ic_chevron);
+            arrow.setColorFilter(MainActivity.DIM);
+            arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            row.addView(arrow, screen.lp(18, 18));
+            row.setFocusable(true);
+            row.setOnClickListener(v -> {
+                click.run();
+                if (value.isAttachedToWindow()) value.setText(getStatus.get());
+            });
+            card.addView(row);
         }
     }
 
     void show() {
-        show(0);
+        settingsHome().dialog.show();
     }
 
-    void show(int scrollY) {
+    private Page settingsHome() {
         Page p = new Page("Einstellungen");
-        p.group("Aufnahme");
-        p.liveRow(
-                "Aufnahmeprofile",
-                () -> Profile.selected(screen).name() + " aktiv",
+        p.group("Besprechungen");
+        p.row(R.drawable.ic_mic, "Aufnahme und Klang", "Mikrofon, Aufnahmeprofile und Nicht stören", this::recording);
+        p.row(R.drawable.ic_play, "Wiedergabe", "Tempo, Sprungintervall und stille Passagen", this::playback);
+        p.row(R.drawable.ic_calendar_day, "Kalender und Dateinamen", "Kalender auswählen, Dateinamen und Ordner festlegen", this::calendar);
+        p.row(R.drawable.ic_folder, "Dateien und Ordner", "Speicherorte, Import und Papierkorb", () -> files(p, 0));
+        p.row(R.drawable.ic_upload, "Cloud und Uploads", "Ziele, Automatik und Warteschlange", () -> cloud(p));
+        p.group("App und System");
+        p.row(R.drawable.ic_shield, "Berechtigungen", "Mikrofon, Kalender und Benachrichtigungen", this::onboarding);
+        p.row(R.drawable.ic_vibration, "Schnellzugriff und Vibration", "Kachel und Vibrationsmuster", this::shortcuts);
+        p.row(R.drawable.ic_backup, "Sicherung und Diagnose", "Einstellungen übertragen und Ereignisse ansehen", this::maintenance);
+        return p;
+    }
+
+    private void recording() {
+        Page p = new Page("Aufnahme und Klang");
+        p.liveRow(R.drawable.ic_mic, "Aufnahmeprofile", () -> Profile.selected(screen).name() + " aktiv",
                 () -> new ProfileDialog(screen).choose());
-        p.row(
-                "Aufnahmeverhalten",
-                "Hintergrund, Anrufe und Töne",
-                () -> {
-                    Page r = new Page("Aufnahmeverhalten");
-                    r.group("Mikrofon");
-                    r.rows.addView(
-                            screen.text(
-                                    "Die Aufnahme läuft im Hintergrund weiter. Unterbrechungen des"
-                                            + " Mikrofoneingangs werden gemeldet.",
-                                    14,
-                                    MainActivity.DIM));
-                    r.row(
-                            "Nicht-stören-Zugriff",
-                            screen.getSystemService(NotificationManager.class)
-                                            .isNotificationPolicyAccessGranted()
-                                    ? "Erlaubt"
-                                    : "Nicht erteilt",
-                            () ->
-                                    screen.startActivity(
-                                            new Intent(
-                                                    Settings
-                                                            .ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)));
-                    r.dialog.show();
-                });
-        p.group("Kalender und Dateinamen");
-        p.liveRow(
-                "Kalender",
-                () -> CalendarNames.ids(screen).size() + " Kalender ausgewählt",
+        p.liveRow(R.drawable.ic_bell, "Nicht-stören-Zugriff",
+                () -> screen.getSystemService(NotificationManager.class).isNotificationPolicyAccessGranted()
+                        ? "Erlaubt" : "Zugriff einrichten",
+                () -> screen.startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)));
+        p.dialog.show();
+    }
+
+    private void playback() {
+        Page p = new Page("Wiedergabe");
+        p.liveRow(R.drawable.ic_play, "Wiedergabetempo", () -> PlaybackOptions.speedLabel(prefs),
+                () -> PlaybackOptions.speed(screen, speed -> {}));
+        p.liveRow(R.drawable.ic_forward, "Sprungintervall", () -> prefs.getInt("skipSeconds", 5) + " Sekunden",
+                () -> PlaybackOptions.step(screen, step -> {}));
+        Switch silence = new Switch(screen);
+        silence.setText("Stille bei Wiedergabe überspringen");
+        silence.setTextColor(MainActivity.INK);
+        silence.setMinHeight(screen.dp(54));
+        silence.setPadding(screen.dp(14), 0, screen.dp(14), 0);
+        silence.setChecked(prefs.getBoolean("skipSilence", false));
+        silence.setOnCheckedChangeListener((v, on) -> prefs.edit().putBoolean("skipSilence", on).apply());
+        p.rows.addView(silence);
+        p.dialog.show();
+    }
+
+    private void calendar() {
+        Page p = new Page("Kalender und Dateinamen");
+        p.liveRow(R.drawable.ic_calendar_day, "Kalender", () -> CalendarNames.ids(screen).size() + " Kalender ausgewählt",
                 () -> screen.startActivity(new Intent(screen, CalendarSettings.class)));
-        p.liveRow(
-                "Dateiname und Ordner",
+        p.liveRow(R.drawable.ic_edit, "Dateiname und Ordner",
                 () -> CalendarNames.template(screen) + " · " + CalendarNames.folderMode(screen).label,
                 () -> screen.startActivity(new Intent(screen, NamingSettings.class)));
-        p.group("Dateien");
-        p.row("Ordner verwalten", "Anlegen, umbenennen, verschieben und löschen", () -> new FolderSettings(screen).show());
-        p.liveRow(
-                "Speicher und Import",
-                () -> prefs.contains("documentTree") ? "Android-Ordner gewählt" : "App-Speicher",
-                this::storage);
-        p.row(
-                "Papierkorb",
-                "Gelöschte Aufnahmen",
-                () -> {
-                    p.dialog.dismiss();
-                    screen.openTrash(p.scroll.getScrollY());
-                });
-        p.group("Cloud und Uploads");
-        p.row("Uploadziele", "Verbindungen und Standardziel", this::uploadTargets);
-        p.row(
-                "Upload-Warteschlange",
-                "Fortschritt und Fehler",
-                () -> new CloudScreen(screen).queue());
-        p.group("App und Diagnose");
-        p.row(
-                "Quick Settings und Vibration",
-                "Kachel und haptische Rückmeldungen",
-                () -> {
-                    Page q = new Page("Quick Settings und Vibration");
-                    q.row(
-                            "Vibration",
-                            prefs.getBoolean("haptic", true) ? "Aktiv" : "Aus",
-                            screen::haptics);
-                    q.row("Kachel hinzufügen", "Android-Schnelleinstellungen", screen::addTile);
-                    q.dialog.show();
-                });
-        p.row(
-                "Einstellungen sichern",
-                "Import und Export",
-                () -> {
-                    Page q = new Page("Einstellungen sichern");
-                    q.row(
-                            "Exportieren",
-                            "JSON-Datei ohne Geheimnisse",
-                            () -> create(20, "Audomo-Einstellungen.json", "application/json"));
-                    q.row(
-                            "Importieren",
-                            "Profile und Regeln übernehmen",
-                            () ->
-                                    screen.startActivityForResult(
-                                            new Intent(Intent.ACTION_OPEN_DOCUMENT)
-                                                    .addCategory(Intent.CATEGORY_OPENABLE)
-                                                    .setType("application/json"),
-                                            21));
-                    q.dialog.show();
-                });
-        p.row("Diagnose", "Ereignisse und Export", this::diagnostics);
-        p.row("Einrichtung", "Berechtigungen und Schnellzugriff", this::onboarding);
         p.dialog.show();
-        if (scrollY != 0) p.scroll.post(() -> p.scroll.scrollTo(0, scrollY));
+    }
+
+    void restoreFileSettings(int scrollY) {
+        Page parent = settingsHome();
+        parent.dialog.show();
+        files(parent, scrollY);
+    }
+
+    private void files(Page parent, int scrollY) {
+        Page p = new Page("Dateien und Ordner");
+        p.group("Ablage und Import");
+        p.row(R.drawable.ic_folder, "Ordner verwalten", "Ordner bearbeiten und Speicherorte abgleichen", () -> new FolderSettings(screen).show());
+        p.liveRow(R.drawable.ic_folder, "Speicher und Import",
+                () -> prefs.contains("documentTree") ? "Android-Ordner gewählt" : "App-Speicher", this::storage);
+        p.row(R.drawable.ic_forward, "Aufnahmen importieren", "Audiodateien auswählen", screen::pickImport);
+        p.group("Papierkorb");
+        p.row(R.drawable.ic_delete, screen.trashView ? "Zur Bibliothek" : "Papierkorb öffnen", "", () -> {
+            p.dialog.dismiss();
+            parent.dialog.dismiss();
+            if (screen.trashView) screen.returnToLibrary();
+            else screen.openTrash(p.scroll.getScrollY());
+        });
+        p.liveRow(R.drawable.ic_wait, "Nach 30 Tagen bereinigen",
+                () -> prefs.getBoolean("cleanTrash", false) ? "Aktiv" : "Aus", this::toggleCleanup);
+        if (screen.trashView) p.row(R.drawable.ic_delete, "Papierkorb leeren", "", screen::emptyTrash);
+        p.dialog.show();
+        if (scrollY > 0) p.scroll.post(() -> p.scroll.scrollTo(0, scrollY));
+    }
+
+    private void toggleCleanup() {
+        if (prefs.getBoolean("cleanTrash", false)) {
+            prefs.edit().putBoolean("cleanTrash", false).apply();
+            return;
+        }
+        new AlertDialog.Builder(screen).setTitle("Dateien nach 30 Tagen endgültig löschen?")
+                .setPositiveButton("Aktivieren", (d, w) -> {
+                    prefs.edit().putBoolean("cleanTrash", true).apply();
+                    screen.runFiles(() -> {
+                        new LibraryFiles(app.sessions).cleanOld();
+                        return "Bereinigung aktiv";
+                    });
+                }).setNegativeButton("Abbrechen", null).show();
+    }
+
+    private void cloud(Page parent) {
+        Page p = new Page("Cloud und Uploads");
+        p.row(R.drawable.ic_upload, "Uploadziele", "Dienste verbinden, Uploadregeln und Verzögerung einstellen", this::uploadTargets);
+        p.row(R.drawable.ic_folder, "Bestehende Aufnahmen hochladen", "", () -> ManualUploadDialog.chooseRecordings(screen));
+        p.row(R.drawable.ic_wait, "Warteschlange öffnen", "", () -> {
+            if (screen.dashboardIndex() == 2) {
+                p.dialog.dismiss();
+                parent.dialog.dismiss();
+            } else screen.openQueue();
+        });
+        p.dialog.show();
+    }
+
+    private void shortcuts() {
+        Page p = new Page("Schnellzugriff und Vibration");
+        p.liveRow(R.drawable.ic_vibration, "Vibration", () -> prefs.getBoolean("haptic", true) ? "Aktiv" : "Aus", screen::haptics);
+        p.row(R.drawable.ic_record, "Kachel hinzufügen", "Android-Schnelleinstellungen", screen::addTile);
+        p.dialog.show();
+    }
+
+    private void maintenance() {
+        Page p = new Page("Sicherung und Diagnose");
+        p.row(R.drawable.ic_backup, "Einstellungen exportieren", "JSON-Datei ohne Zugangsdaten",
+                () -> create(20, "Audomo-Einstellungen.json", "application/json"));
+        p.row(R.drawable.ic_folder, "Einstellungen importieren", "Profile und Regeln übernehmen",
+                () -> screen.startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                        .addCategory(Intent.CATEGORY_OPENABLE).setType("application/json"), 21));
+        p.row(R.drawable.ic_problem, "Diagnose", "Ereignisse, Audioeingang und Export", this::diagnostics);
+        p.dialog.show();
     }
 
     void onboarding() {
-        Page p = new Page("Einrichtung");
-        p.liveRow(
-                "Mikrofon",
-                () -> status(Manifest.permission.RECORD_AUDIO),
-                () ->
-                        screen.requestPermissions(
-                                new String[] {Manifest.permission.RECORD_AUDIO}, 15));
-        p.liveRow(
-                "Kalender",
-                () -> status(Manifest.permission.READ_CALENDAR),
+        Page p = new Page("Berechtigungen");
+        p.liveRow(R.drawable.ic_mic, "Mikrofon", () -> status(Manifest.permission.RECORD_AUDIO),
+                () -> permission(Manifest.permission.RECORD_AUDIO, 15));
+        p.liveRow(R.drawable.ic_calendar_day, "Kalender", () -> status(Manifest.permission.READ_CALENDAR),
                 () -> screen.startActivity(new Intent(screen, CalendarSettings.class)));
-        p.liveRow(
-                "Benachrichtigungen",
-                () -> status(Manifest.permission.POST_NOTIFICATIONS),
-                () ->
-                        screen.requestPermissions(
-                                new String[] {Manifest.permission.POST_NOTIFICATIONS}, 2));
-        p.row("Kachel hinzufügen", "Android-Schnelleinstellungen", screen::addTile);
-        p.row("Cloudziel", "Optional", this::uploadTargets);
+        p.liveRow(R.drawable.ic_bell, "Benachrichtigungen", () -> status(Manifest.permission.POST_NOTIFICATIONS),
+                () -> {
+                    if (screen.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                        permission(Manifest.permission.POST_NOTIFICATIONS, 2);
+                    else screen.startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, screen.getPackageName()));
+                });
+        p.row(R.drawable.ic_settings, "Android-App-Einstellungen", "Berechtigungen des Geräts verwalten",
+                () -> screen.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + screen.getPackageName()))));
         p.dialog.show();
+    }
+
+    private void permission(String permission, int request) {
+        if (screen.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED)
+            screen.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + screen.getPackageName())));
+        else screen.requestPermissions(new String[]{permission}, request);
     }
 
     String status(String p) {
@@ -248,9 +307,9 @@ final class AppSettings {
                             DocumentStorage.leaveCurrent(screen);
                             return "App-Speicher gewählt";
                         }));
-        p.row(
+        p.liveRow(R.drawable.ic_search,
                 "Vor Mediensuche verbergen",
-                prefs.getBoolean("hidden", false) ? "Aktiv" : "Aus",
+                () -> prefs.getBoolean("hidden", false) ? "Aktiv" : "Aus",
                 () ->
                         screen.runFiles(() -> {
                             DocumentStorage.hide(screen, !prefs.getBoolean("hidden", false));
@@ -322,7 +381,7 @@ final class AppSettings {
                         }
                     }
                 });
-        p.row(
+        p.row(R.drawable.ic_share,
                 "Diagnose exportieren",
                 "Textdatei ohne Audio",
                 () -> create(22, "Audomo-Diagnose.txt", "text/plain"));

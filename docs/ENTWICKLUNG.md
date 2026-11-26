@@ -13,7 +13,7 @@ Audomo ist eine native Android-Anwendung mit einem Gradle-Modul. Der Java-Code l
 | Ordner und externe Dokumente | `FolderManager`, `FolderSettings`, `DocumentStorage`, `DocumentReconcile` | Verschachtelte Pfade, ordnergebundene Einstellungen, entzogenes SAF-Recht, unterbrochener Umzug |
 | Zugang und Transport | `CloudScreen`, `CloudConfig`, `DropboxLinkDialog`, `DropboxFiles`, `RemoteFiles`, `UploadWorker` | OAuth-Rücksprung und Abbruch, Serveridentität, Hashkonflikt, Abbruch vor und während der Veröffentlichung |
 | Uploadplanung, Bedienung und Katalog | `ManualUploadDialog`, `UploadQueue`, `UploadDelay`, `UploadRetry`, `QueueActivity`, `QueueDashboard`, `QueueSwipeList`, `UploadDetailsDialog`, `CloudLibrary`, `CloudReconcile` | Doppelte Aufträge, zwei Dienste, Fälligkeit, Reihenfolge nach Neustart, Leeren mit erhaltener Cloudkopie |
-| Einstellungen und Backup | `AppSettings`, `SettingsBackup` und die jeweilige Fachklasse | Alte Optionen, ungültiges Importformat, entkoppelte Konten und Android-Freigaben |
+| Einstellungen und Backup | `AppSettings`, `PlaybackOptions`, `SettingsBackup` und die jeweilige Fachklasse | Alte Optionen, ungültiges Importformat, entkoppelte Konten und Android-Freigaben |
 
 ## Vom Start bis zur gesicherten Aufnahme
 
@@ -58,3 +58,9 @@ Beim nachträglichen Umbenennen übernimmt `LibraryFiles.rename` die lokale Änd
 ## Anforderungen zurückverfolgen
 
 Die [ursprüngliche Matrix](spezifikation/featurematrix_original.json), [Standardprofile](spezifikation/standardprofile_freigegeben.json), [Produktregeln](spezifikation/PRODUKTREGELN_UND_DATENMODELL.md) und der [ursprüngliche Abnahmeplan](spezifikation/ABNAHMEPLAN.md) sind historische Grundlagen. Der [Funktionsabgleich](../qa/ANFORDERUNGSABGLEICH.md) ordnet Module und Prüfungen je ID zu. Für den heutigen Stand zusätzlich die späteren Einträge im [Geräteprotokoll](../qa/GERAETETEST.md) und die [Grenzen von 1.0.0](../qa/RELEASE-1.0.0.md) lesen.
+
+### Dashboard-Bedienung ab 1.1.0
+
+`DashboardGestures` erkennt seitliche Gesten im Fenster der drei Dashboard-Activities und verwendet dieselbe Navigation wie die Reitertasten. Eine Wischgeste auf einer Auftragszeile geht an `QueueSwipeList`, auf der Zeitleiste an den Player. Bei einem Außentipp auf den geöffneten Player erhält das berührte Element ein Abbruchereignis. Native Auswahldialoge verwenden das gemeinsame Dialogthema. Die Einstellungsübersicht und ihre Untermenüs sind ganze Seiten mit eigener Zurück-Navigation.
+
+`QueueDashboard` speichert den Filter unter `queueFilter` in den App-Einstellungen. Die Werte 0 bis 3 stehen in der Reihenfolge des Auswahlmenüs und sind Teil des Einstellungsbackups. Beim Rücksprung auf eine ältere Activity liest die Warteschlange den aktuellen Wert erneut. Leere Filter dürfen keine Listenposition auswählen. Das ist auf One UI auch bei Adaptern mit stabilen IDs erforderlich.

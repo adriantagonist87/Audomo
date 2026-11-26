@@ -1,9 +1,14 @@
 <resources>
     <style name="AudomoTheme" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">#0D0B2B</item>
+        <item name="android:alertDialogTheme">@style/AudomoAlertTheme</item>
         <item name="android:colorAccent">#B89AFF</item>
         <item name="android:statusBarColor">#0D0B2B</item>
         <item name="android:navigationBarColor">#0D0B2B</item>
         <item name="android:windowLightStatusBar">false</item>
+    </style>
+    <style name="AudomoAlertTheme" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowCloseOnTouchOutside">true</item>
+        <item name="android:colorAccent">#B89AFF</item>
     </style>
 </resources>

@@ -21,7 +21,7 @@ Im Kalender „Werkstattumbau“ steht um zehn Uhr die „Planungsrunde“. Ist 
   <a href="docs/bilder/wiedergabe.png"><img src="docs/bilder/wiedergabe.png" width="245" alt="Gespeicherte Planungsrunde.ogg im Ordner Werkstattumbau mit geöffnetem Player"></a>
 </p>
 
-Wer für jedes Projekt einen Kalender führt, kann denselben Namen auch für den Aufnahmeordner nutzen. Wählt dazu in „Einstellungen“ unter „Dateiname und Ordner“ die Option „Unterordner je Kalender“. Audomo legt den Ordner bei der ersten Aufnahme an. In diesem Beispiel findet ihr das Gespräch anschließend unter `Werkstattumbau/Planungsrunde.ogg`.
+Wer für jedes Projekt einen Kalender führt, kann denselben Namen auch für den Aufnahmeordner nutzen. Öffnet dazu am Zahnrad „Kalender und Dateinamen“ → „Dateiname und Ordner“ und wählt die Option „Unterordner je Kalender“. Audomo legt den Ordner bei der ersten Aufnahme an. In diesem Beispiel findet ihr das Gespräch anschließend unter `Werkstattumbau/Planungsrunde.ogg`.
 
 ## Nach der Besprechung
 

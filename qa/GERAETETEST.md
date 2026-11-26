@@ -1,4 +1,14 @@
-# Audomo · Teststand vom 25.11.2026
+# Audomo · Teststand vom 26.11.2026
+
+## Dashboard und Einstellungen mit Version 1.1.0
+
+Auf dem Galaxy S24 Ultra mit Android 14 und One UI 6.1 wurde die Test-APK als Update installiert. Ihre Prüfsumme stimmte mit dem Build überein. Alle lokalen Sitzungseinträge waren nach der Installation vorhanden. Wischen wechselte vorwärts und rückwärts zwischen den Reitern. Das Zahnrad öffnete die Einstellungsübersicht, „Kalender und Dateinamen“ die passende Unterseite. Android-Zurück führte zur Übersicht. Ein Tipp bei geöffnetem Player auf den dahinterliegenden Reiter schloss den Player und ließ die Dateiliste sichtbar.
+
+Auf One UI trat beim Wechsel auf einen Filter ohne Treffer zunächst ein Absturz auf. Die Listenansicht fragte die ID der ersten Zeile ab, obwohl die Ergebnisliste leer war. Im korrigierten Build wurde „Fehlerhafte Uploads“ auf demselben Telefon mit leerem Ergebnis gewählt, der Reiter verlassen und wieder geöffnet. Der Filter blieb ausgewählt. Nach der Prüfung wurde die ursprüngliche Filterauswahl wiederhergestellt.
+
+Im separaten API-34-Emulator wurden alle vier Filter mit wartenden, fehlgeschlagenen, kollidierenden, abgeschlossenen, abgebrochenen und ausgelassenen Testaufträgen geprüft. Die Filterwahl überstand das Beenden des Prozesses. Wischen auf einem Auftrag priorisierte oder entfernte ihn. Ziehen an der Player-Zeitleiste wechselte den Reiter nicht. Ein Außentipp verwarf einen eingegebenen Dateinamen. Alle acht Einstellungskategorien, die Untermenüs zur Wiedergabe und zur Vibration sowie die Rückkehr aus dem Papierkorb wurden bedient. [Einstellungsübersicht](api34/einstellungen-1.1.0.webp) · [Filterauswahl](api34/warteschlangenfilter-1.1.0.webp)
+
+Der abschließende Build bestand 14 JVM-Tests und alle 25 instrumentierten Tests der Android-14-Kernprüfung.
 
 ## Umbenennen im Auswahlmodus mit Version 1.0.3
 

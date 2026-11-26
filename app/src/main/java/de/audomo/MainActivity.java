@@ -159,7 +159,7 @@ public class MainActivity extends Activity {
             importFolder = state.getString("importFolder");
             pendingStart = state.getBoolean("pending");
         }
-        root = column();
+        root = new DashboardGestures(this);
         root.setBackgroundColor(BG);
         root.setPadding(dp(20), 0, dp(20), dp(12));
         setContentView(root);
@@ -172,9 +172,9 @@ public class MainActivity extends Activity {
         brand.setPadding(dp(9), 0, 0, 0);
         brand.setTypeface(getResources().getFont(R.font.inter_display_light));
         header.addView(brand, weight());
-        ImageButton more = toolbarIcon("Weitere Optionen", R.drawable.ic_more);
-        more.setOnClickListener(v -> menu(more));
-        header.addView(more, lp(48, 48));
+        ImageButton settings = toolbarIcon("Einstellungen", R.drawable.ic_settings);
+        settings.setOnClickListener(v -> preferences.show());
+        header.addView(settings, lp(48, 48));
         LinearLayout tabs = row();
         root.addView(tabs);
         recordTab = tab("Aufnehmen", () -> { if (library || isQueuePage()) openTab(MainActivity.class); });
@@ -490,59 +490,28 @@ public class MainActivity extends Activity {
                         });
     }
 
-    private void menu(View anchor) {
-        PopupMenu menu = new PopupMenu(this, anchor);
-        LibraryActions.item(menu, "Einstellungen", () -> preferences.show());
-        if (library && recordings != null) recordings.addMenu(menu);
-        LibraryActions.item(menu, "Einrichtung", () -> preferences.onboarding());
-        LibraryActions.item(menu, "Uploads", preferences::uploadTargets);
-        menu.getMenu()
-                .add("Kalender")
-                .setOnMenuItemClickListener(item -> {
-                    startActivity(new Intent(this, CalendarSettings.class));
-                    return true;
-                });
-        menu.getMenu().add("Dateiname und Ordner").setOnMenuItemClickListener(item -> {
-            startActivity(new Intent(this, NamingSettings.class));
-            return true;
-        });
-        menu.getMenu()
-                .add("Kachel hinzufügen")
-                .setOnMenuItemClickListener(item -> {
-                    addTile();
-                    return true;
-                });
-        menu.getMenu()
-                .add("Benachrichtigungen")
-                .setOnMenuItemClickListener(item -> {
-                    if (!permitted(Manifest.permission.POST_NOTIFICATIONS))
-                        requestPermissions(
-                                new String[] {Manifest.permission.POST_NOTIFICATIONS}, 2);
-                    else toast("Benachrichtigungen sind erlaubt");
-                    return true;
-                });
-        menu.getMenu()
-                .add("Nicht-stören-Zugriff")
-                .setOnMenuItemClickListener(item -> {
-                    startActivity(
-                            new Intent(
-                                    android.provider.Settings
-                                            .ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
-                    return true;
-                });
-        menu.getMenu()
-                .add("Vibration")
-                .setOnMenuItemClickListener(item -> {
-                    haptics();
-                    return true;
-                });
-        menu.getMenu()
-                .add("Diagnose")
-                .setOnMenuItemClickListener(item -> {
-                    preferences.diagnostics();
-                    return true;
-                });
-        menu.show();
+    int dashboardIndex() {
+        return library ? 1 : isQueuePage() ? 2 : 0;
+    }
+
+    void swipeTo(int index) {
+        switch (index) {
+            case 0 -> openTab(MainActivity.class);
+            case 1 -> openLibrary();
+            case 2 -> openQueue();
+        }
+    }
+
+    boolean outsidePlayer(float x, float y) {
+        return recordings != null && recordings.outsidePlayer(x, y);
+    }
+
+    void closePlayer() {
+        if (recordings != null) recordings.closePlayer();
+    }
+
+    void emptyTrash() {
+        if (recordings != null && trashView) recordings.emptyTrash();
     }
 
     void haptics() {
@@ -682,7 +651,7 @@ public class MainActivity extends Activity {
         if (page.getBoolean("library")) renderLibrary(page.getBundle("libraryState"));
         else if (this instanceof QueueActivity) showQueue(page);
         else showRecorder();
-        if (page.containsKey("settingsScroll")) preferences.show(page.getInt("settingsScroll"));
+        if (page.containsKey("settingsScroll")) preferences.restoreFileSettings(page.getInt("settingsScroll"));
     }
 
     private void updateBackHandler() {

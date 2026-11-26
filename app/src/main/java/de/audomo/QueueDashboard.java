@@ -8,7 +8,7 @@ import android.widget.*;
 import java.util.*;
 
 final class QueueDashboard {
-    private static final String[] FILTERS = {"Alle Aufträge", "Offen", "Klärungsbedarf", "Beendet"};
+    private static final String[] FILTERS = {"Alle", "Alle (außer Fertiggestellte)", "Fehlerhafte Uploads", "In Warteschlange"};
     private final MainActivity screen;
     private final Audomo app;
     private final TextView summary, empty;
@@ -30,11 +30,11 @@ final class QueueDashboard {
     QueueDashboard(MainActivity screen, LinearLayout body, Bundle state) {
         this.screen = screen;
         app = (Audomo) screen.getApplication();
+        filter = savedFilter();
         if (state != null) {
             selecting = state.getBoolean("queueSelecting");
             long[] saved = state.getLongArray("queueSelected");
             if (saved != null) for (long id : saved) selected.add(id);
-            filter = state.getInt("queueFilter");
             restoreIndex = state.getInt("queueIndex");
             restoreOffset = state.getInt("queueOffset");
         }
@@ -55,13 +55,14 @@ final class QueueDashboard {
                                                 filter,
                                                 (dialog, i) -> {
                                                     filter = i;
+                                                    Profile.prefs(screen).edit().putInt("queueFilter", i).apply();
                                                     applyFilter();
-                                                    list.setSelection(0);
+                                                    if (!visible.isEmpty()) list.setSelection(0);
                                                     dialog.dismiss();
                                                 })
                                         .setNegativeButton("Abbrechen", null)
                                         .show());
-        heading.addView(filterButton);
+        body.addView(filterButton);
         cancelSelection = screen.button("Abbrechen", v -> exitSelection());
         heading.addView(cancelSelection);
         totals = screen.text("", 14, MainActivity.DIM);
@@ -129,13 +130,23 @@ final class QueueDashboard {
     void save(Bundle state) {
         state.putBoolean("queueSelecting", selecting);
         state.putLongArray("queueSelected", selected.stream().mapToLong(Long::longValue).toArray());
-        state.putInt("queueFilter", filter);
         state.putInt("queueIndex", list.getFirstVisiblePosition());
         View first = list.getChildAt(0);
         state.putInt("queueOffset", first == null ? 0 : first.getTop());
     }
 
+    private int savedFilter() {
+        int value = Profile.prefs(screen).getInt("queueFilter", 0);
+        return value >= 0 && value < FILTERS.length ? value : 0;
+    }
+
     void refresh() {
+        int current = savedFilter();
+        if (filter != current) {
+            filter = current;
+            applyFilter();
+            if (!visible.isEmpty()) list.setSelection(0);
+        }
         if (loading) return;
         loading = true;
         app.uploadControls.execute(() -> {
@@ -176,7 +187,8 @@ final class QueueDashboard {
                         labels = names;
                         applyFilter();
                         if (restoreIndex > 0 || restoreOffset != 0) {
-                            list.setSelectionFromTop(restoreIndex, restoreOffset);
+                            if (!visible.isEmpty())
+                                list.setSelectionFromTop(Math.min(restoreIndex, visible.size() - 1), restoreOffset);
                             restoreIndex = restoreOffset = 0;
                         }
                     } else if (visible.stream()
@@ -197,9 +209,10 @@ final class QueueDashboard {
         List<UploadQueue.Job> rows = new ArrayList<>();
         for (UploadQueue.Job job : jobs) {
             if (filter == 0
-                    || filter == 1 && job.open()
+                    || filter == 1 && (job.needsAttention() ||
+                            !(job.state().equals("Hochgeladen") || job.state().equals("Cloudkopie gelöscht")))
                     || filter == 2 && job.needsAttention()
-                    || filter == 3 && !job.open()) rows.add(job);
+                    || filter == 3 && job.state().equals("Wartet")) rows.add(job);
         }
         long now = System.currentTimeMillis();
         rows.sort(
@@ -386,7 +399,7 @@ final class QueueDashboard {
         }
 
         public long getItemId(int i) {
-            return getItem(i).id();
+            return i >= 0 && i < visible.size() ? getItem(i).id() : AdapterView.INVALID_ROW_ID;
         }
 
         public boolean hasStableIds() {

@@ -144,6 +144,70 @@ public class LibraryUiDeviceTest {
                 && find(expected.getWindow().getDecorView(), View.class, label) != null);
     }
 
+    private void touch(float x1, float x2, float y) {
+        int steps = x1 == x2 ? 1 : 8;
+        long down = SystemClock.uptimeMillis();
+        for (int i = 0; i <= steps; i++) {
+            int action = i == 0 ? MotionEvent.ACTION_DOWN : i == steps ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE;
+            MotionEvent event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action,
+                    x1 + (x2 - x1) * i / steps, y, 0);
+            event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+            inst.sendPointerSync(event);
+            event.recycle();
+            SystemClock.sleep(16);
+        }
+        inst.waitForIdleSync();
+    }
+
+    private MainActivity swipeTab(MainActivity from, String label, Class<? extends MainActivity> target,
+            boolean left, List<MainActivity> opened) {
+        View root = from.getWindow().getDecorView();
+        TextView tab = find(root, TextView.class, label);
+        int[] position = new int[2];
+        ui(() -> tab.getLocationOnScreen(position));
+        Instrumentation.ActivityMonitor monitor = inst.addMonitor(target.getName(), null, false);
+        try {
+            touch(root.getWidth() * (left ? .75f : .25f), root.getWidth() * (left ? .25f : .75f),
+                    position[1] + tab.getHeight() / 2f);
+            MainActivity next = (MainActivity)inst.waitForMonitorWithTimeout(monitor, 5000);
+            assertNotNull(next);
+            opened.add(next);
+            await(next::hasWindowFocus);
+            return next;
+        } finally {
+            inst.removeMonitor(monitor);
+        }
+    }
+
+    @Test public void dashboardSwipesKeepQueueFilterAfterReopening() throws Exception {
+        org.junit.Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
+        Context ctx = inst.getTargetContext();
+        var prefs = Profile.prefs(ctx);
+        int original = prefs.getInt("queueFilter", 0);
+        List<MainActivity> opened = new ArrayList<>();
+        try {
+            prefs.edit().putInt("queueFilter", 0).commit();
+            MainActivity recorder = (MainActivity)inst.startActivitySync(new Intent(ctx, MainActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            opened.add(recorder);
+            await(recorder::hasWindowFocus);
+            MainActivity library = swipeTab(recorder, "Aufnehmen", LibraryActivity.class, true, opened);
+            MainActivity queue = swipeTab(library, "Wiedergeben", QueueActivity.class, true, opened);
+            choice("Filter: Alle");
+            choice("Fehlerhafte Uploads");
+            await(() -> find(queue.getWindow().getDecorView(), Button.class, "Filter: Fehlerhafte Uploads") != null);
+            var adapter = find(queue.getWindow().getDecorView(), QueueSwipeList.class, null).getAdapter();
+            assertEquals(AdapterView.INVALID_ROW_ID, adapter.getItemId(adapter.getCount()));
+            MainActivity again = swipeTab(queue, "Warteschlange", LibraryActivity.class, false, opened);
+            MainActivity restored = openTab(again, "Warteschlange", QueueActivity.class, opened);
+            await(() -> find(restored.getWindow().getDecorView(), Button.class, "Filter: Fehlerhafte Uploads") != null);
+        } finally {
+            Collections.reverse(opened);
+            for (MainActivity item : opened) ui(item::finish);
+            prefs.edit().putInt("queueFilter", original).commit();
+        }
+    }
+
     void shot(Context ctx, String name) throws Exception {
         if (!"true".equals(InstrumentationRegistry.getArguments().getString("screenshots"))) return;
         inst.waitForIdleSync();
@@ -263,6 +327,14 @@ public class LibraryUiDeviceTest {
             ui(() -> list.performItemClick(list.getChildAt(0), 0, 0));
             await(() -> find(root, Button.class, "Umbenennen") != null);
             assertNotNull(find(root, Button.class, "Upload"));
+            TextView queueTab = find(root, TextView.class, "Warteschlange");
+            int[] position = new int[2];
+            ui(() -> queueTab.getLocationOnScreen(position));
+            float x = position[0] + queueTab.getWidth() / 2f;
+            touch(x, x, position[1] + queueTab.getHeight() / 2f);
+            await(() -> activity.hasWindowFocus() && find(root, ImageButton.class, "Abspielen") == null);
+            ui(() -> list.performItemClick(list.getChildAt(0), 0, 0));
+            await(() -> find(root, Button.class, "Umbenennen") != null);
             shot(ctx, "dateiaktionen");
             ui(() -> find(root, Button.class, "Umbenennen").performClick());
             inst.getUiAutomation().waitForIdle(250, 5000);
@@ -412,12 +484,13 @@ public class LibraryUiDeviceTest {
             ListView reopened = find(nextRoot, ListView.class, null);
             ui(() -> reopened.performItemClick(reopened.getChildAt(0), 0, reopened.getItemIdAtPosition(0)));
             await(() -> find(nextRoot, ImageButton.class, "Abspielen") != null);
-            choice("Weitere Optionen");
             choice("Einstellungen");
-            choice("Papierkorb");
+            choice("Dateien und Ordner");
+            choice("Papierkorb öffnen");
             await(() -> find(nextRoot, TextView.class, "Der Papierkorb ist leer") != null);
             inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             choice("Speicher und Import");
+            choice("Zurück");
             choice("Zurück");
             choice("Zurück");
             await(() -> nextLibrary.hasWindowFocus() && find(nextRoot, ImageButton.class, "Abspielen") != null);

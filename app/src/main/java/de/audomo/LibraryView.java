@@ -42,6 +42,7 @@ final class LibraryView {
     private boolean searchOnTop;
     private boolean allFolders;
     private SessionStore.Entry selected;
+    private View playerRowActions;
     private ExoPlayer player;
     private String query = "";
     private ImageButton play, back, forward;
@@ -263,6 +264,7 @@ final class LibraryView {
                         if (selected == e && !selectionMode) {
                             LinearLayout bar = screen.row();
                             cell.addView(bar);
+                            playerRowActions = bar;
                             if (trash) {
                                 action(
                                         bar,
@@ -333,43 +335,24 @@ final class LibraryView {
         filter();
     }
 
-    void addMenu(PopupMenu menu) {
-        if (!trash) LibraryActions.item(menu, "Aufnahmen importieren", screen::pickImport);
-        LibraryActions.item(
-                menu,
-                trash ? "Zur Bibliothek" : "Papierkorb",
-                () -> {
-                    if (trash) screen.returnToLibrary();
-                    else screen.openTrash(-1);
-                });
-        if (trash) {
-            menu.getMenu()
-                    .add("Nach 30 Tagen bereinigen")
-                    .setCheckable(true)
-                    .setChecked(prefs.getBoolean("cleanTrash", false))
-                    .setOnMenuItemClickListener(item -> {
-                        boolean on = !item.isChecked();
-                        if (on)
-                            new AlertDialog.Builder(screen)
-                                    .setTitle("Dateien nach 30 Tagen endgültig löschen?")
-                                    .setPositiveButton(
-                                            "Aktivieren",
-                                            (d, w) -> {
-                                                prefs.edit().putBoolean("cleanTrash", true).apply();
-                                                screen.runFiles(() -> {
-                                                    actions.files.cleanOld();
-                                                    return "Bereinigung aktiv";
-                                                });
-                                            })
-                                    .setNegativeButton("Abbrechen", null)
-                                    .show();
-                        else prefs.edit().putBoolean("cleanTrash", false).apply();
-                        return true;
-                    });
-            if (!visible.isEmpty())
-                LibraryActions.item(
-                        menu, "Papierkorb leeren", () -> actions.trash(List.copyOf(visible), true));
-        }
+    void emptyTrash() {
+        List<SessionStore.Entry> entries = all.stream().filter(e -> e.trashed() > 0).collect(java.util.stream.Collectors.toList());
+        if (entries.isEmpty()) screen.toast("Der Papierkorb ist leer");
+        else actions.trash(entries, true);
+    }
+
+    boolean outsidePlayer(float x, float y) {
+        return selected != null && !trash && !DashboardGestures.contains(panel, x, y)
+                && !DashboardGestures.contains(playerRowActions, x, y);
+    }
+
+    void closePlayer() {
+        stop();
+        selected = null;
+        playerRowActions = null;
+        panel.removeAllViews();
+        panel.setPadding(0, 0, 0, 0);
+        adapter.notifyDataSetChanged();
     }
 
     void refreshStatus() {
@@ -404,11 +387,7 @@ final class LibraryView {
         } else if (selectionMode) {
             endSelection();
         } else if (selected != null) {
-            stop();
-            selected = null;
-            panel.removeAllViews();
-            panel.setPadding(0, 0, 0, 0);
-            adapter.notifyDataSetChanged();
+            closePlayer();
         } else if (field.isShown()) {
             closeSearch();
         } else if (!folderTrail.isEmpty()) {
@@ -723,20 +702,10 @@ final class LibraryView {
         LinearLayout options = screen.row();
         panel.addView(options);
         Button speed = screen.button("Tempo " + prefs.getFloat("speed", 1f) + "×", null);
-        speed.setOnClickListener(v -> {
-            String[] text = {"0,75×", "1×", "1,25×", "1,5×", "2×"};
-            float[] speeds = {.75f, 1, 1.25f, 1.5f, 2};
-            new AlertDialog.Builder(screen)
-                    .setTitle("Wiedergabetempo")
-                    .setItems(
-                            text,
-                            (d, i) -> {
-                                prefs.edit().putFloat("speed", speeds[i]).apply();
-                                speed.setText("Tempo " + text[i]);
-                                if (player != null) player.setPlaybackSpeed(speeds[i]);
-                            })
-                    .show();
-        });
+        speed.setOnClickListener(v -> PlaybackOptions.speed(screen, value -> {
+            speed.setText("Tempo " + PlaybackOptions.speedLabel(prefs));
+            if (player != null) player.setPlaybackSpeed(value);
+        }));
         Switch silence = new Switch(screen);
         silence.setText("Stille");
         silence.setContentDescription("Stille bei Wiedergabe überspringen");
@@ -746,22 +715,11 @@ final class LibraryView {
             if (player != null) player.setSkipSilenceEnabled(on);
         });
         Button interval = screen.button("Sprung " + step + " s", null);
-        interval.setOnClickListener(v -> {
-            int[] values = {5, 10, 15, 30};
-            new AlertDialog.Builder(screen)
-                    .setTitle("Sprungintervall")
-                    .setItems(
-                            new String[] {
-                                "5 Sekunden", "10 Sekunden", "15 Sekunden", "30 Sekunden"
-                            },
-                            (d, i) -> {
-                                step = values[i];
-                                prefs.edit().putInt("skipSeconds", step).apply();
-                                interval.setText("Sprung " + step + " s");
-                                directions();
-                            })
-                    .show();
-        });
+        interval.setOnClickListener(v -> PlaybackOptions.step(screen, value -> {
+            step = value;
+            interval.setText("Sprung " + step + " s");
+            directions();
+        }));
         options.addView(speed, screen.weight());
         options.addView(silence, screen.weight());
         options.addView(interval, screen.weight());

@@ -19,6 +19,8 @@ final class SettingsBackup {
                     Integer.MAX_VALUE,
                     "sort",
                     4,
+                    "queueFilter",
+                    3,
                     "pattern.start",
                     2,
                     "pattern.stop",
