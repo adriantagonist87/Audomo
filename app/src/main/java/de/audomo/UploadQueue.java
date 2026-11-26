@@ -40,7 +40,7 @@ final class UploadQueue extends SQLiteOpenHelper {
     }
 
     private UploadQueue(Context c) {
-        super(c, "uploads.db", null, 6);
+        super(c, "uploads.db", null, 7);
         context = c;
     }
 
@@ -63,7 +63,7 @@ final class UploadQueue extends SQLiteOpenHelper {
                     + " DEFAULT '',notBefore INTEGER NOT NULL DEFAULT 0,attempts INTEGER NOT NULL"
                     + " DEFAULT 0,lastAttempt INTEGER NOT NULL DEFAULT 0,lastChecked INTEGER NOT"
                     + " NULL DEFAULT 0,priority INTEGER NOT NULL DEFAULT 0,inQueue INTEGER NOT NULL"
-                    + " DEFAULT 1,UNIQUE(rec,target))");
+                    + " DEFAULT 1,publicationHash TEXT DEFAULT '',UNIQUE(rec,target))");
     }
 
     private static void createRecordings(SQLiteDatabase db) {
@@ -89,7 +89,7 @@ final class UploadQueue extends SQLiteOpenHelper {
     }
 
     public void onUpgrade(SQLiteDatabase db, int from, int to) {
-        if (from < 1 || to != 6) throw new IllegalStateException("Unbekannte Datenbankversion");
+        if (from < 1 || to != 7) throw new IllegalStateException("Unbekannte Datenbankversion");
         if (from == 1) {
             db.execSQL("ALTER TABLE jobs ADD COLUMN action TEXT DEFAULT 'upload'");
             db.execSQL("ALTER TABLE jobs ADD COLUMN origin TEXT DEFAULT ''");
@@ -98,11 +98,17 @@ final class UploadQueue extends SQLiteOpenHelper {
         if (from <= 2) addCatalog(db);
         if (from <= 3) addDelay(db);
         if (from <= 4) addHistory(db);
-        db.execSQL("ALTER TABLE jobs RENAME TO old_jobs");
-        createJobs(db);
-        db.execSQL(
-                "INSERT INTO jobs(" + OLD_COLUMNS + ") SELECT " + OLD_COLUMNS + " FROM old_jobs");
-        db.execSQL("DROP TABLE old_jobs");
+        if (from < 6) {
+            db.execSQL("ALTER TABLE jobs RENAME TO old_jobs");
+            createJobs(db);
+            db.execSQL("INSERT INTO jobs(" + OLD_COLUMNS + ") SELECT " + OLD_COLUMNS + " FROM old_jobs");
+            db.execSQL("DROP TABLE old_jobs");
+        } else {
+            db.execSQL("ALTER TABLE jobs ADD COLUMN publicationHash TEXT DEFAULT ''");
+        }
+        // Old versions marked a send before transferring bytes, without persisting the commit boundary.
+        db.execSQL("UPDATE jobs SET publicationHash=NULL WHERE action='upload' AND attempted=1"
+                + " AND state NOT IN ('Hochgeladen','Cloudkopie gelöscht','Konflikt')");
     }
 
     record Job(
@@ -125,7 +131,13 @@ final class UploadQueue extends SQLiteOpenHelper {
             long lastAttempt,
             long lastChecked,
             long priority,
-            boolean inQueue) {
+            boolean inQueue,
+            String publicationHash) {
+        boolean disposableUpload() {
+            return inQueue && action.equals("upload") && !state.equals("Hochgeladen")
+                    && !state.equals("Cloudkopie gelöscht");
+        }
+
         boolean canPrioritize() {
             return inQueue && (state.equals("Wartet") || state.equals("Fehler"));
         }
@@ -157,7 +169,7 @@ final class UploadQueue extends SQLiteOpenHelper {
         }
     }
 
-    private static final String SELECT = "SELECT " + OLD_COLUMNS + ",priority,inQueue FROM jobs";
+    private static final String SELECT = "SELECT " + OLD_COLUMNS + ",priority,inQueue,publicationHash FROM jobs";
 
     private static Job readJob(Cursor c) {
         return new Job(
@@ -180,7 +192,7 @@ final class UploadQueue extends SQLiteOpenHelper {
                 c.getLong(16),
                 c.getLong(17),
                 c.getLong(18),
-                c.getInt(19) != 0);
+                c.getInt(19) != 0, c.getString(20));
     }
 
     List<Job> listedJobs() {
@@ -256,7 +268,7 @@ final class UploadQueue extends SQLiteOpenHelper {
                                 "UPDATE jobs SET path=CASE WHEN state='Hochgeladen' THEN path ELSE"
                                     + " ? END,inQueue=1,priority=0,notBefore=?,action='upload',state='Wartet',origin='',replacement=NULL,verified=CASE"
                                     + " WHEN state='Hochgeladen' THEN verified ELSE ''"
-                                    + " END,attempted=0,error='',progress=0 WHERE rec=? AND"
+                                    + " END,publicationHash='',attempted=0,error='',progress=0 WHERE rec=? AND"
                                     + " target=? AND (state IN ('Cloudkopie gelöscht') OR"
                                     + " (action='upload' AND state IN"
                                     + " ('Ausgelassen','Abgebrochen')) OR (state='Hochgeladen' AND"
@@ -404,7 +416,7 @@ final class UploadQueue extends SQLiteOpenHelper {
         getWritableDatabase()
                 .execSQL(
                         "UPDATE jobs SET"
-                            + " state='Hochgeladen',action='upload',origin='',replacement=NULL,verified=?,availability='',lastChecked=?,progress=100,error=''"
+                            + " state='Hochgeladen',action='upload',origin='',replacement=NULL,publicationHash='',verified=?,availability='',lastChecked=?,progress=100,error=''"
                             + " WHERE id=?",
                         new Object[] {hash, System.currentTimeMillis(), id});
         clearErrorNotice(id);
@@ -467,6 +479,8 @@ final class UploadQueue extends SQLiteOpenHelper {
                             .setBackoffCriteria(30000, JobInfo.BACKOFF_POLICY_EXPONENTIAL)
                             .build());
         }
+        if (earliest > now && active.isEmpty() && scheduler.getPendingJob(JOB) != null)
+            scheduler.cancel(JOB);
         JobInfo timer = scheduler.getPendingJob(DELAY_TIMER);
         if (next > 0) {
             if (timerFired || timer == null || timer.getExtras().getLong("due") != next) {
@@ -563,6 +577,50 @@ final class UploadQueue extends SQLiteOpenHelper {
         return changed;
     }
 
+    // The caller owns the session lock. Hash large legacy files outside the queue lock.
+    String legacyUploadHash(SessionStore.Entry entry) throws Exception {
+        try (Cursor rows = getReadableDatabase().rawQuery(
+                "SELECT 1 FROM jobs WHERE rec=? AND inQueue=1 AND action='upload'"
+                        + " AND publicationHash IS NULL LIMIT 1", new String[]{entry.id()})) {
+            if (!rows.moveToFirst()) return null;
+        }
+        return LibraryFiles.digest(new FileInputStream(entry.file()));
+    }
+
+    void discardUploadsForTrash(SessionStore.Entry entry) throws Exception {
+        discardUploadsForTrash(entry.id(), legacyUploadHash(entry));
+    }
+
+    synchronized void discardUploadsForTrash(String rec, String legacyHash) {
+        if (legacyHash != null)
+            getWritableDatabase().execSQL("UPDATE jobs SET publicationHash=? WHERE rec=? AND publicationHash IS NULL",
+                    new Object[]{legacyHash, rec});
+        List<Long> ids = new ArrayList<>();
+        try (Cursor rows = getReadableDatabase().rawQuery(SELECT + " WHERE rec=? AND inQueue=1",
+                new String[]{rec})) {
+            while (rows.moveToNext()) {
+                Job job = readJob(rows);
+                if (job.disposableUpload()) ids.add(job.id);
+            }
+        }
+        if (!ids.isEmpty()) remove(ids);
+    }
+
+    void reconcileTrash(SessionStore store) {
+        Set<String> candidates = new HashSet<>();
+        for (Job job : listedJobs()) if (job.disposableUpload()) candidates.add(job.rec);
+        for (String id : candidates) {
+            synchronized (store) {
+                try {
+                    SessionStore.Entry entry = store.byId(id);
+                    if (entry != null && entry.trashed() != 0) discardUploadsForTrash(entry);
+                } catch (Exception error) {
+                    ((Audomo)context).diagnostic("Warnung · Uploadauftrag im Papierkorb konnte nicht geprüft werden");
+                }
+            }
+        }
+    }
+
     record Removal(int removed, int finishing) {}
 
     Removal remove(Collection<Long> ids) {
@@ -579,11 +637,14 @@ final class UploadQueue extends SQLiteOpenHelper {
                 Job job = byId(id);
                 if (job == null || !job.inQueue || (finishedOnly && !job.finished())) continue;
                 boolean mayHaveRenamed = job.action.equals("rename") && job.attempted && !job.state.equals("Konflikt");
-                if ((job.state.equals("Upload läuft") && committing(id)) || mayHaveRenamed) {
+                boolean mayHaveUploaded = job.disposableUpload() && job.publicationHash != null
+                        && !job.publicationHash.isEmpty();
+                if ((job.state.equals("Upload läuft") && committing(id)) || mayHaveRenamed || mayHaveUploaded) {
                     // The server may already have published the file. Any recovery must only read
                     // it.
                     String expected =
-                            mayHaveRenamed ? job.verified : job.action.equals("delete") ? "" : active.get(id).expectedHash;
+                            mayHaveUploaded ? job.publicationHash : mayHaveRenamed ? job.verified
+                                    : job.action.equals("delete") ? "" : active.get(id).expectedHash;
                     db.execSQL(
                             "UPDATE jobs SET"
                                 + " inQueue=0,priority=0,notBefore=0,state='Wartet',action='verifyRemoval',replacement=? WHERE"
@@ -615,7 +676,7 @@ final class UploadQueue extends SQLiteOpenHelper {
         if (job.knownCopy()) {
             db.execSQL(
                     "UPDATE jobs SET"
-                        + " inQueue=0,priority=0,state='Hochgeladen',action='upload',path=?,origin='',replacement=NULL,error='',progress=100,notBefore=0"
+                        + " inQueue=0,priority=0,state='Hochgeladen',action='upload',path=?,origin='',replacement=NULL,publicationHash='',error='',progress=100,notBefore=0"
                         + " WHERE id=?",
                     new Object[] {job.confirmedPath(), job.id});
         } else {
@@ -676,7 +737,11 @@ final class UploadQueue extends SQLiteOpenHelper {
     synchronized void beforeCommit(Attempt attempt) throws IOException {
         attempt.check();
         if (attempt.finishOnly) throw new IOException("Auftrag entfernt");
-        attempt.committing = true;
+        if (!attempt.committing) {
+            getWritableDatabase().execSQL("UPDATE jobs SET publicationHash=? WHERE id=? AND action='upload'",
+                    new Object[]{attempt.expectedHash, attempt.id});
+            attempt.committing = true;
+        }
     }
 
     synchronized void release(Attempt attempt) {
@@ -770,7 +835,7 @@ final class UploadQueue extends SQLiteOpenHelper {
         }
         getWritableDatabase()
                 .execSQL(
-                        "UPDATE jobs SET path=?,attempted=0,state='Wartet',replacement=?,error=''"
+                        "UPDATE jobs SET path=?,attempted=0,publicationHash='',state='Wartet',replacement=?,error=''"
                                 + " WHERE id=? AND state='Konflikt'",
                         new Object[] {path, choice == 1 ? j.replacement : null, j.id});
         schedule(false);

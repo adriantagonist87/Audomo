@@ -190,6 +190,10 @@ final class CloudLibrary {
                 new LibraryFiles(store).ensureFolder(e.folder());
                 if (!audio.exists())
                     Files.move(temp.toPath(), audio.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                if (meta.optLong("trashed") != 0) {
+                    SessionStore.Entry trashed = SessionStore.entry(dir);
+                    if (trashed != null) queue.discardUploadsForTrash(trashed);
+                }
                 long frames = e.frames();
                 if (frames < 0) {
                     android.media.MediaMetadataRetriever media =
@@ -211,7 +215,8 @@ final class CloudLibrary {
                         .put("start", e.start().toString())
                         .put("frames", frames)
                         .put("folder", e.folder())
-                        .put("trashed", 0);
+                        .put("trashed", 0)
+                        .put("autoQueued", true);
                 SessionStore.storeMeta(dir, meta);
                 remember(queue.getWritableDatabase(), SessionStore.entry(dir));
                 DocumentStorage.deliver(store.context, audio);

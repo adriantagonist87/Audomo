@@ -59,6 +59,14 @@ Beim nachträglichen Umbenennen übernimmt `LibraryFiles.rename` die lokale Änd
 
 Die [ursprüngliche Matrix](spezifikation/featurematrix_original.json), [Standardprofile](spezifikation/standardprofile_freigegeben.json), [Produktregeln](spezifikation/PRODUKTREGELN_UND_DATENMODELL.md) und der [ursprüngliche Abnahmeplan](spezifikation/ABNAHMEPLAN.md) sind historische Grundlagen. Der [Funktionsabgleich](../qa/ANFORDERUNGSABGLEICH.md) ordnet Module und Prüfungen je ID zu. Für den heutigen Stand zusätzlich die späteren Einträge im [Geräteprotokoll](../qa/GERAETETEST.md) und die [Grenzen von 1.0.0](../qa/RELEASE-1.0.0.md) lesen.
 
+### Papierkorb und Uploads ab 1.1.10
+
+`LibraryFiles.change` sichert beim Verschieben die Papierkorbmarkierung in der Sitzung und entfernt unter derselben Warteschlangensperre die ausstehenden Uploads für deren UUID. Die Entfernung zieht die Meldungen der einzelnen Zielaufträge zurück und plant die verbliebenen Fälligkeiten neu. Die Metadaten halten die Automatik für diese Aufnahme mit `autoQueued` für abgearbeitet. Eine spätere manuelle Auswahl darf einen neuen Auftrag erzeugen. Beim Wiederherstellen und beim endgültigen Löschen werden auch veraltete Aufträge früherer Versionen bereinigt.
+
+`UploadQueue.beforeCommit` speichert ab Datenbankversion 7 den erwarteten Inhaltshash in `publicationHash`, bevor der Server die Datei endgültig übernehmen kann. Nach einem Verbindungsabbruch oder Prozessneustart kann die Entfernung damit einen möglicherweise abgeschlossenen Transfer in eine unsichtbare, rein lesende Prüfung (`verifyRemoval`) umwandeln. Bei alten, bereits gesendeten Uploads kennzeichnet SQL-NULL den unbekannten Abschlusszustand. Nur in diesem Fall wird beim Bereinigen der Hash aus der lokalen Datei bestimmt. Bestätigte Zielkopien, ausdrücklich beauftragte Cloudlöschungen und Umbenennungen behalten ihren eigenen Lebenszyklus.
+
+Beim App-Start gleicht `reconcileTrash` die betroffenen UUIDs mit dem lokalen Papierkorb ab. Der Worker prüft den Sitzungszustand zusätzlich beim Transferstart. Eine tatsächlich fehlende Quelle ohne Papierkorbmarkierung bleibt als Fehler sichtbar.
+
 ### Dashboard-Bedienung ab 1.1.0
 
 Ab Version 1.1.8 leiten sich alle Activities mit privaten Inhalten von `ProtectedActivity` ab. Beim gesperrten Kaltstart wartet der Aufbau der Zielansicht einschließlich gespeicherter Fragmente und externer Ergebnisse auf die Bestätigung. Bei der Rückkehr maskiert die Activity ihre Inhalte und Dialogfenster, bis die Sitzung wieder freigegeben ist. Interne Activity-Wechsel verwenden `FLAG_ACTIVITY_NO_USER_ACTION`, damit Home die Sitzung auch bei einer schnellen Rückkehr beenden kann. Bei eingeschalteter Sperre deaktivieren die Activities ihre Screenshot-Vorschau in der Übersicht der letzten Apps.

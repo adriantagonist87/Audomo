@@ -122,12 +122,16 @@ final class DocumentStorage {
     }
 
     static void updateLocation(Context c, File audio, JSONObject meta) throws Exception {
+        storeLocation(audio, meta);
+        deliver(c, audio);
+    }
+
+    static void storeLocation(File audio, JSONObject meta) throws Exception {
         if (meta.has("deliveredUri")) {
             meta.put("obsoleteUri", meta.getString("deliveredUri"));
             meta.remove("deliveredUri");
         }
         SessionStore.storeMeta(audio.getParentFile(), meta);
-        deliver(c, audio);
     }
 
     static void deliver(Context c, File audio) throws Exception {

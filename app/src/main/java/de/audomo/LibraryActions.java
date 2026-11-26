@@ -179,6 +179,13 @@ final class LibraryActions {
     void trash(List<SessionStore.Entry> list, boolean purge) {
         LinearLayout page = screen.column();
         page.addView(screen.text(list.size() + " ausgewählt", 16, MainActivity.INK));
+        if (!purge) {
+            Set<String> ids = new HashSet<>();
+            for (SessionStore.Entry e : list) ids.add(e.id());
+            if (UploadQueue.get(screen).listedJobs().stream().anyMatch(j -> ids.contains(j.rec()) && j.disposableUpload()))
+                page.addView(screen.text("Ausstehende Uploads dieser Aufnahmen werden aus der Warteschlange entfernt.",
+                        15, MainActivity.DIM));
+        }
         Switch cloud =
                 purge ? new Switch(screen) : cloudSwitch(page, list, "Auch Cloudkopie löschen");
         Runnable remove =

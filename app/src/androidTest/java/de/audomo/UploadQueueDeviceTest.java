@@ -185,6 +185,77 @@ public class UploadQueueDeviceTest {
     }
 
     @Test
+    public void trashRetiresEachTargetAccordingToItsPublicationState() throws Exception {
+        var inst = InstrumentationRegistry.getInstrumentation();
+        Audomo app = (Audomo)inst.getTargetContext().getApplicationContext();
+        Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
+        UploadQueue queue = UploadQueue.get(app);
+        LibraryFiles files = new LibraryFiles(app.sessions);
+        String rec = UUID.randomUUID().toString();
+        File dir = new File(app.sessions.root, rec);
+        Files.createDirectories(dir.toPath());
+        File source = new File(dir, "Besprechung.ogg");
+        try (InputStream in = inst.getContext().getAssets().open("testsignal.ogg")) {
+            Files.copy(in, source.toPath());
+        }
+        SessionStore.storeMeta(dir, new JSONObject().put("name", source.getName())
+                .put("frames", 48317).put("start", OffsetDateTime.now().toString()));
+        String hash = LibraryFiles.digest(new FileInputStream(source));
+        var db = queue.getWritableDatabase();
+        synchronized (app.sessions) {
+            synchronized (queue) {
+                try {
+                    long[] ids = new long[5];
+                    for (int i = 0; i < ids.length; i++) {
+                        db.execSQL("INSERT INTO jobs(rec,target,path,state) VALUES(?,?,?,'Wartet')",
+                                new Object[]{rec, "Ziel-" + i, "/Besprechung.ogg"});
+                        ids[i] = queue.job(rec).id();
+                    }
+                    queue.verified(ids[0], hash);
+                    var streaming = queue.claim(queue.byId(ids[1]));
+                    queue.sent(ids[1]);
+                    var publishing = queue.claim(queue.byId(ids[2]));
+                    publishing.expectedHash = hash;
+                    queue.beforeCommit(publishing);
+                    var interrupted = queue.claim(queue.byId(ids[3]));
+                    interrupted.expectedHash = hash;
+                    queue.beforeCommit(interrupted);
+                    queue.release(interrupted); // Lost server response, no live attempt left.
+                    queue.state(ids[3], "Fehler", "Zeitüberschreitung");
+                    queue.state(ids[4], "Konflikt", "Namenskonflikt");
+                    files.change(app.sessions.byId(rec), null, "", true);
+                    assertThrows(IOException.class, streaming::check);
+                    queue.release(streaming);
+                    queue.release(publishing);
+                    assertNull(queue.byId(ids[1]));
+                    assertNull(queue.byId(ids[4]));
+                    assertEquals("Hochgeladen", queue.byId(ids[0]).state());
+                    assertEquals(1, queue.listedJobs().stream().filter(j -> rec.equals(j.rec())).count());
+                    for (int i : new int[]{2, 3}) {
+                        UploadQueue.Job check = queue.byId(ids[i]);
+                        assertEquals("verifyRemoval", check.action());
+                        assertFalse(check.inQueue());
+                        assertEquals(hash, check.replacement());
+                        queue.finishRemoval(check, i == 2 ? hash : null, null);
+                    }
+                    assertTrue(queue.byId(ids[2]).knownCopy());
+                    assertNull(queue.byId(ids[3]));
+                    files.purge(app.sessions.byId(rec));
+                    assertTrue(queue.byId(ids[0]).knownCopy());
+                    assertTrue(queue.byId(ids[2]).knownCopy());
+                    assertNull(app.sessions.byId(rec));
+                } finally {
+                    db.delete("jobs", "rec=?", new String[]{rec});
+                    db.delete("recordings", "rec=?", new String[]{rec});
+                    if (dir.exists()) try (var entries = Files.walk(dir.toPath())) {
+                        for (Path file : entries.sorted(Comparator.reverseOrder()).collect(java.util.stream.Collectors.toList())) Files.deleteIfExists(file);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     public void cancelAndSkipArePersistentAndRespectRemoteCommit() throws Exception {
         Context c = InstrumentationRegistry.getInstrumentation().getTargetContext();
         Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));

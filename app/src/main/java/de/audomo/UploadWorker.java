@@ -120,9 +120,18 @@ public final class UploadWorker extends JobService {
             UploadQueue.Attempt attempt)
             throws Exception {
         Audomo app = (Audomo) c.getApplicationContext();
-        SessionStore.Entry e = app.sessions.byId(j.rec());
-        if (j.action().equals("upload") && (e == null || e.trashed() != 0))
-            throw new IOException("Quelle fehlt oder liegt im Papierkorb");
+        SessionStore.Entry e;
+        synchronized (app.sessions) {
+            attempt.check();
+            e = app.sessions.byId(j.rec());
+            if (j.action().equals("upload")) {
+                if (e == null) throw new IOException("Quelle auf diesem Gerät nicht gefunden");
+                if (e.trashed() != 0) {
+                    q.discardUploadsForTrash(e);
+                    return;
+                }
+            }
+        }
         CloudConfig t = CloudConfig.byId(c, j.target());
         ConnectivityManager cm = c.getSystemService(ConnectivityManager.class);
         long size = e == null ? 0 : e.bytes();

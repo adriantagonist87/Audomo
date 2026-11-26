@@ -67,7 +67,7 @@ public final class UploadDetailsDialog extends DialogFragment {
 
     private void render() {
         UploadQueue.Job job = queue.byId(getArguments().getLong("job"));
-        if (job == null) {
+        if (job == null || (!job.inQueue() && job.action().equals("verifyRemoval"))) {
             page.removeAllViews();
             page.addView(screen.text("Auftrag nicht mehr vorhanden", 16, MainActivity.DIM));
             return;

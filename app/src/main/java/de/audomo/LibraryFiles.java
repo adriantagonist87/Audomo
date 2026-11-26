@@ -148,8 +148,19 @@ final class LibraryFiles {
             meta.put("displayName", name)
                     .put("folder", folder)
                     .put("trashed", trash ? System.currentTimeMillis() : 0);
+            UploadQueue queue = UploadQueue.get(store.context);
             try {
-                DocumentStorage.updateLocation(store.context, e.file(), meta);
+                if (trash || e.trashed() != 0) {
+                    String legacyHash = queue.legacyUploadHash(e);
+                    meta.put("autoQueued", true);
+                    synchronized (queue) {
+                        // Restore only after stale uploads are retired. Trash only after the marker is durable.
+                        if (!trash) queue.discardUploadsForTrash(e.id(), legacyHash);
+                        DocumentStorage.storeLocation(e.file(), meta);
+                        if (trash) queue.discardUploadsForTrash(e.id(), legacyHash);
+                    }
+                } else DocumentStorage.storeLocation(e.file(), meta);
+                DocumentStorage.deliver(store.context, e.file());
             } finally {
                 SessionStore.Entry updated = SessionStore.entry(e.file().getParentFile());
                 if (updated != null)
@@ -165,13 +176,14 @@ final class LibraryFiles {
             JSONObject meta = checked(e);
             if (meta.has("obsoleteUri") || meta.has("pendingUri") || meta.has("deliveredUri"))
                 throw new IOException("Ordnerkopie zuerst prüfen");
+            if (e.trashed() == 0) throw new IOException("Datei liegt nicht im Papierkorb");
+            UploadQueue.get(store.context).discardUploadsForTrash(e);
             if (UploadQueue.get(store.context).jobs().stream()
                     .anyMatch(j ->
                             j.rec().equals(e.id())
                                     && List.of("Wartet", "Upload läuft", "Konflikt", "Fehler")
                                             .contains(j.state())))
                 throw new IOException("Ein Cloudauftrag benötigt diese Datei noch");
-            if (e.trashed() == 0) throw new IOException("Datei liegt nicht im Papierkorb");
             File dir = e.file().getParentFile();
             if (UploadQueue.get(store.context).hasCloud(e.id())) new CloudLibrary(store).known();
             File pending = new File(store.root, ".purge-" + e.id());

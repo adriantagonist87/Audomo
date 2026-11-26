@@ -52,6 +52,7 @@ public final class Audomo extends Application {
                 notice = cause(e);
             }
             try {
+                UploadQueue.get(this).reconcileTrash(sessions);
                 new FolderManager(sessions).resume();
                 new LibraryFiles(sessions).cleanOld();
                 UploadQueue.get(this).reconcile();

@@ -54,7 +54,11 @@ Unter „Aufnehmen“ öffnet ein Tipp auf „Aktueller Kalendertermin“ die Ta
 
 Ein Tipp in der Bibliothek öffnet die Schnellaktionen und den Player. Ein kurzer Tipp außerhalb seiner Bedienelemente schließt den Player. Der erste Tipp wird dabei zum Schließen verwendet. Auch Auswahl- und Bestätigungsdialoge lassen sich durch Antippen des abgedunkelten Bereichs abbrechen. Langes Drücken aktiviert die Mehrfachauswahl. Das Stapelsymbol neben der Anzahl markiert alle Aufnahmen des aktuellen Ordners oder alle Suchtreffer, auch außerhalb des Bildschirms. Sind alle markiert, hebt ein weiterer Tipp die Auswahl auf. „Abbrechen“ beendet den Auswahlmodus.
 
-Dateien werden zuerst in den Papierkorb gelegt. Die 30-Tage-Bereinigung wird separat aktiviert. Beim Import werden Quelldateien unverändert kopiert. Der Einstellungs-Export enthält keine Audioinhalte, Zugangscodes oder Passwörter.
+Beim Verschieben in den Papierkorb entfernt Audomo die ausstehenden Uploads dieser Aufnahme für alle Ziele. Das gilt auch während der eingestellten Wartezeit und nach einem fehlgeschlagenen Versuch. Bereits gemeldete Uploadfehler dieser Aufträge verschwinden. Beim Wiederherstellen bleibt die Aufnahme lokal. Über „Cloud Upload“ kannst du sie später wieder einreihen.
+
+Eine bereits bestätigte Cloudkopie bleibt beim lokalen Löschen erhalten. Soll sie ebenfalls gelöscht werden, aktiviere „Auch Cloudkopie löschen“ und bestätige die Cloudlöschung. Nimmt der Server im Moment des Löschens gerade die Datei an, prüft Audomo anschließend ihren Inhalt am Ziel. Eine vollständig übertragene Kopie bleibt unter „Speicherorte“ auffindbar.
+
+Die 30-Tage-Bereinigung des Papierkorbs wird separat aktiviert. Beim Import werden Quelldateien unverändert kopiert. Der Einstellungs-Export enthält keine Audioinhalte, Zugangscodes oder Passwörter.
 
 Unter „Einstellungen“ → „Dateien und Ordner“ → „Ordner verwalten“ lassen sich Ordner und Unterordner anlegen, umbenennen, verschieben oder löschen. Beim Löschen rückt der Inhalt in den übergeordneten Ordner. Die Auswahl für neue Aufnahmen und der Kalender-Basisordner folgen der Änderung. Vorhandene Cloudkopien werden auf Wunsch ebenfalls verschoben. Namenskollisionen werden vorab angezeigt.
 

@@ -1,5 +1,15 @@
 # Audomo · Teststand vom 27.11.2026
 
+## Papierkorb und Uploads mit Version 1.1.10
+
+Auf dem Android-14-Emulator wurde eine Aufnahme mit neun Sekunden automatischer Uploadverzögerung beendet und im regulären Papierkorbdialog gelöscht. Der Auftrag verschwand vor seiner Fälligkeit. Nach Ablauf der Frist fand sich weder eine Android-Fehlermeldung für den Auftrag noch die Datei auf dem lokalen FTP-Testserver. Nach der Wiederherstellung blieb die Aufnahme lokal. Ein separater Test mit falschem FTP-Passwort löste weiterhin die Fehlerbenachrichtigung und nach Korrektur den automatischen Wiederanlauf aus.
+
+Der Mehrzieltest verwendete eine Aufnahme mit einer bestätigten Kopie, einem laufenden Transfer vor der Veröffentlichung, einem gerade abschließenden Transfer, einer ausgebliebenen Serverantwort und einem Namenskonflikt. Nur die bestätigte Kopie blieb als erledigter Auftrag sichtbar. Für die beiden ungewissen Abschlüsse wurden die Varianten „Inhalt am Ziel bestätigt“ und „Datei fehlt“ geprüft. Die bestätigten Kopien ließen sich nach dem Leeren des lokalen Papierkorbs weiterhin im Katalog nachweisen.
+
+Für den Update-Test wurde 1.1.9 installiert und der Fehler „Quelle fehlt oder liegt im Papierkorb“ mit einem synthetischen Altauftrag samt Android-Benachrichtigung reproduziert. Beim Update auf 1.1.10 verschwanden dieser Auftrag, seine Meldung und ein weiterer wartender Upload derselben Aufnahme. Eine bestätigte Kopie und ein echter Fehler einer anderen Aufnahme blieben erhalten. Ein älterer Sendeversuch mit unbekanntem Serverabschluss ging in die rein lesende Prüfung. Auch nach einem weiteren Prozessstart kamen die entfernten Aufträge nicht zurück.
+
+Auf dem physischen Galaxy S24 Ultra wurde 1.1.10 im Leerlauf über 1.1.9 installiert. Beim Öffnen des Filters „Zu prüfen“ auf dem Gerät zeigte die App „Keine Aufträge zu prüfen“. Der gemeldete Testauftrag war dort nicht mehr sichtbar. Die Auslieferungsfassung bestand im Emulator alle 32 Gerätetests sowie 14 JVM-Tests auf dem Mac. Android Lint meldete keine Fehler.
+
 ## Dashboard mit Version 1.1.9
 
 Auf dem Galaxy S24 Ultra wurde 1.1.9 im Leerlauf über die vorhandene 1.1.8 installiert. Ein Wisch wechselte den Reiter. Android-Zurück führte zur Ausgangsseite. Die Bildschirmkoordinaten von Wortmarke, Zahnrad und Reitern waren vor und nach beiden Übergängen gleich.
