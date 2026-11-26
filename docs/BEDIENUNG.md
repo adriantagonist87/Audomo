@@ -30,6 +30,18 @@ Unter „Einstellungen“ → „Wiedergabe“ → „Audioausgang“ sperrt „
 
 ## Einstellungen und Dateien
 
+### App-Sperre
+
+Öffne am Zahnrad **App-Sperre → App beim Öffnen sperren**. Bestätige die Änderung im Android-Systemdialog. Zur Auswahl stehen die starke Biometrie deines Geräts, etwa der registrierte Fingerabdruck, und deine eingerichtete Android-Displaysperre (PIN, Muster oder Passwort). Ohne sichere Displaysperre führt „Gerätesicherheit öffnen“ zur Einrichtung. Zum Ausschalten ist dieselbe Bestätigung erforderlich. [Ansicht der App-Sperre](../qa/api34/app-sperre-1.1.8.webp)
+
+Die App fragt beim Öffnen, nach dem Wechsel zu einer anderen App und nach dem Ausschalten des Displays erneut. Innerhalb von Audomo kannst du zwischen Reitern und Einstellungen wechseln. Auch der Weg aus einer Benachrichtigung zu den Auftragsdetails führt über die Sperre.
+
+Ein Tipp auf die angeheftete Verknüpfung „Aufnahme“ oder die Schnellkachel startet oder beendet weiterhin die Aufnahme. Für eine Schnellaufnahme direkt in Audomo brich den Android-Entsperrdialog ab und tippe auf der Sperrseite auf „Aufnahme starten / stoppen“. Ein langer Druck auf die Kachel öffnet die geschützte App. Die Sperre gilt für die Audomo-Oberfläche. Bereits exportierte Dateien und Cloudkopien unterliegen den Zugriffsregeln ihres Speicherorts.
+
+Ist auch das Telefon gesperrt, führt Android vor dem Start über die Schnellkachel durch die Geräteentsperrung. Eine laufende Aufnahme lässt sich direkt mit der Kachel stoppen, sofern die Schnelleinstellungen auf dem Sperrbildschirm erreichbar sind.
+
+### Dateiverwaltung
+
 Das Zahnrad ist in allen drei Reitern an derselben Stelle. Die Kategorie „Wiedergabe“ enthält den Audioausgang, Tempo, Sprungintervall und das Überspringen stiller Passagen. Diagnose und Einstellungsdateien stehen unter „Sicherung und Diagnose“. Android-Zurück oder der Pfeil oben führt in die vorherige Menüebene. [Einstellungsübersicht](../qa/api34/einstellungen-1.1.4.webp)
 
 Unter „Dateien und Ordner“ → „Speicher und Import“ lässt sich ein Android-Dokumentordner freigeben. Audomo sichert eine Aufnahme zuerst im privaten Speicher, kopiert sie in den ausgewählten Ordner und liest die Kopie zur SHA-256-Prüfung zurück. Bei einem Zugriffsfehler bleibt die private Sicherung erhalten.

@@ -48,23 +48,18 @@ public final class CaptureTile extends TileService {
     @Override
     public void onClick() {
         super.onClick();
-        if (isLocked()) {
-            unlockAndRun(this::activate);
-            return;
-        }
-        activate();
-    }
-
-    private void activate() {
         Audomo app = (Audomo) getApplication();
         if (app.active()) app.command("STOP", null);
         else if (app.ready()) {
-            Intent intent =
-                    new Intent(this, TileStartActivity.class)
-                            .setFlags(
-                                    Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivityAndCollapse(
-                    PendingIntent.getActivity(this, 7, intent, PendingIntent.FLAG_IMMUTABLE));
+            if (isLocked()) unlockAndRun(this::startRecording);
+            else startRecording();
         }
+    }
+
+    private void startRecording() {
+        if (!((Audomo)getApplication()).ready()) return;
+        Intent intent = new Intent(this, TileStartActivity.class)
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivityAndCollapse(PendingIntent.getActivity(this, 7, intent, PendingIntent.FLAG_IMMUTABLE));
     }
 }

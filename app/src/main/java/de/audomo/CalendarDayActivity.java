@@ -1,7 +1,6 @@
 package de.audomo;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.os.*;
@@ -13,7 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.concurrent.*;
 
-public final class CalendarDayActivity extends Activity {
+public final class CalendarDayActivity extends ProtectedActivity {
     private final ExecutorService reader = Executors.newSingleThreadExecutor();
     private LinearLayout body;
     private TextView dateLabel;
@@ -50,8 +49,7 @@ public final class CalendarDayActivity extends Activity {
     }
 
     @Override
-    public void onCreate(Bundle state) {
-        super.onCreate(state);
+    protected void openContent(Bundle state) {
         app = (Audomo) getApplication();
         scroll = state == null ? -1 : state.getInt("scroll", -1);
         LinearLayout page = new LinearLayout(this);
@@ -75,8 +73,7 @@ public final class CalendarDayActivity extends Activity {
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
+    protected void resumeContent() {
         load();
     }
 
@@ -192,8 +189,7 @@ public final class CalendarDayActivity extends Activity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int code, String[] permissions, int[] grants) {
-        super.onRequestPermissionsResult(code, permissions, grants);
+    protected void permissionResult(int code, String[] permissions, int[] grants) {
         if (code == 1) load();
     }
 
@@ -206,8 +202,7 @@ public final class CalendarDayActivity extends Activity {
     }
 
     @Override
-    public void onSaveInstanceState(Bundle state) {
-        super.onSaveInstanceState(state);
+    protected void saveContent(Bundle state) {
         state.putInt("scroll", timeline == null ? scroll : timeline.scrollPosition());
     }
 

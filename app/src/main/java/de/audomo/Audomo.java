@@ -33,12 +33,14 @@ public final class Audomo extends Application {
     final ExecutorService libraryFiles = Executors.newSingleThreadExecutor();
     final ExecutorService uploadControls = Executors.newSingleThreadExecutor();
     final Handler main = new Handler(Looper.getMainLooper());
+    AppLock appLock;
     SessionStore sessions;
     RecordingDraft draft;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        appLock = new AppLock(this);
         sessions = new SessionStore(this);
         draft = new RecordingDraft(this);
         worker.execute(() -> {

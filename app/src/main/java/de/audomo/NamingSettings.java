@@ -1,6 +1,5 @@
 package de.audomo;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
@@ -17,7 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Set;
 
-public final class NamingSettings extends Activity {
+public final class NamingSettings extends ProtectedActivity {
     private static final String[] PRESETS = {
         "Datum, Uhrzeit und Termintitel", "Kalendername", "Termintitel", "Datum und Kalendername"
     };
@@ -41,8 +40,7 @@ public final class NamingSettings extends Activity {
     private Button baseButton, calendars;
 
     @Override
-    public void onCreate(Bundle state) {
-        super.onCreate(state);
+    protected void openContent(Bundle state) {
         mode =
                 state == null
                         ? CalendarNames.folderMode(this)
@@ -277,8 +275,7 @@ public final class NamingSettings extends Activity {
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle out) {
-        super.onSaveInstanceState(out);
+    protected void saveContent(Bundle out) {
         out.putString("mode", mode.name());
         out.putString("base", base);
         out.putString("template", template.getText().toString());

@@ -146,10 +146,26 @@ final class AppSettings {
         p.row(R.drawable.ic_folder, "Dateien und Ordner", "Speicherorte, Import und Papierkorb", () -> files(p, 0));
         p.row(R.drawable.ic_upload, "Cloud und Uploads", "Ziele, Automatik und Warteschlange", () -> cloud(p));
         p.group("App und System");
+        p.liveRow(R.drawable.ic_lock, "App-Sperre", () -> app.appLock.enabled() ? "Aktiv" : "Aus", this::appLock);
         p.row(R.drawable.ic_shield, "Berechtigungen", "Mikrofon, Kalender, Benachrichtigungen und Nicht stören", this::onboarding);
         p.row(R.drawable.ic_vibration, "Schnellzugriff und Vibration", "Kachel und Vibrationsmuster", this::shortcuts);
         p.row(R.drawable.ic_backup, "Sicherung und Diagnose", "Einstellungen übertragen und Ereignisse ansehen", this::maintenance);
         return p;
+    }
+
+    private void appLock() {
+        Page p = new Page("App-Sperre");
+        p.group("Zugriff auf Audomo");
+        p.liveRow(R.drawable.ic_lock, "App beim Öffnen sperren",
+                () -> app.appLock.enabled() ? "Aktiv · Zum Ausschalten antippen" : "Aus · Zum Aktivieren antippen",
+                () -> screen.startActivity(new Intent(screen, UnlockActivity.class)
+                        .setAction(app.appLock.enabled() ? UnlockActivity.DISABLE : UnlockActivity.ENABLE)));
+        TextView hint = screen.text("Entsperre Audomo mit Fingerabdruck oder deiner Android-Displaysperre. "
+                + "Nach dem Verlassen der App oder Ausschalten des Displays wird sie erneut gesperrt. "
+                + "Kachel und Startbildschirm-Verknüpfung können Aufnahmen weiterhin starten und stoppen.", 14, MainActivity.DIM);
+        hint.setPadding(screen.dp(8), screen.dp(16), screen.dp(8), 0);
+        p.rows.addView(hint);
+        p.dialog.show();
     }
 
     private void playback() {

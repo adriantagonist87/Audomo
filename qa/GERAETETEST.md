@@ -1,4 +1,12 @@
-# Audomo · Teststand vom 26.11.2026
+# Audomo · Teststand vom 27.11.2026
+
+## App-Sperre mit Version 1.1.8
+
+Auf dem Android-14-Emulator wurden die Aktivierung ohne eingerichtete Gerätesperre, die Bestätigung mit einer Test-PIN, ein registrierter und ein unbekannter simulierter Fingerabdruck sowie die Alternative „Muster verwenden“ geprüft. Das Ausschalten gelang nach Bestätigung des Android-Musters. Beim nächsten Kaltstart öffnete sich Audomo wieder direkt.
+
+Mit aktiver Sperre wurde die Wiedergabeliste nach Home, auch bei sofortigem Wiederöffnen, erst nach Bestätigung sichtbar. Dasselbe galt für ein bereits geöffnetes Einstellungsuntermenü, den Wechsel aus dem ausgeschalteten Display und den Uploaddetail-Einstieg nach einem Prozessneustart. Ein Reiterwechsel innerhalb der entsperrten Sitzung brauchte keine neue Bestätigung. Ein Abbruch hielt die Bibliothek geschlossen.
+
+Die angeheftete Launcher-Verknüpfung, die sichtbare Schnellkachel und die Schaltfläche auf der Audomo-Sperrseite starteten und stoppten bei gesperrter App jeweils eine Aufnahme. Bei zusätzlich gesperrtem Android startete die Aufnahme nach der Gerätefreigabe. Der anschließende Stopp über die Kachel auf dem erneut gesperrten Gerät speicherte die Datei und ließ die Gerätesperre aktiv. Auf dem Galaxy S24 Ultra wurde 1.1.8 im Leerlauf installiert und der ausgeschaltete Zustand in „Einstellungen → App-Sperre“ geprüft. Die persönliche Biometrie blieb dem Nutzer zur Einrichtung überlassen. Die abschließende Kernprüfung auf einer frischen API-34-AVD bestand mit 29 Tests, einschließlich des gesperrten Uploadeinstiegs bei fehlender Gerätesperre.
 
 ## Warteschlange mit Version 1.1.7
 

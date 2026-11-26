@@ -25,7 +25,7 @@ python3 -m venv /tmp/audomo-qa-venv
 /tmp/audomo-qa-venv/bin/python qa/release_suite.py emulator-5554
 ```
 
-Die [Suite](../qa/release_suite.py) führt 13 Instrumentierungsklassen aus. Die Protokoll-Fixtures vergeben eigene Ports, Testzugänge und Zertifikate. ADB leitet nur diese Ports weiter. Nach Ende werden Weiterleitungen, Cacheprofil und lokale Testserver entfernt. Die Testinstallation verbleibt zur Inspektion auf dem Emulator. Ein weiterer Lauf beginnt mit einem frischen Testgerät. Übersprungene Tests führen in dieser Kernprüfung zu einem Fehler.
+Die [Suite](../qa/release_suite.py) führt 14 Instrumentierungsklassen aus. Die Protokoll-Fixtures vergeben eigene Ports, Testzugänge und Zertifikate. ADB leitet nur diese Ports weiter. Nach Ende werden Weiterleitungen, Cacheprofil und lokale Testserver entfernt. Die Testinstallation verbleibt zur Inspektion auf dem Emulator. Ein weiterer Lauf beginnt mit einem frischen Testgerät. Übersprungene Tests führen in dieser Kernprüfung zu einem Fehler.
 
 | Bereich | Beispiele aus der Suite |
 |---|---|

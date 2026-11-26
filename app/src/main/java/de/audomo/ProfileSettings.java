@@ -1,6 +1,5 @@
 package de.audomo;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -18,7 +17,7 @@ import android.widget.*;
 
 import java.util.List;
 
-public final class ProfileSettings extends Activity {
+public final class ProfileSettings extends ProtectedActivity {
     private enum Mode { OVERVIEW, CREATE, EDIT, RENAME }
 
     private Mode mode;
@@ -29,8 +28,7 @@ public final class ProfileSettings extends Activity {
     private Spinner input, rate, bitrate;
     private RadioGroup echo, noise;
 
-    @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
+    @Override protected void openContent(Bundle state) {
         String action = getIntent().getStringExtra("mode");
         mode = action == null ? Mode.OVERVIEW : Mode.valueOf(action);
         LinearLayout page = column();
@@ -67,8 +65,7 @@ public final class ProfileSettings extends Activity {
         }
     }
 
-    @Override protected void onResume() {
-        super.onResume();
+    @Override protected void resumeContent() {
         if (mode == Mode.OVERVIEW) overview();
     }
 

@@ -14,7 +14,7 @@ import android.widget.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-public final class CalendarSettings extends Activity {
+public final class CalendarSettings extends ProtectedActivity {
     private LinearLayout page, rows;
     private TextView notice;
     private EditText before, after;
@@ -24,8 +24,7 @@ public final class CalendarSettings extends Activity {
     private int pad;
 
     @Override
-    public void onCreate(Bundle saved) {
-        super.onCreate(saved);
+    protected void openContent(Bundle saved) {
         pad = (int) (getResources().getDisplayMetrics().density * 16);
         ScrollView scroll = new ScrollView(this);
         page = new LinearLayout(this);
@@ -198,8 +197,7 @@ public final class CalendarSettings extends Activity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int code, String[] keys, int[] results) {
-        super.onRequestPermissionsResult(code, keys, results);
+    protected void permissionResult(int code, String[] keys, int[] results) {
         if (granted()) recreate();
         else load();
     }

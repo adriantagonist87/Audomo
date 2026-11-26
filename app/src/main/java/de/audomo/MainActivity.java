@@ -18,7 +18,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 
-public class MainActivity extends Activity {
+public class MainActivity extends ProtectedActivity {
     private static final String EXTRA_PREVIOUS_TAB = "de.audomo.extra.PREVIOUS_TAB";
     static final int BG = 0xff0d0b2b, PANEL = 0xff242039, LINE = 0xff39354f;
     static final int INK = 0xfffaf8ff, DIM = 0xffc2bed1, ACCENT = 0xffbd9eff;
@@ -141,8 +141,7 @@ public class MainActivity extends Activity {
             };
 
     @Override
-    public void onCreate(Bundle state) {
-        super.onCreate(state);
+    protected void openContent(Bundle state) {
         app = (Audomo) getApplication();
         currentProfile = Profile.selected(this);
         preferences = new AppSettings(this);
@@ -426,8 +425,7 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
-        super.onRequestPermissionsResult(code, permissions, results);
+    protected void permissionResult(int code, String[] permissions, int[] results) {
         if (code == 1) {
             pendingStart = permitted(Manifest.permission.RECORD_AUDIO);
             if (!pendingStart) {
@@ -676,7 +674,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         // Some navigation modes deliver Back through Activity rather than the window callback.
-        if (isQueuePage() || library || editing || !history.isEmpty()) navigateBack();
+        if (mayUseContent() && (isQueuePage() || library || editing || !history.isEmpty())) navigateBack();
         else super.onBackPressed();
     }
 
@@ -720,8 +718,7 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onActivityResult(int req, int result, Intent data) {
-        super.onActivityResult(req, result, data);
+    protected void contentResult(int req, int result, Intent data) {
         if (req == AppSettings.REQUEST_PROFILES) {
             preferences.show();
             return;
@@ -929,8 +926,7 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
+    protected void resumeContent() {
         openingTab = false;
         app.draft.validate(this);
         if (library && pausedLibrary != null) {
@@ -945,7 +941,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         resumed = false;
-        if (library) pausedLibrary = libraryState();
+        if (hasContent() && library) pausedLibrary = libraryState();
         handler.removeCallbacks(refresh);
         super.onPause();
     }
@@ -957,8 +953,7 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle state) {
-        super.onSaveInstanceState(state);
+    protected void saveContent(Bundle state) {
         if (editing) app.draft.name(inlineName.getText().toString());
         if (isQueuePage()) dashboard.save(state);
         state.putBoolean("trashView", trashView);

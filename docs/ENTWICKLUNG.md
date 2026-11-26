@@ -61,6 +61,10 @@ Die [ursprüngliche Matrix](spezifikation/featurematrix_original.json), [Standar
 
 ### Dashboard-Bedienung ab 1.1.0
 
+Ab Version 1.1.8 leiten sich alle Activities mit privaten Inhalten von `ProtectedActivity` ab. Beim gesperrten Kaltstart wartet der Aufbau der Zielansicht einschließlich gespeicherter Fragmente und externer Ergebnisse auf die Bestätigung. Bei der Rückkehr maskiert die Activity ihre Inhalte und Dialogfenster, bis die Sitzung wieder freigegeben ist. Interne Activity-Wechsel verwenden `FLAG_ACTIVITY_NO_USER_ACTION`, damit Home die Sitzung auch bei einer schnellen Rückkehr beenden kann. Bei eingeschalteter Sperre deaktivieren die Activities ihre Screenshot-Vorschau in der Übersicht der letzten Apps.
+
+`UnlockActivity` verwendet den Android-Systemdialog mit `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`. Nur der Aktivierungszustand liegt dauerhaft in den lokalen `app_lock`-Preferences. Die Freigabe lebt im Prozess. Der Einstellungsexport enthält weder den Sperrzustand noch ein Entsperrmerkmal. `CaptureTile`, `TileStartActivity` und der Mikrofon-Vordergrunddienst arbeiten unabhängig von der Freigabe der Ansichten. Neue Ansichten mit Aufnahmen, Kalenderdaten oder Einstellungen müssen die geschützte Basisklasse verwenden.
+
 `DashboardGestures` erkennt seitliche Gesten im Fenster der drei Dashboard-Activities und verwendet dieselbe Navigation wie die Reitertasten. Eine Wischgeste auf einer Auftragszeile geht an `QueueSwipeList`, auf der Zeitleiste an den Player. Bei einem Außentipp auf den geöffneten Player erhält das berührte Element ein Abbruchereignis. Native Auswahldialoge verwenden das gemeinsame Dialogthema. Die Einstellungsübersicht und ihre Untermenüs sind ganze Seiten mit eigener Zurück-Navigation.
 
 Seit 1.1.6 gibt `MainActivity.openTab` die Position des Ausgangsreiters im Intent mit. Die Ziel-Activity setzt in `onCreate` über `overrideActivityTransition` den horizontalen Übergang zum Ziel und die umgekehrte Bewegung für den Rückweg. Jede besuchte Activity behält damit ihre eigene Rückrichtung, auch wenn derselbe Reiter mehrfach im Android-Verlauf liegt.
