@@ -1,0 +1,16 @@
+<resources>
+    <item type="id" name="profile_scroll"/>
+    <item type="id" name="profile_name"/>
+    <item type="id" name="profile_gain"/>
+    <item type="id" name="profile_rate"/>
+    <item type="id" name="profile_bitrate"/>
+    <item type="id" name="profile_input"/>
+    <item type="id" name="profile_echo"/>
+    <item type="id" name="profile_noise"/>
+    <item type="id" name="echo_default"/>
+    <item type="id" name="echo_on"/>
+    <item type="id" name="echo_off"/>
+    <item type="id" name="noise_default"/>
+    <item type="id" name="noise_on"/>
+    <item type="id" name="noise_off"/>
+</resources>

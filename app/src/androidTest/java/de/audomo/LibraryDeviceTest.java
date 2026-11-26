@@ -185,6 +185,27 @@ public class LibraryDeviceTest {
     }
 
     @Test
+    public void renameAndDeleteRespectSelectionAndExistingBuiltinOverrides() throws Exception {
+        Profile meeting = Profile.standard("Besprechung", 64);
+        Profile.save(ctx, meeting, "Besprechung");
+        Profile.save(ctx, Profile.standard("Probe", 96), null);
+        Profile renamed = Profile.standard("Außentermin", 96);
+        Profile.save(ctx, renamed, "Probe");
+        assertEquals(renamed, Profile.selected(ctx));
+        assertFalse(Profile.profiles(ctx).stream().anyMatch(p -> p.name().equals("Probe")));
+        assertThrows(IllegalArgumentException.class, () -> Profile.save(ctx, meeting, renamed.name()));
+        assertThrows(IllegalArgumentException.class, () -> Profile.save(ctx, renamed, meeting.name()));
+        assertThrows(IllegalArgumentException.class, () -> Profile.delete(ctx, meeting.name()));
+        assertEquals(renamed, Profile.selected(ctx));
+        Profile.save(ctx, Profile.standard("Besuch", 48), null);
+        Profile.delete(ctx, renamed.name());
+        assertEquals("Besuch", Profile.selected(ctx).name());
+        Profile.delete(ctx, "Besuch");
+        assertEquals(meeting, Profile.selected(ctx));
+        assertEquals(3, Profile.profiles(ctx).size());
+    }
+
+    @Test
     public void profileAndBackupRoundTripAndRejectInvalidSchema() throws Exception {
         assertEquals(
                 List.of(48, 80, 32),

@@ -402,7 +402,7 @@ public class MainActivity extends Activity {
             aux.setOnClickListener(v -> app.command(paused ? "STOP" : "PAUSE", null));
             side.addView(aux, new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER));
         } else {
-            Button profile = button("Profil", v -> profiles());
+            Button profile = button("Profil", v -> startActivity(new Intent(this, ProfileSettings.class)));
             profile.setEnabled(app.ready());
             controls.addView(profile, weight());
         }
@@ -466,10 +466,6 @@ public class MainActivity extends Activity {
                 .hideSoftInputFromWindow(inlineName.getWindowToken(), 0);
         inlineName.setVisibility(View.GONE);
         name.setVisibility(View.VISIBLE);
-    }
-
-    private void profiles() {
-        new ProfileDialog(this).choose();
     }
 
     void addTile() {
@@ -725,6 +721,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int result, Intent data) {
         super.onActivityResult(req, result, data);
+        if (req == AppSettings.REQUEST_PROFILES) {
+            preferences.show();
+            return;
+        }
         if (result == RESULT_OK && data != null && preferences.result(req, data)) return;
         if (req == 8 && result == RESULT_OK && data != null) {
             List<android.net.Uri> uris = new ArrayList<>();

@@ -29,10 +29,10 @@ Die 44 Testfälle, die verwendeten Geräte und die verbleibenden Abnahmegrenzen 
 
 | ID | Priorität, Anforderung | Beschlüsse / Tests | Kandidat | Audomo und Modul | Nachweis | Einschränkung |
 |---|---|---|---|---|---|---|
-| b01 | MUSS · Internes Mikrofon auswählen, z. B. hinten | 26, 28 / T08 | teilweise · AudioInput / AudioSource | teilweise · AudioInput, ProfileDialog | T08 · S24 meldet interne Route. 0.2 liest aktive Mikrofonbeschreibungen, soweit Android sie liefert | Konkrete hintere Kapsel am S24 unbestätigt |
+| b01 | MUSS · Internes Mikrofon auswählen, z. B. hinten | 26, 28 / T08 | teilweise · AudioInput / AudioSource | teilweise · AudioInput, ProfileSettings | T08 · S24 meldet interne Route. 0.2 liest aktive Mikrofonbeschreibungen, soweit Android sie liefert | Konkrete hintere Kapsel am S24 unbestätigt |
 | b02 | NICHT BENÖTIGT · Externes USB-Mikrofon | ∅ / ∅ | ohne Nachweis | abgewählt | Featurematrix | Kein Implementierungsauftrag |
 | b03 | OPTIONAL · Bluetooth-Mikrofon | 26 / ∅ | ohne Nachweis | fehlt · Audio und Profile | Offen | Optional |
-| b04 | MUSS · Mikrofonverstärkung in dB einstellen | 26, 28 / T09 | ohne Nachweis | vorhanden · CaptureEngine, ProfileDialog | T09 · +5 dB und beidseitiges Clipping mit bekanntem PCM-Signal | Kalibrierter akustischer Vergleich offen |
+| b04 | MUSS · Mikrofonverstärkung in dB einstellen | 26, 28 / T09 | ohne Nachweis | vorhanden · CaptureEngine, ProfileSettings | T09 · +5 dB und beidseitiges Clipping mit bekanntem PCM-Signal | Kalibrierter akustischer Vergleich offen |
 | b05 | OPTIONAL · MP3-Aufnahmeformat | 26 / ∅ | ohne Nachweis | fehlt · Audio und Profile | Offen | Optional |
 | b06 | OPTIONAL · AAC/M4A-Aufnahmeformat | 26 / ∅ | vorhanden · RecordingFormat / FormatConfig | fehlt · Audio und Profile | Offen | Optional |
 | b07 | MUSS · Opus/Ogg-Aufnahmeformat | 26, 28 / T10 | fehlt · RecordingFormat kennt M4A, WAV, 3GP | vorhanden · OpusEncoder, OggOpus, Profile | T10 · 24 Codec-Kombinationen auf S24 und AVD mit synthetischem PCM | Nicht jede Kombination wurde mit der physischen Mikrofonroute aufgenommen |
@@ -42,10 +42,10 @@ Die 44 Testfälle, die verwendeten Geräte und die verbleibenden Abnahmegrenzen 
 | b11 | MUSS · Abtastrate einstellen | 26, 28 / T10 | vorhanden · RecordingFormat / FormatConfig | vorhanden · OpusEncoder, OggOpus, Profile | T10 · 24 Codec-Kombinationen auf S24 und AVD mit synthetischem PCM | Nicht jede Kombination wurde mit der physischen Mikrofonroute aufgenommen |
 | b12 | MUSS · Bitrate einstellen | 26, 28 / T10 | vorhanden · RecordingFormat / FormatConfig | vorhanden · OpusEncoder, OggOpus, Profile | T10 · 24 Codec-Kombinationen auf S24 und AVD mit synthetischem PCM | Nicht jede Kombination wurde mit der physischen Mikrofonroute aufgenommen |
 | b13 | OPTIONAL · Variable Bitrate (VBR) | 26 / ∅ | ohne Nachweis | fehlt · Audio und Profile | Offen | Optional |
-| b14 | MUSS · Echounterdrückung ein/aus/Gerätestandard | 26, 28 / T11 | ohne Nachweis | vorhanden · AudioInput, ProfileDialog | T11 · S24 meldete Echo ein und Rauschen aus im Radioprofil | Akustische Wirkung und Kontrollverlust bei Konkurrenz offen |
-| b15 | MUSS · Rauschunterdrückung ein/aus/Gerätestandard | 26, 28 / T11 | ohne Nachweis | vorhanden · AudioInput, ProfileDialog | T11 · S24 meldete Echo ein und Rauschen aus im Radioprofil | Akustische Wirkung und Kontrollverlust bei Konkurrenz offen |
+| b14 | MUSS · Echounterdrückung ein/aus/Gerätestandard | 26, 28 / T11 | ohne Nachweis | vorhanden · AudioInput, ProfileSettings | T11 · S24 meldete Echo ein und Rauschen aus im Radioprofil | Akustische Wirkung und Kontrollverlust bei Konkurrenz offen |
+| b15 | MUSS · Rauschunterdrückung ein/aus/Gerätestandard | 26, 28 / T11 | ohne Nachweis | vorhanden · AudioInput, ProfileSettings | T11 · S24 meldete Echo ein und Rauschen aus im Radioprofil | Akustische Wirkung und Kontrollverlust bei Konkurrenz offen |
 | b16 | OPTIONAL · Automatische Pegelanpassung (AGC) | 26 / ∅ | ohne Nachweis | fehlt · Audio und Profile | Offen | Optional |
-| b17 | MUSS · Speicherbare Aufnahmeprofile | 25, 26, 27, 28 / T12, T40 | ohne Nachweis | vorhanden · Profile, ProfileDialog | T12, T40 · Standardprofil bearbeiten, eigenes Profil und Einstellungen erneut laden | Gerätewechsel und alle Editor-Eingabefelder gesondert prüfen |
+| b17 | MUSS · Speicherbare Aufnahmeprofile | 25, 26, 27, 28 / T12, T40 | ohne Nachweis | vorhanden · Profile, ProfileSettings | T12, T40 · Standardprofil bearbeiten, eigenes Profil und Einstellungen erneut laden | Gerätewechsel und alle Editor-Eingabefelder gesondert prüfen |
 | b18 | NICHT BENÖTIGT · Vor dem Teilen automatisch komprimieren | ∅ / ∅ | ohne Nachweis | abgewählt | Featurematrix | Kein Implementierungsauftrag |
 
 ## Kalender und Namen

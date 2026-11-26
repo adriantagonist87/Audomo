@@ -13,8 +13,11 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 final class AppSettings {
+    static final int REQUEST_PROFILES = 25;
     final MainActivity screen;
     final Audomo app;
     final SharedPreferences prefs;
@@ -65,6 +68,18 @@ final class AppSettings {
         }
 
         void liveRow(int icon, String title, java.util.function.Supplier<String> getStatus, Runnable click) {
+            addRow(icon, title, value -> value.setText(getStatus.get()), click);
+        }
+
+        void permissionRow(int icon, String title, BooleanSupplier granted, Runnable click) {
+            addRow(icon, title, value -> {
+                boolean allowed = granted.getAsBoolean();
+                value.setText(allowed ? "Erlaubt" : "Nicht erlaubt");
+                value.setTextColor(screen.getColor(allowed ? R.color.permission_granted : R.color.permission_missing));
+            }, click);
+        }
+
+        private void addRow(int icon, String title, Consumer<TextView> update, Runnable click) {
             if (card == null || card.getParent() != rows) {
                 card = screen.column();
                 card.setBackground(screen.surface(MainActivity.PANEL, 14));
@@ -91,11 +106,12 @@ final class AppSettings {
             LinearLayout labels = screen.column();
             labels.setPadding(screen.dp(14), 0, screen.dp(8), 0);
             labels.addView(screen.text(title, 16, MainActivity.INK));
-            TextView value = screen.text(getStatus.get(), 13, MainActivity.DIM);
+            TextView value = screen.text("", 13, MainActivity.DIM);
+            update.accept(value);
             if (value.length() > 0) {
                 labels.addView(value);
                 row.getViewTreeObserver().addOnWindowFocusChangeListener(focus -> {
-                    if (focus && row.isAttachedToWindow()) value.setText(getStatus.get());
+                    if (focus && row.isAttachedToWindow()) update.accept(value);
                 });
             }
             row.addView(labels, screen.weight());
@@ -107,7 +123,7 @@ final class AppSettings {
             row.setFocusable(true);
             row.setOnClickListener(v -> {
                 click.run();
-                if (value.isAttachedToWindow()) value.setText(getStatus.get());
+                if (value.isAttachedToWindow()) update.accept(value);
             });
             card.addView(row);
         }
@@ -120,7 +136,11 @@ final class AppSettings {
     private Page settingsHome() {
         Page p = new Page("Einstellungen");
         p.group("Besprechungen");
-        p.row(R.drawable.ic_mic, "Aufnahme und Klang", "Aufnahmeprofile, Mikrofonwahl und Audioqualität", this::recording);
+        p.liveRow(R.drawable.ic_mic, "Aufnahmeprofile", () -> Profile.selected(screen).name() + " aktiv",
+                () -> {
+                    screen.startActivityForResult(new Intent(screen, ProfileSettings.class), REQUEST_PROFILES);
+                    p.dialog.dismiss();
+                });
         p.row(R.drawable.ic_play, "Wiedergabe", "Audioausgang, Tempo und Sprungintervall", this::playback);
         p.row(R.drawable.ic_calendar_day, "Kalender und Dateinamen", "Kalender auswählen, Dateinamen und Ordner festlegen", this::calendar);
         p.row(R.drawable.ic_folder, "Dateien und Ordner", "Speicherorte, Import und Papierkorb", () -> files(p, 0));
@@ -130,13 +150,6 @@ final class AppSettings {
         p.row(R.drawable.ic_vibration, "Schnellzugriff und Vibration", "Kachel und Vibrationsmuster", this::shortcuts);
         p.row(R.drawable.ic_backup, "Sicherung und Diagnose", "Einstellungen übertragen und Ereignisse ansehen", this::maintenance);
         return p;
-    }
-
-    private void recording() {
-        Page p = new Page("Aufnahme und Klang");
-        p.liveRow(R.drawable.ic_mic, "Aufnahmeprofile", () -> Profile.selected(screen).name() + " aktiv",
-                () -> new ProfileDialog(screen).choose());
-        p.dialog.show();
     }
 
     private void playback() {
@@ -250,20 +263,19 @@ final class AppSettings {
 
     void onboarding() {
         Page p = new Page("Berechtigungen");
-        p.liveRow(R.drawable.ic_mic, "Mikrofon", () -> status(Manifest.permission.RECORD_AUDIO),
+        p.permissionRow(R.drawable.ic_mic, "Mikrofon", () -> granted(Manifest.permission.RECORD_AUDIO),
                 () -> permission(Manifest.permission.RECORD_AUDIO, 15));
-        p.liveRow(R.drawable.ic_calendar_day, "Kalender", () -> status(Manifest.permission.READ_CALENDAR),
+        p.permissionRow(R.drawable.ic_calendar_day, "Kalender", () -> granted(Manifest.permission.READ_CALENDAR),
                 () -> permission(Manifest.permission.READ_CALENDAR, 4));
-        p.liveRow(R.drawable.ic_bell, "Benachrichtigungen", () -> status(Manifest.permission.POST_NOTIFICATIONS),
+        p.permissionRow(R.drawable.ic_bell, "Benachrichtigungen", () -> granted(Manifest.permission.POST_NOTIFICATIONS),
                 () -> {
                     if (screen.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                         permission(Manifest.permission.POST_NOTIFICATIONS, 2);
                     else screen.startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, screen.getPackageName()));
                 });
-        p.liveRow(R.drawable.ic_bell, "Nicht-stören-Zugriff",
-                () -> screen.getSystemService(NotificationManager.class).isNotificationPolicyAccessGranted()
-                        ? "Erlaubt" : "Zugriff einrichten",
+        p.permissionRow(R.drawable.ic_bell, "Nicht-stören-Zugriff",
+                () -> screen.getSystemService(NotificationManager.class).isNotificationPolicyAccessGranted(),
                 () -> screen.startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)));
         p.row(R.drawable.ic_settings, "Android-App-Einstellungen", "Berechtigungen des Geräts verwalten",
                 () -> screen.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + screen.getPackageName()))));
@@ -276,10 +288,8 @@ final class AppSettings {
         else screen.requestPermissions(new String[]{permission}, request);
     }
 
-    String status(String p) {
-        return screen.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
-                ? "Erlaubt"
-                : "Zugriff einrichten";
+    private boolean granted(String permission) {
+        return screen.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
     }
 
     void uploadTargets() {

@@ -11,4 +11,11 @@
         <item name="android:windowCloseOnTouchOutside">true</item>
         <item name="android:colorAccent">#B89AFF</item>
     </style>
+    <style name="ProfileFieldTheme" parent="@style/AudomoTheme">
+        <item name="android:spinnerStyle">@style/ProfileField</item>
+    </style>
+    <style name="ProfileField" parent="@android:style/Widget.Material.Spinner">
+        <item name="android:overlapAnchor">false</item>
+        <item name="android:popupElevation">8dp</item>
+    </style>
 </resources>

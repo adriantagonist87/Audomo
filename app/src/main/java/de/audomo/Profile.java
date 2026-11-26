@@ -90,18 +90,39 @@ record Profile(String name, int rate, int kbps, int gain, String mic, String ech
         return BUILTINS.get(0);
     }
 
+    static boolean builtIn(String name) {
+        return BUILTINS.stream().anyMatch(profile -> profile.name.equals(name));
+    }
+
     static void save(Context context, Profile value, String former) throws JSONException {
+        if (builtIn(former) && !value.name.equals(former))
+            throw new IllegalArgumentException("Standardprofile behalten ihren Namen");
         JSONArray own = new JSONArray();
+        boolean replaced = false;
         for (Profile p : profiles(context)) {
             if (p.name.equals(value.name) && !p.name.equals(former))
                 throw new IllegalArgumentException("Profilname schon belegt");
-            if (!BUILTINS.contains(p) && !p.name.equals(former)) own.put(p.json());
+            if (p.name.equals(former)) {
+                replaced = true;
+                if (!BUILTINS.contains(value)) own.put(value.json());
+            } else if (!BUILTINS.contains(p)) own.put(p.json());
         }
-        own.put(value.json());
+        if (former == null) own.put(value.json());
+        else if (!replaced) throw new IllegalArgumentException("Profil nicht mehr vorhanden");
         prefs(context)
                 .edit()
                 .putString("profiles", own.toString())
                 .putString("selected", value.name)
                 .apply();
+    }
+
+    static void delete(Context context, String name) throws JSONException {
+        if (builtIn(name)) throw new IllegalArgumentException("Standardprofile bleiben erhalten");
+        JSONArray own = new JSONArray();
+        for (Profile p : profiles(context))
+            if (!p.name.equals(name) && !BUILTINS.contains(p)) own.put(p.json());
+        var edit = prefs(context).edit().putString("profiles", own.toString());
+        if (selected(context).name.equals(name)) edit.putString("selected", BUILTINS.get(0).name);
+        edit.apply();
     }
 }

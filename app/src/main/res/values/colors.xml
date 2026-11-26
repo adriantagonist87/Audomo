@@ -1,3 +1,5 @@
 <resources>
     <color name="audomo_purple">#A97BFF</color>
+    <color name="permission_granted">#A2CFAF</color>
+    <color name="permission_missing">#FF9A9D</color>
 </resources>

@@ -35,6 +35,7 @@
         <activity android:name=".QueueActivity" android:exported="false" android:enableOnBackInvokedCallback="true"/>
         <activity android:name=".LibraryActivity" android:exported="false" android:enableOnBackInvokedCallback="true"/>
         <activity android:name=".NamingSettings" android:exported="false" android:windowSoftInputMode="adjustResize|stateAlwaysHidden"/>
+        <activity android:name=".ProfileSettings" android:exported="false" android:windowSoftInputMode="adjustResize|stateAlwaysHidden"/>
         <activity android:name=".CalendarDayActivity" android:exported="false"/>
         <activity android:name=".CalendarSettings" android:exported="false"/>
         <activity android:name="com.dropbox.core.android.AuthActivity"

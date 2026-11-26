@@ -1,5 +1,11 @@
 # Audomo · Teststand vom 26.11.2026
 
+## Aufnahmeprofile und Berechtigungsfarben mit Version 1.1.4
+
+Auf dem Galaxy S24 Ultra wurde die Profilverwaltung direkt aus den Einstellungen geöffnet. Geprüft wurden das Dropdown, der Editor und der Rückweg. Das geöffnete Dropdown zeigte die Qualitätsangaben. Im Editor war für jeden der beiden Effekte genau eine der drei Tasten ausgewählt. Die gespeicherten Profile und die aktive Auswahl stimmten nach dem Update mit dem vorherigen Stand überein. Für alle vier Berechtigungen wurde die tatsächliche Textfarbe mit dem angezeigten Status verglichen.
+
+Im API-34-Emulator wurde aus „Hohe Qualität“ ein eigenes Profil mit 96 kbit/s und 7 dB erstellt. Der eingegebene Name und die Effektwahl überstanden eine Bildschirmdrehung. Nach dem Speichern und erneuten Bearbeiten waren „Standard“ für Echo und „Ein“ für Rauschunterdrückung weiterhin ausgewählt. Ein belegter Name ließ sich korrigieren, ein eigener Name ändern und eine Bearbeitung verwerfen. Das aktive Profil blieb beim Wechsel zum Dashboard und nach einem Prozessneustart erhalten. Abbruch der Löschbestätigung behielt das Profil, bestätigtes Löschen aktivierte „Besprechung“. Alle vier fehlenden Freigaben waren rot. Nach Freigabe des Kalenders über Android wechselte der Status beim Zurückkehren zu grün. [Profilverwaltung](api34/aufnahmeprofile-1.1.4.webp) · [Profil-Dropdown](api34/profilmenue-1.1.4.webp) · [Effektauswahl](api34/profileffekte-1.1.4.webp) · [Berechtigungen](api34/berechtigungen-1.1.4.webp)
+
 ## Zentrale Berechtigungen mit Version 1.1.2
 
 Auf dem Galaxy S24 Ultra öffnete „Einstellungen“ → „Berechtigungen“ → „Nicht-stören-Zugriff“ die Samsung-Systemseite. Android-Zurück führte mit dem vorhandenen Freigabestatus in dieselbe Übersicht. Im Android-14-Emulator wurden der Kalenderzugriff direkt aus der Ersteinrichtung erteilt und der Nicht-stören-Zugriff auf der Systemseite erteilt und wieder entzogen. Nach der Rückkehr zeigte die Zeile jeweils „Erlaubt“ beziehungsweise „Zugriff einrichten“. [Ansicht der Berechtigungen](api34/berechtigungen-1.1.2.webp)
