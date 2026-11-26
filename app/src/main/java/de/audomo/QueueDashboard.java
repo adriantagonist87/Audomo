@@ -6,15 +6,19 @@ import android.view.*;
 import android.widget.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 final class QueueDashboard {
-    private static final String[] FILTERS = {"Alle", "Alle (außer Fertiggestellte)", "Fehlerhafte Uploads", "In Warteschlange"};
+    static final String REVIEW_ISSUES = "de.audomo.extra.REVIEW_UPLOAD_ISSUES";
+    private static final int ALL = 0, OPEN = 1, REVIEW = 2, WAITING = 3;
+    private static final String[] FILTERS = {"Alle Aufträge", "Offene Aufträge", "Zu prüfen", "Wartend"};
+    private static final String[] EMPTY = {"Noch keine Uploadaufträge", "Keine offenen Aufträge",
+            "Keine Aufträge zu prüfen", "Keine wartenden Aufträge"};
     private final MainActivity screen;
     private final Audomo app;
     private final TextView summary, empty;
-    private final Button filterButton, targets, retryErrors;
+    private final Button filterButton;
     private String waitingFor = "";
-    private final TextView totals;
     private final QueueSwipeList list;
     private final LinearLayout normalActions, selectionActions;
     private final Button cancelSelection, promoteSelected, deleteSelected, select;
@@ -26,11 +30,15 @@ final class QueueDashboard {
     private Map<String, String> labels = Map.of();
     private int filter, restoreIndex, restoreOffset;
     private boolean loading;
+    private boolean reviewingIssues;
+    private String readMessage = "Aufträge werden geladen …";
 
     QueueDashboard(MainActivity screen, LinearLayout body, Bundle state) {
         this.screen = screen;
         app = (Audomo) screen.getApplication();
-        filter = savedFilter();
+        reviewingIssues = state == null ? screen.getIntent().getBooleanExtra(REVIEW_ISSUES, false)
+                : state.getBoolean("queueReviewingIssues");
+        filter = activeFilter();
         if (state != null) {
             selecting = state.getBoolean("queueSelecting");
             long[] saved = state.getLongArray("queueSelected");
@@ -38,12 +46,10 @@ final class QueueDashboard {
             restoreIndex = state.getInt("queueIndex");
             restoreOffset = state.getInt("queueOffset");
         }
-        list = new QueueSwipeList(screen, id -> remove(List.of(id)), id -> prioritize(List.of(id)));
+        list = new QueueSwipeList(screen, id -> remove(List.of(id), Removal.SELECTED), id -> prioritize(List.of(id)));
         LinearLayout heading = screen.row();
         heading.setPadding(0, screen.dp(12), 0, screen.dp(4));
         body.addView(heading);
-        summary = screen.text("Aufträge werden geladen …", 21, MainActivity.INK);
-        heading.addView(summary, screen.weight());
         filterButton =
                 screen.button(
                         FILTERS[filter],
@@ -54,6 +60,7 @@ final class QueueDashboard {
                                                 FILTERS,
                                                 filter,
                                                 (dialog, i) -> {
+                                                    reviewingIssues = false;
                                                     filter = i;
                                                     Profile.prefs(screen).edit().putInt("queueFilter", i).apply();
                                                     applyFilter();
@@ -62,35 +69,34 @@ final class QueueDashboard {
                                                 })
                                         .setNegativeButton("Abbrechen", null)
                                         .show());
-        body.addView(filterButton);
-        cancelSelection = screen.button("Abbrechen", v -> exitSelection());
-        heading.addView(cancelSelection);
-        totals = screen.text("", 14, MainActivity.DIM);
-        totals.setPadding(0, 0, 0, screen.dp(8));
-        body.addView(totals);
-        targets = screen.button("Uploadziele", v -> new CloudScreen(screen).manage(List.of()));
-        body.addView(targets);
-        normalActions = screen.row();
-        normalActions.setPadding(0, screen.dp(4), 0, screen.dp(6));
-        normalActions.addView(
-                screen.button(
-                        "Upload hinzufügen", v -> ManualUploadDialog.chooseRecordings(screen)),
-                screen.weight());
-        retryErrors =
-                screen.button(
-                        "Fehler wiederholen",
-                        v ->
-                                screen.runFiles(() ->
-                                        UploadQueue.get(screen).retryErrors()
-                                                + " Aufträge freigegeben"));
-        retryErrors.setVisibility(View.GONE);
-        select = screen.button("Auswählen", v -> enterSelection());
-        normalActions.addView(select, screen.weight());
+        filterButton.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        filterButton.setPadding(screen.dp(14), 0, screen.dp(10), 0);
+        filterButton.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_expand, 0);
+        heading.addView(filterButton, screen.weight());
+        summary = screen.text("", 15, MainActivity.DIM);
+        summary.setPadding(screen.dp(12), 0, screen.dp(4), 0);
+        heading.addView(summary);
         manage = screen.toolbarIcon("Warteschlange verwalten", R.drawable.ic_more);
         manage.setOnClickListener(v -> manage());
-        normalActions.addView(manage, screen.lp(48, 48));
+        heading.addView(manage, screen.lp(48, 48));
+        cancelSelection = screen.button("Abbrechen", v -> exitSelection());
+        heading.addView(cancelSelection);
+        empty = screen.text(readMessage, 19, MainActivity.INK);
+        empty.setGravity(Gravity.CENTER);
+        empty.setPadding(0, screen.dp(40), 0, screen.dp(12));
+        body.addView(empty);
+        normalActions = screen.row();
+        normalActions.setPadding(0, screen.dp(4), 0, screen.dp(6));
+        Button add = screen.button("Upload hinzufügen", v -> ManualUploadDialog.chooseRecordings(screen));
+        add.setPadding(screen.dp(16), 0, screen.dp(16), 0);
+        add.setCompoundDrawablePadding(screen.dp(8));
+        add.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_upload, 0, 0, 0);
+        normalActions.addView(add);
+        select = screen.button("Auswählen", v -> enterSelection());
+        LinearLayout.LayoutParams selectLayout = screen.lp(-2, -2);
+        selectLayout.setMarginStart(screen.dp(8));
+        normalActions.addView(select, selectLayout);
         body.addView(normalActions);
-        body.addView(retryErrors);
         selectionActions = screen.row();
         body.addView(selectionActions);
         toggleAll = screen.toolbarIcon("Alle auswählen", R.drawable.ic_select_all);
@@ -102,13 +108,9 @@ final class QueueDashboard {
         });
         selectionActions.addView(toggleAll, screen.lp(48, 48));
         promoteSelected = screen.button("An die Spitze", v -> prioritize(selectedIds()));
-        deleteSelected = screen.button("Entfernen", v -> confirmRemove(selectedIds(), false));
+        deleteSelected = screen.button("Entfernen", v -> confirmRemove(selectedIds(), Removal.SELECTED));
         selectionActions.addView(promoteSelected, screen.weight());
         selectionActions.addView(deleteSelected, screen.weight());
-        empty = screen.text("", 16, MainActivity.DIM);
-        empty.setGravity(Gravity.CENTER);
-        empty.setPadding(0, screen.dp(24), 0, 0);
-        body.addView(empty);
 
         list.setDivider(new android.graphics.drawable.ColorDrawable(MainActivity.BG));
         list.setDividerHeight(screen.dp(6));
@@ -128,6 +130,7 @@ final class QueueDashboard {
     }
 
     void save(Bundle state) {
+        state.putBoolean("queueReviewingIssues", reviewingIssues);
         state.putBoolean("queueSelecting", selecting);
         state.putLongArray("queueSelected", selected.stream().mapToLong(Long::longValue).toArray());
         state.putInt("queueIndex", list.getFirstVisiblePosition());
@@ -135,13 +138,14 @@ final class QueueDashboard {
         state.putInt("queueOffset", first == null ? 0 : first.getTop());
     }
 
-    private int savedFilter() {
-        int value = Profile.prefs(screen).getInt("queueFilter", 0);
-        return value >= 0 && value < FILTERS.length ? value : 0;
+    private int activeFilter() {
+        if (reviewingIssues) return REVIEW;
+        int value = Profile.prefs(screen).getInt("queueFilter", OPEN);
+        return value >= 0 && value < FILTERS.length ? value : OPEN;
     }
 
     void refresh() {
-        int current = savedFilter();
+        int current = activeFilter();
         if (filter != current) {
             filter = current;
             applyFilter();
@@ -170,18 +174,14 @@ final class QueueDashboard {
                                                                 .TRANSPORT_WIFI))
                                 ? "Wartet auf WLAN"
                                 : caps == null ? "Wartet auf Netzwerk" : "";
-                String config =
-                        "Uploadziele · Automatik "
-                                + (prefs.getBoolean("autoUpload", false) ? "an" : "aus")
-                                + (prefs.getBoolean("wifiOnly", true) ? " · Nur WLAN" : "");
                 screen.runOnUiThread(() -> {
                     loading = false;
                     if (screen.isDestroyed() || !list.isAttachedToWindow() || list.touching) return;
-                    targets.setText(config);
                     if (!jobs.equals(next)
                             || !labels.equals(names)
                             || !waitingFor.equals(wait)
-                            || empty.getText().length() == 0) {
+                            || readMessage != null) {
+                        readMessage = null;
                         waitingFor = wait;
                         jobs = next;
                         labels = names;
@@ -198,8 +198,10 @@ final class QueueDashboard {
             } catch (Exception e) {
                 screen.runOnUiThread(() -> {
                     loading = false;
-                    empty.setVisibility(View.VISIBLE);
-                    empty.setText(Audomo.cause(e));
+                    if (screen.isDestroyed() || !list.isAttachedToWindow()) return;
+                    readMessage = "Warteschlange konnte nicht geladen werden. " + Audomo.cause(e);
+                    jobs = List.of();
+                    applyFilter();
                 });
             }
         });
@@ -208,11 +210,12 @@ final class QueueDashboard {
     private void applyFilter() {
         List<UploadQueue.Job> rows = new ArrayList<>();
         for (UploadQueue.Job job : jobs) {
-            if (filter == 0
-                    || filter == 1 && (job.needsAttention() ||
-                            !(job.state().equals("Hochgeladen") || job.state().equals("Cloudkopie gelöscht")))
-                    || filter == 2 && job.needsAttention()
-                    || filter == 3 && job.state().equals("Wartet")) rows.add(job);
+            if (switch (filter) {
+                case OPEN -> !job.finished();
+                case REVIEW -> job.needsAttention();
+                case WAITING -> job.state().equals("Wartet");
+                default -> true;
+            }) rows.add(job);
         }
         long now = System.currentTimeMillis();
         rows.sort(
@@ -220,65 +223,67 @@ final class QueueDashboard {
                                 (UploadQueue.Job j) -> {
                                     if (j.state().equals("Upload läuft")) return 0;
                                     if (j.canPrioritize() && j.priority() > 0) return 1;
-                                    if (!j.open()) return 5;
-                                    if (j.state().equals("Konflikt")) return 4;
-                                    return j.notBefore() > now ? 3 : 2;
+                                    if (j.needsAttention()) return 2;
+                                    if (j.finished()) return 5;
+                                    return j.notBefore() > now ? 4 : 3;
                                 })
                         .thenComparingLong(j -> j.canPrioritize() ? -j.priority() : 0)
                         .thenComparingLong(
                                 j -> j.notBefore() > now && j.open() ? j.notBefore() : 0L)
                         .thenComparingLong(j -> j.open() ? j.id() : -j.id()));
         visible = rows;
-        long open = jobs.stream().filter(UploadQueue.Job::open).count();
-        long issues = jobs.stream().filter(UploadQueue.Job::needsAttention).count();
-        totals.setText(open + " offen · " + issues + " mit Klärungsbedarf");
+        boolean hadSelection = !selected.isEmpty();
         selected.retainAll(
                 rows.stream()
                         .map(UploadQueue.Job::id)
-                        .collect(java.util.stream.Collectors.toSet()));
+                        .collect(Collectors.toSet()));
+        if (rows.isEmpty() || (hadSelection && selected.isEmpty())) selecting = false;
         updateControls();
-        filterButton.setText(FILTERS[filter] + " ▾");
-        filterButton.setContentDescription("Filter: " + FILTERS[filter]);
-        empty.setText(
-                jobs.isEmpty() ? "Noch keine Uploadaufträge" : "Keine Aufträge in dieser Ansicht");
-        empty.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
         adapter.notifyDataSetChanged();
     }
 
     private void manage() {
         PopupMenu menu = new PopupMenu(screen, manage);
-        List<Long> finished =
-                jobs.stream()
-                        .filter(j -> !j.open())
-                        .map(UploadQueue.Job::id)
-                        .collect(java.util.stream.Collectors.toList());
-        menu.getMenu()
-                .add("Beendete Aufträge entfernen")
-                .setEnabled(!finished.isEmpty())
-                .setOnMenuItemClickListener(item -> {
-                    confirmRemove(finished, false);
+        menu.getMenu().add("Uploadziele").setOnMenuItemClickListener(item -> {
+            new CloudScreen(screen).manage(List.of());
+            return true;
+        });
+        List<Long> failed = visible.stream().filter(j -> j.state().equals("Fehler"))
+                .map(UploadQueue.Job::id).collect(Collectors.toList());
+        if (!failed.isEmpty())
+            menu.getMenu().add("Fehlgeschlagene erneut versuchen").setOnMenuItemClickListener(item -> {
+                change(() -> {
+                    int count = UploadQueue.get(screen).retryErrors(failed);
+                    return count == 1 ? "1 Auftrag freigegeben" : count + " Aufträge freigegeben";
+                });
+                return true;
+            });
+        if (filter == ALL && !visible.isEmpty()) {
+            List<Long> finished = visible.stream().filter(UploadQueue.Job::finished)
+                    .map(UploadQueue.Job::id).collect(Collectors.toList());
+            if (!finished.isEmpty() && finished.size() < visible.size())
+                menu.getMenu().add("Beendete Aufträge entfernen").setOnMenuItemClickListener(item -> {
+                    confirmRemove(finished, Removal.FINISHED);
                     return true;
                 });
-        List<Long> all =
-                jobs.stream()
-                        .map(UploadQueue.Job::id)
-                        .collect(java.util.stream.Collectors.toList());
-        menu.getMenu()
-                .add("Warteschlange leeren")
-                .setEnabled(!all.isEmpty())
-                .setOnMenuItemClickListener(item -> {
-                    confirmRemove(all, true);
-                    return true;
-                });
+            List<Long> all = visible.stream().map(UploadQueue.Job::id).collect(Collectors.toList());
+            menu.getMenu().add("Warteschlange leeren").setOnMenuItemClickListener(item -> {
+                confirmRemove(all, Removal.ALL);
+                return true;
+            });
+        }
         menu.show();
     }
 
-    private void confirmRemove(List<Long> ids, boolean clear) {
+    private enum Removal { SELECTED, FINISHED, ALL }
+
+    private void confirmRemove(List<Long> ids, Removal scope) {
         if (ids.isEmpty()) return;
-        String title =
-                clear
-                        ? "Warteschlange leeren?"
-                        : ids.size() == 1 ? "Auftrag entfernen?" : "Aufträge entfernen?";
+        String title = switch (scope) {
+            case ALL -> "Warteschlange leeren?";
+            case FINISHED -> "Beendete Aufträge entfernen?";
+            case SELECTED -> ids.size() == 1 ? "Auftrag entfernen?" : "Aufträge entfernen?";
+        };
         String amount =
                 ids.size() == 1
                         ? "1 Auftrag wird entfernt."
@@ -287,13 +292,14 @@ final class QueueDashboard {
                 .setTitle(title)
                 .setMessage(amount + " Aufnahmen und Cloudkopien bleiben erhalten.")
                 .setNegativeButton("Abbrechen", null)
-                .setPositiveButton(clear ? "Leeren" : "Entfernen", (d, w) -> remove(ids))
+                .setPositiveButton(scope == Removal.ALL ? "Leeren" : "Entfernen",
+                        (d, w) -> remove(ids, scope))
                 .show();
     }
 
-    private void remove(List<Long> ids) {
+    private void remove(List<Long> ids, Removal scope) {
         change(() -> {
-            UploadQueue.Removal result = UploadQueue.get(screen).remove(ids);
+            UploadQueue.Removal result = UploadQueue.get(screen).remove(ids, scope == Removal.FINISHED);
             String message =
                     result.removed() == 1
                             ? "1 Auftrag entfernt"
@@ -336,7 +342,7 @@ final class QueueDashboard {
         return visible.stream()
                 .map(UploadQueue.Job::id)
                 .filter(selected::contains)
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
     }
 
     private void enterSelection() {
@@ -367,18 +373,19 @@ final class QueueDashboard {
         summary.setText(
                 selecting
                         ? selected.size() + " ausgewählt"
-                        : jobs.size() == 1 ? "1 Auftrag" : jobs.size() + " Aufträge");
+                        : visible.size() == 1 ? "1 Auftrag" : visible.size() + " Aufträge");
+        summary.setVisibility(selecting || !visible.isEmpty() ? View.VISIBLE : View.GONE);
+        filterButton.setText(FILTERS[filter]);
+        filterButton.setContentDescription("Filter: " + FILTERS[filter]);
+        empty.setText(readMessage == null ? EMPTY[filter] : readMessage);
+        empty.setVisibility(visible.isEmpty() && !selecting ? View.VISIBLE : View.GONE);
         normalActions.setVisibility(selecting ? View.GONE : View.VISIBLE);
-        targets.setVisibility(selecting ? View.GONE : View.VISIBLE);
+        normalActions.setGravity(visible.isEmpty() ? Gravity.CENTER : Gravity.START);
+        manage.setVisibility(selecting ? View.GONE : View.VISIBLE);
         selectionActions.setVisibility(selecting ? View.VISIBLE : View.GONE);
         filterButton.setVisibility(selecting ? View.GONE : View.VISIBLE);
         cancelSelection.setVisibility(selecting ? View.VISIBLE : View.GONE);
-        totals.setVisibility(!selecting && !jobs.isEmpty() ? View.VISIBLE : View.GONE);
-        retryErrors.setVisibility(
-                !selecting && jobs.stream().anyMatch(j -> j.state().equals("Fehler"))
-                        ? View.VISIBLE
-                        : View.GONE);
-        select.setEnabled(!visible.isEmpty());
+        select.setVisibility(visible.isEmpty() ? View.GONE : View.VISIBLE);
         boolean all = !visible.isEmpty() && selected.size() == visible.size();
         toggleAll.setImageResource(all ? R.drawable.ic_deselect_all : R.drawable.ic_select_all);
         toggleAll.setContentDescription(all ? "Alle abwählen" : "Alle auswählen");

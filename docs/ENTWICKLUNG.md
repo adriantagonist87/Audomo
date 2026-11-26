@@ -52,7 +52,7 @@ Beim nachträglichen Umbenennen übernimmt `LibraryFiles.rename` die lokale Änd
 - Der Start der Aufnahme ist ein runder gedeckt grüner Punkt. Fortsetzen und Wiedergabe verwenden Play. Die Aufnahmenotification trägt die Audomo-Bildmarke und den Wortlaut „die App ist aktiv und verrichtet ihren Dienst“. Der lange Vibrationsimpuls dauert 500 ms, kurze dauern je 300 ms mit 200 ms Pause.
 - Dateiliste mit Datum, Uhrzeit, Größe und bestätigten Speicherorten. Sortierfeld und Richtung lassen sich direkt wählen. Bibliothek und Warteschlange haben jeweils einen Auswahlmodus mit Alles-auswählen/Alles-abwählen.
 - Kalendername und Termintitel sind eigene Bausteine. Tagesauswahl, manueller Name und Ordnerbildung sind getrennt zu prüfen. Kalender- und Cloudauswahl bleiben freiwillig.
-- Die Warteschlange bildet Aufträge pro Dienst ab. Rechtswisch priorisiert, Linkswisch entfernt. Für dieselben Aktionen gibt es Bedienelemente. „Warteschlange leeren“ bezieht sich auch bei aktivem Filter auf alle sichtbaren Auftragsarten und verlangt eine Bestätigung.
+- Die Warteschlange bildet Aufträge pro Dienst ab. Rechtswisch priorisiert, Linkswisch entfernt. Für dieselben Aktionen gibt es Bedienelemente. „Warteschlange leeren“ ist in „Alle Aufträge“ erreichbar und verlangt eine Bestätigung.
 - Für die dicht gesetzte Bibliothek gelten Listenmaster 09, korrigierter Player 10 und die F2-Aktionen. Größere Systemschrift darf die Zahl sichtbarer Zeilen reduzieren. Die versionierten Bildbelege stammen von der laufenden App. [Beschlussabgleich](../qa/MOCKUPABGLEICH.md) · [Geräteprotokoll](../qa/GERAETETEST.md)
 
 ## Anforderungen zurückverfolgen
@@ -65,7 +65,7 @@ Die [ursprüngliche Matrix](spezifikation/featurematrix_original.json), [Standar
 
 Seit 1.1.6 gibt `MainActivity.openTab` die Position des Ausgangsreiters im Intent mit. Die Ziel-Activity setzt in `onCreate` über `overrideActivityTransition` den horizontalen Übergang zum Ziel und die umgekehrte Bewegung für den Rückweg. Jede besuchte Activity behält damit ihre eigene Rückrichtung, auch wenn derselbe Reiter mehrfach im Android-Verlauf liegt.
 
-`QueueDashboard` speichert den Filter unter `queueFilter` in den App-Einstellungen. Die Werte 0 bis 3 stehen in der Reihenfolge des Auswahlmenüs und sind Teil des Einstellungsbackups. Beim Rücksprung auf eine ältere Activity liest die Warteschlange den aktuellen Wert erneut. Leere Filter dürfen keine Listenposition auswählen. Das ist auf One UI auch bei Adaptern mit stabilen IDs erforderlich.
+Seit 1.1.7 leitet `QueueDashboard` Zähler, Leerzustand und Sammelaktionen aus derselben gefilterten Liste ab. Die gespeicherten Werte für `queueFilter` bleiben 0 (alle), 1 (offen), 2 (zu prüfen) und 3 (wartend). Ohne gespeicherte Wahl gilt „Offene Aufträge“. Der Einstieg vom Prüfhinweis setzt „Zu prüfen“ für diese Activity. Eine ausdrückliche Filterwahl gilt danach wieder appweit. `UploadQueue.Job.finished()` berücksichtigt sowohl den Auftragsstatus als auch gemeldete Probleme mit der Cloudkopie. Beim Entfernen beendeter Einträge prüft die Datenbank den aktuellen Zustand jeder bestätigten ID erneut. Leere Filter dürfen auf One UI keine Listenposition auswählen.
 
 ### Audioausgang im Listenplayer ab 1.1.1
 

@@ -150,7 +150,7 @@ final class CloudScreen {
             option(page, "Nur über WLAN", "wifiOnly", true);
             option(page, "Lokale Unterordner nachbilden", "mirrorFolders", true);
             option(page, "Nach verifiziertem Upload in den Papierkorb", "cleanupUploaded", false);
-            button(page, "Warteschlange", this::queue);
+            if (s.dashboardIndex() != 2) button(page, "Warteschlange", s::openQueue);
             d.show();
         } catch (Exception e) {
             fail(e);
@@ -300,10 +300,6 @@ final class CloudScreen {
                 if (!s.isDestroyed() && result.isShowing()) result.setMessage(completed);
             });
         });
-    }
-
-    void queue() {
-        s.openQueue();
     }
 
     void reconcile(CloudConfig target) {

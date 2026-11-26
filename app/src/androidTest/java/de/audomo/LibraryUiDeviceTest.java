@@ -193,7 +193,7 @@ public class LibraryUiDeviceTest {
         org.junit.Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
         Context ctx = inst.getTargetContext();
         var prefs = Profile.prefs(ctx);
-        int original = prefs.getInt("queueFilter", 0);
+        Integer original = prefs.contains("queueFilter") ? prefs.getInt("queueFilter", 1) : null;
         List<MainActivity> opened = new ArrayList<>();
         try {
             prefs.edit().putInt("queueFilter", 0).commit();
@@ -203,25 +203,140 @@ public class LibraryUiDeviceTest {
             await(recorder::hasWindowFocus);
             MainActivity library = swipeTab(recorder, "Aufnehmen", LibraryActivity.class, true, opened);
             MainActivity queue = swipeTab(library, "Wiedergeben", QueueActivity.class, true, opened);
-            choice("Filter: Alle");
-            choice("Fehlerhafte Uploads");
-            await(() -> find(queue.getWindow().getDecorView(), Button.class, "Filter: Fehlerhafte Uploads") != null);
+            choice("Filter: Alle Aufträge");
+            choice("Zu prüfen");
+            await(() -> find(queue.getWindow().getDecorView(), Button.class, "Filter: Zu prüfen") != null);
             var adapter = find(queue.getWindow().getDecorView(), QueueSwipeList.class, null).getAdapter();
             assertEquals(AdapterView.INVALID_ROW_ID, adapter.getItemId(adapter.getCount()));
             MainActivity again = swipeTab(queue, "Warteschlange", LibraryActivity.class, false, opened);
             MainActivity restored = openTab(again, "Warteschlange", QueueActivity.class, opened);
-            await(() -> find(restored.getWindow().getDecorView(), Button.class, "Filter: Fehlerhafte Uploads") != null);
+            await(() -> find(restored.getWindow().getDecorView(), Button.class, "Filter: Zu prüfen") != null);
             MainActivity direct = openTab(restored, "Aufnehmen", MainActivity.class, opened);
-            backTo(restored, "Filter: Fehlerhafte Uploads");
+            backTo(restored, "Filter: Zu prüfen");
             assertTrue(direct.isFinishing() || direct.isDestroyed());
             backTo(again, "Aufnahmen sortieren");
-            backTo(queue, "Filter: Fehlerhafte Uploads");
+            backTo(queue, "Filter: Zu prüfen");
             backTo(library, "Aufnahmen sortieren");
             backTo(recorder, "Aufnahme starten");
         } finally {
             Collections.reverse(opened);
             for (MainActivity item : opened) ui(item::finish);
-            prefs.edit().putInt("queueFilter", original).commit();
+            if (original == null) prefs.edit().remove("queueFilter").commit();
+            else prefs.edit().putInt("queueFilter", original).commit();
+        }
+    }
+
+    private void assertQueueView(View root, int count, String label) {
+        await(() -> {
+            TextView status = find(root, TextView.class, label);
+            return status != null && status.isShown()
+                    && find(root, QueueSwipeList.class, null).getCount() == count;
+        });
+    }
+
+    private long addQueueJob(UploadQueue queue, String target, String title, String state, String issue) {
+        ContentValues values = new ContentValues();
+        values.put("rec", UUID.randomUUID().toString());
+        values.put("target", target);
+        values.put("path", "/" + title + ".ogg");
+        values.put("state", state);
+        values.put("provider", "Dropbox");
+        values.put("availability", issue);
+        values.put("notBefore", System.currentTimeMillis() + 3_600_000);
+        if (state.equals("Hochgeladen")) values.put("verified", "synthetic");
+        return queue.getWritableDatabase().insertOrThrow("jobs", null, values);
+    }
+
+    @Test public void queueCountsActionsAndHistoryFollowTheVisibleJobs() throws Exception {
+        org.junit.Assume.assumeTrue(android.os.Build.MODEL.contains("sdk_gphone"));
+        Context ctx = inst.getTargetContext();
+        UploadQueue queue = UploadQueue.get(ctx);
+        org.junit.Assume.assumeTrue("Leere Testwarteschlange", queue.listedJobs().isEmpty());
+        var prefs = Profile.prefs(ctx);
+        Integer original = prefs.contains("queueFilter") ? prefs.getInt("queueFilter", 1) : null;
+        String target = "QA-Queue-" + UUID.randomUUID();
+        List<MainActivity> opened = new ArrayList<>();
+        try {
+            prefs.edit().remove("queueFilter").commit();
+            long finished = addQueueJob(queue, target, "Planungsrunde", "Hochgeladen", "");
+            addQueueJob(queue, target, "Abstimmung", "Hochgeladen", "");
+            MainActivity recorder = (MainActivity)inst.startActivitySync(new Intent(ctx, MainActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            opened.add(recorder);
+            await(recorder::hasWindowFocus);
+            MainActivity dashboard = openTab(recorder, "Warteschlange", QueueActivity.class, opened);
+            View root = dashboard.getWindow().getDecorView();
+            assertQueueView(root, 0, "Keine offenen Aufträge");
+            assertFalse(find(root, Button.class, "Auswählen").isShown());
+            assertNull(find(root, TextView.class, "2 Aufträge"));
+            shot(ctx, "warteschlange-offen-1.1.7");
+            choice("Warteschlange verwalten");
+            var menu = windowWith("Uploadziele");
+            assertTrue(menu.findAccessibilityNodeInfosByText("Warteschlange leeren").isEmpty());
+            choice("Uploadziele");
+            assertTrue(windowWith("Nur über WLAN").findAccessibilityNodeInfosByText("Warteschlange").isEmpty());
+            inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+            assertQueueView(root, 0, "Keine offenen Aufträge");
+            choice("Filter: Offene Aufträge");
+            choice("Alle Aufträge");
+            assertQueueView(root, 2, "2 Aufträge");
+            choice("Warteschlange verwalten");
+            choice("Warteschlange leeren");
+            windowWith("2 Aufträge werden entfernt.");
+            choice("Abbrechen");
+            assertQueueView(root, 2, "2 Aufträge");
+            addQueueJob(queue, target, "Verworfen", "Abgebrochen", "");
+            addQueueJob(queue, target, "Ausgelassen", "Ausgelassen", "");
+            long waiting = addQueueJob(queue, target, "Projektstart", "Wartet", "");
+            addQueueJob(queue, target, "Transfer", "Upload läuft", "");
+            long failed = addQueueJob(queue, target, "Rückblick", "Fehler", "");
+            addQueueJob(queue, target, "Namenskonflikt", "Konflikt", "");
+            long missing = addQueueJob(queue, target, "Cloudprüfung", "Hochgeladen", "Cloudkopie fehlt");
+            choice("Filter: Alle Aufträge");
+            choice("Offene Aufträge");
+            assertQueueView(root, 5, "5 Aufträge");
+            choice("Filter: Offene Aufträge");
+            choice("Zu prüfen");
+            assertQueueView(root, 3, "3 Aufträge");
+            shot(ctx, "warteschlange-pruefen-1.1.7");
+            choice("Warteschlange verwalten");
+            windowWith("Fehlgeschlagene erneut versuchen");
+            inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+            choice("Filter: Zu prüfen");
+            choice("Wartend");
+            assertQueueView(root, 1, "1 Auftrag");
+            choice("Warteschlange verwalten");
+            assertTrue(windowWith("Uploadziele").findAccessibilityNodeInfosByText("Fehlgeschlagene erneut versuchen").isEmpty());
+            inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+            choice("Auswählen");
+            choice("Alle auswählen");
+            assertQueueView(root, 1, "1 ausgewählt");
+            queue.state(waiting, "Hochgeladen", "");
+            assertQueueView(root, 0, "Keine wartenden Aufträge");
+            assertFalse(find(root, Button.class, "Entfernen").isShown());
+            backTo(recorder, "Aufnahme starten");
+            await(() -> find(recorder.getWindow().getDecorView(), Button.class, "3 Uploads prüfen · Warteschlange öffnen") != null);
+            MainActivity review = openTab(recorder, "3 Uploads prüfen · Warteschlange öffnen", QueueActivity.class, opened);
+            assertQueueView(review.getWindow().getDecorView(), 3, "3 Aufträge");
+            assertEquals(3, prefs.getInt("queueFilter", -1));
+            backTo(recorder, "Aufnahme starten");
+            MainActivity again = openTab(recorder, "Warteschlange", QueueActivity.class, opened);
+            assertQueueView(again.getWindow().getDecorView(), 0, "Keine wartenden Aufträge");
+            assertEquals(1, queue.remove(List.of(finished, missing), true).removed());
+            assertTrue(queue.byId(finished).knownCopy());
+            assertTrue(queue.byId(missing).inQueue());
+            long later = addQueueJob(queue, target, "Späterer Fehler", "Fehler", "");
+            synchronized (queue) {
+                assertEquals(1, queue.retryErrors(List.of(failed, missing)));
+                assertEquals("Wartet", queue.byId(failed).state());
+                assertEquals("Fehler", queue.byId(later).state());
+            }
+        } finally {
+            Collections.reverse(opened);
+            for (MainActivity item : opened) ui(item::finish);
+            queue.getWritableDatabase().delete("jobs", "target=?", new String[]{target});
+            if (original == null) prefs.edit().remove("queueFilter").commit();
+            else prefs.edit().putInt("queueFilter", original).commit();
         }
     }
 

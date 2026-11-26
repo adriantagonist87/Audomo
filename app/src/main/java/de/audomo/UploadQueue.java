@@ -142,6 +142,10 @@ final class UploadQueue extends SQLiteOpenHelper {
             return state.equals("Fehler") || state.equals("Konflikt") || !availability.isEmpty();
         }
 
+        boolean finished() {
+            return !open() && !needsAttention();
+        }
+
         boolean canRename() {
             return (knownCopy() && state.equals("Hochgeladen") && availability.isEmpty())
                     || (!knownCopy() && action.equals("upload") && !attempted
@@ -561,7 +565,11 @@ final class UploadQueue extends SQLiteOpenHelper {
 
     record Removal(int removed, int finishing) {}
 
-    synchronized Removal remove(Collection<Long> ids) {
+    Removal remove(Collection<Long> ids) {
+        return remove(ids, false);
+    }
+
+    synchronized Removal remove(Collection<Long> ids, boolean finishedOnly) {
         SQLiteDatabase db = getWritableDatabase();
         List<Long> removed = new ArrayList<>();
         int finishing = 0;
@@ -569,7 +577,7 @@ final class UploadQueue extends SQLiteOpenHelper {
         try {
             for (long id : new LinkedHashSet<>(ids)) {
                 Job job = byId(id);
-                if (job == null || !job.inQueue) continue;
+                if (job == null || !job.inQueue || (finishedOnly && !job.finished())) continue;
                 boolean mayHaveRenamed = job.action.equals("rename") && job.attempted && !job.state.equals("Konflikt");
                 if ((job.state.equals("Upload läuft") && committing(id)) || mayHaveRenamed) {
                     // The server may already have published the file. Any recovery must only read
@@ -794,14 +802,20 @@ final class UploadQueue extends SQLiteOpenHelper {
         schedule(true);
     }
 
-    synchronized int retryErrors() {
-        ContentValues ready = new ContentValues();
-        ready.put("state", "Wartet");
-        ready.put("error", "");
-        ready.put("notBefore", 0);
-        ready.put("progress", 0);
-        int count =
-                getWritableDatabase().update("jobs", ready, "inQueue=1 AND state='Fehler'", null);
+    synchronized int retryErrors(Collection<Long> ids) {
+        SQLiteDatabase db = getWritableDatabase();
+        int count = 0;
+        db.beginTransaction();
+        try (SQLiteStatement update = db.compileStatement("UPDATE jobs SET state='Wartet',error='',"
+                + "notBefore=0,progress=0 WHERE id=? AND inQueue=1 AND state='Fehler'")) {
+            for (long id : ids) {
+                update.bindLong(1, id);
+                count += update.executeUpdateDelete();
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
         if (count > 0) schedule(active.isEmpty());
         return count;
     }

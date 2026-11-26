@@ -62,13 +62,24 @@ Unter „Wiedergeben“ eine Aufnahme lange drücken, weitere Dateien markieren 
 
 ## Warteschlange
 
-Der dritte Reiter zeigt für jede Kombination aus Aufnahme und Uploadziel einen eigenen Auftrag. „Upload hinzufügen“ öffnet die Dateiauswahl. Der zuletzt gewählte Filter bleibt beim Reiterwechsel und beim Neustart erhalten. „Alle“ zeigt den gesamten Bestand. „Alle (außer Fertiggestellte)“ blendet erfolgreich abgeschlossene Aufträge aus. Abgebrochene und ausgelassene Aufträge sowie Kopien mit Prüfbedarf bleiben sichtbar. „Fehlerhafte Uploads“ umfasst Fehler, Konflikte und gemeldete Probleme mit Cloudkopien. „In Warteschlange“ zeigt wartende Aufträge einschließlich der zeitverzögerten. Laufende Transfers zeigen ihren Fortschritt. Bei fehlendem WLAN und eingestellter WLAN-Regel steht der Grund direkt in der Liste. [Filterauswahl](../qa/api34/warteschlangenfilter-1.1.0.webp)
+„Offene Aufträge“ zeigt, welche Uploads noch laufen, warten oder eine Entscheidung brauchen. Sind nur erledigte Einträge gespeichert, steht hier „Keine offenen Aufträge“. „Upload hinzufügen“ öffnet die Dateiauswahl. Pro Aufnahme und Uploadziel entsteht ein eigener Auftrag.
+
+Über den Filter oben lässt sich der Ausschnitt wechseln. Die Zahl daneben zählt die angezeigten Aufträge. In einer leeren Ansicht erscheint nur die zum Filter passende Meldung.
+
+| Ansicht | Welche Aufträge erscheinen? |
+|---|---|
+| Offene Aufträge | Wartende und laufende Übertragungen, Fehler, Konflikte und Cloudkopien mit Prüfbedarf |
+| Wartend | Auf den Start wartende Aufträge einschließlich zeitverzögerter Uploads |
+| Zu prüfen | Fehler, Namenskonflikte und gemeldete Probleme mit einer Cloudkopie |
+| Alle Aufträge | Der ganze Verlauf, einschließlich erfolgreich beendeter, abgebrochener und übersprungener Aufträge |
+
+Die App merkt sich die Filterwahl. Der Hinweis „Uploads prüfen“ auf der Aufnahmeseite öffnet direkt „Zu prüfen“. Beim nächsten gewöhnlichen Aufruf des Reiters gilt wieder der selbst gewählte Filter. Laufende Übertragungen zeigen ihren Fortschritt. Wartet ein Auftrag auf eine Startzeit oder auf WLAN, steht das in seiner Zeile. [Leere Arbeitsliste](../qa/api34/warteschlange-offen-1.1.7.webp) · [Aufträge mit Prüfbedarf](../qa/api34/warteschlange-pruefen-1.1.7.webp)
 
 Ein Wisch nach rechts setzt einen wartenden oder fehlgeschlagenen Auftrag an die Spitze. Die Reihenfolge gilt auch nach einem Neustart. Die eingestellte Verzögerung und die WLAN-Regel gelten weiter. Ein Wisch nach links entfernt den einzelnen Auftrag direkt. Läuft die Übertragung bereits, bricht Audomo sie bis zur Bestätigung am Ziel ab. Hat die Veröffentlichung bereits begonnen, prüft Audomo das Ergebnis und behält eine bestätigte Cloudkopie im Katalog.
 
-„Auswählen“ oder langes Drücken startet die Mehrfachauswahl. Tippen markiert einzelne Aufträge. Das Stapelsymbol markiert alle Aufträge des aktuellen Filters oder hebt die Auswahl auf. „An die Spitze“ zieht die geeigneten Aufträge in ihrer bisherigen Reihenfolge vor. „Entfernen“ fragt bei der Auswahl nach Bestätigung. Das Dreipunktmenü neben „Auswählen“ bietet „Beendete Aufträge entfernen“ und „Warteschlange leeren“. „Leeren“ umfasst alle Filter und zeigt die Anzahl vorab. Aufnahmen und bestätigte Cloud-Speicherorte bleiben erhalten.
+„Auswählen“ oder langes Drücken startet die Mehrfachauswahl. Tippen markiert einzelne Aufträge. Das Stapelsymbol markiert alle Aufträge des aktuellen Filters oder hebt die Auswahl auf. „An die Spitze“ zieht die geeigneten Aufträge in ihrer bisherigen Reihenfolge vor. „Entfernen“ fragt bei der Auswahl nach Bestätigung. Im Menü oben rechts sind die Uploadziele erreichbar. In „Alle Aufträge“ lässt sich die Warteschlange nach Bestätigung leeren. Enthält sie zugleich beendete und offene Aufträge, lassen sich gezielt die beendeten entfernen. Cloudkopien mit Prüfbedarf zählen als offen. Aufnahmen und bestätigte Cloud-Speicherorte bleiben erhalten.
 
-Antippen öffnet die Auftragsdetails mit Zielpfad, Fehlerursache und den für diesen Auftrag verfügbaren Aktionen. „Jetzt freigeben“ hebt die Aufnahmeverzögerung auf. „Überspringen“ nimmt den Auftrag aus der automatischen Verarbeitung. „Auftrag abbrechen“ beendet auch eine laufende Übertragung, solange der Dienst den endgültigen Zielinhalt noch nicht bestätigt. In der Abschlussphase prüft Audomo das Ergebnis. „Erneut versuchen“ gibt abgebrochene, ausgelassene und fehlgeschlagene Aufträge wieder frei. „Fehler wiederholen“ gibt alle fehlgeschlagenen Aufträge gemeinsam frei.
+Antippen öffnet die Auftragsdetails mit Zielpfad, Fehlerursache und den für diesen Auftrag verfügbaren Aktionen. „Jetzt freigeben“ hebt die Aufnahmeverzögerung auf. „Überspringen“ nimmt den Auftrag aus der automatischen Verarbeitung. „Auftrag abbrechen“ beendet auch eine laufende Übertragung, solange der Dienst den endgültigen Zielinhalt noch nicht bestätigt. In der Abschlussphase prüft Audomo das Ergebnis. „Erneut versuchen“ gibt abgebrochene, ausgelassene und fehlgeschlagene Aufträge wieder frei. Bei sichtbaren Fehlern bietet das Menü „Fehlgeschlagene erneut versuchen“. Ein Konflikt lässt sich in den Auftragsdetails lösen.
 
 Nach dem Speichern zeigt Audomo das automatische Uploadziel und bei einer Verzögerung die früheste Startzeit. Scheitert die Übertragung, steht der Grund in der Android-Benachrichtigung und in den Auftragsdetails. Unter „Aufnehmen“ öffnet „Uploads prüfen“ die Warteschlange. Vorübergehende Verbindungsfehler versucht Android mit wachsendem Abstand erneut. Bei Namenskonflikten ist eine Entscheidung in den Details nötig.
 

@@ -1,5 +1,11 @@
 # Audomo · Teststand vom 26.11.2026
 
+## Warteschlange mit Version 1.1.7
+
+Auf dem Android-14-Emulator zeigte „Offene Aufträge“ bei zwei erfolgreich hochgeladenen Besprechungen „Keine offenen Aufträge“ und die Aktion „Upload hinzufügen“. „Alle Aufträge“ zeigte beide Einträge. Der Abbruch beim Leeren erhielt beide. Mit weiteren Testaufträgen zeigten die Filter fünf offene, drei zu prüfende und einen wartenden Auftrag. Als der letzte wartende Eintrag während der Mehrfachauswahl fertig wurde, verschwand die Auswahl. Der Prüfhinweis auf der Aufnahmeseite öffnete die drei relevanten Einträge. Beim nächsten Aufruf des Reiters galt wieder der zuvor gewählte Filter „Wartend“. [Leere Arbeitsliste](api34/warteschlange-offen-1.1.7.webp) · [Prüfbedarf](api34/warteschlange-pruefen-1.1.7.webp)
+
+Das Entfernen beendeter Aufträge erhielt sowohl die bestätigte Cloudkopie im Katalog als auch einen Eintrag mit gemeldetem Prüfbedarf in der Liste. Ein nachträglich hinzugekommener Fehler blieb bei der Sammelwiederholung anderer Aufträge unangetastet. Die Android-14-Kernprüfung mit 28 Tests bestand. In einem separaten Lauf überstand ein auf WLAN wartender Auftrag einen Emulatorneustart. Nach der Übertragung stimmten die SHA-256-Prüfsummen von Aufnahme und Zieldatei überein.
+
 ## Dashboard-Wechsel mit Version 1.1.6
 
 Auf dem Galaxy S24 Ultra wurde von „Aufnehmen“ nach „Wiedergeben“ gewischt, „Warteschlange“ angetippt und zurück zu „Wiedergeben“ gewischt. Aus „Kalender und Dateinamen“ führte Android-Zurück über die Einstellungsübersicht wieder zur Bibliothek und zur zuvor besuchten Warteschlange. Auch nach einem direkten Sprung von dort zu „Aufnehmen“ zeigte Zurück wieder die Warteschlange, danach die Bibliothek und schließlich die ursprüngliche Aufnahmeansicht.

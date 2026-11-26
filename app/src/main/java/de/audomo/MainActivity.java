@@ -344,7 +344,8 @@ public class MainActivity extends Activity {
             if (app.ready()) openLibrary();
         });
         content.addView(note);
-        uploadAttention = button("", v -> openQueue());
+        uploadAttention = button("", v -> openTab(new Intent(this, QueueActivity.class)
+                .putExtra(QueueDashboard.REVIEW_ISSUES, true)));
         uploadAttention.setVisibility(View.GONE);
         content.addView(uploadAttention);
         nextUploadCheck = 0;
@@ -590,10 +591,14 @@ public class MainActivity extends Activity {
     }
 
     private void openTab(Class<? extends MainActivity> destination) {
+        openTab(new Intent(this, destination));
+    }
+
+    private void openTab(Intent intent) {
         if (openingTab) return;
         openingTab = true;
         finishName();
-        startActivity(new Intent(this, destination).putExtra(EXTRA_PREVIOUS_TAB, dashboardIndex()));
+        startActivity(intent.putExtra(EXTRA_PREVIOUS_TAB, dashboardIndex()));
     }
 
     private void configureTabTransition() {

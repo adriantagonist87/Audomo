@@ -13,8 +13,8 @@ android {
         minSdk = 34
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 30
-        versionName = "1.1.6"
+        versionCode = 31
+        versionName = "1.1.7"
         buildConfigField("String", "DROPBOX_APP_KEY", "\"$dropboxAppKey\"")
         manifestPlaceholders["dropboxScheme"] = "db-" + dropboxAppKey.ifEmpty { "audomo-unconfigured" }
         manifestPlaceholders["dropboxConfigured"] = dropboxAppKey.isNotEmpty().toString()
