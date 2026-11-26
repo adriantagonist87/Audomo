@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
+    private static final String EXTRA_PREVIOUS_TAB = "de.audomo.extra.PREVIOUS_TAB";
     static final int BG = 0xff0d0b2b, PANEL = 0xff242039, LINE = 0xff39354f;
     static final int INK = 0xfffaf8ff, DIM = 0xffc2bed1, ACCENT = 0xffbd9eff;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -147,6 +148,7 @@ public class MainActivity extends Activity {
         preferences = new AppSettings(this);
         prefs().registerOnSharedPreferenceChangeListener(optionsChanged);
         library = this instanceof LibraryActivity;
+        configureTabTransition();
         String legacyDraft = state == null ? getIntent().getStringExtra("draftName") : state.getString("name");
         if (legacyDraft != null && !legacyDraft.isBlank() && app.draft.get().event() == null && app.draft.get().name().isEmpty())
             app.draft.name(legacyDraft);
@@ -591,7 +593,19 @@ public class MainActivity extends Activity {
         if (openingTab) return;
         openingTab = true;
         finishName();
-        startActivity(new Intent(this, destination));
+        startActivity(new Intent(this, destination).putExtra(EXTRA_PREVIOUS_TAB, dashboardIndex()));
+    }
+
+    private void configureTabTransition() {
+        int previous = getIntent().getIntExtra(EXTRA_PREVIOUS_TAB, -1);
+        if (previous < 0 || previous == dashboardIndex()) return;
+        boolean movingRight = dashboardIndex() > previous;
+        int enter = movingRight ? R.anim.tab_in_right : R.anim.tab_in_left;
+        int exit = movingRight ? R.anim.tab_out_left : R.anim.tab_out_right;
+        int enterOnBack = movingRight ? R.anim.tab_in_left : R.anim.tab_in_right;
+        int exitOnBack = movingRight ? R.anim.tab_out_right : R.anim.tab_out_left;
+        overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, enter, exit, BG);
+        overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, enterOnBack, exitOnBack, BG);
     }
 
     void openTrash(int settingsScroll) {

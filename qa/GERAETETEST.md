@@ -1,5 +1,11 @@
 # Audomo · Teststand vom 26.11.2026
 
+## Dashboard-Wechsel mit Version 1.1.6
+
+Auf dem Galaxy S24 Ultra wurde von „Aufnehmen“ nach „Wiedergeben“ gewischt, „Warteschlange“ angetippt und zurück zu „Wiedergeben“ gewischt. Aus „Kalender und Dateinamen“ führte Android-Zurück über die Einstellungsübersicht wieder zur Bibliothek und zur zuvor besuchten Warteschlange. Auch nach einem direkten Sprung von dort zu „Aufnehmen“ zeigte Zurück wieder die Warteschlange, danach die Bibliothek und schließlich die ursprüngliche Aufnahmeansicht.
+
+Im API-34-Emulator wurden sechs Reiterwechsel per Wischen, Tippen und Zurück in Einzelbildern geprüft. Das App-Logo wanderte bei allen sechs Übergängen horizontal auf derselben Höhe. Der Instrumentierungstest erreichte auch bei mehrfach besuchten Reitern jeweils dieselbe frühere Activity mit dem gewählten Warteschlangenfilter. Beide Tests von `LibraryUiDeviceTest` bestanden, einschließlich der Bibliotheksprüfung mit 500 Einträgen.
+
 ## Schnelleinstellungskachel und Startbildschirm mit Version 1.1.5
 
 Das Galaxy S24 Ultra meldete beim Antippen der bereits zugeordneten Kachel „Die Audomo-Kachel ist bereits in deinen Schnelleinstellungen“. Der eingestellte Standard-Launcher war Nova Launcher. Android meldete die Aufnahme-Verknüpfung als angeheftet. Die Aufnahmetests liefen auf einem separaten Android-14-Emulator.

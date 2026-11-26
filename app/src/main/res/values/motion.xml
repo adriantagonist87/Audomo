@@ -1,0 +1,3 @@
+<resources>
+    <integer name="dashboard_slide_ms">240</integer>
+</resources>

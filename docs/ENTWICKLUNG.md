@@ -63,6 +63,8 @@ Die [ursprüngliche Matrix](spezifikation/featurematrix_original.json), [Standar
 
 `DashboardGestures` erkennt seitliche Gesten im Fenster der drei Dashboard-Activities und verwendet dieselbe Navigation wie die Reitertasten. Eine Wischgeste auf einer Auftragszeile geht an `QueueSwipeList`, auf der Zeitleiste an den Player. Bei einem Außentipp auf den geöffneten Player erhält das berührte Element ein Abbruchereignis. Native Auswahldialoge verwenden das gemeinsame Dialogthema. Die Einstellungsübersicht und ihre Untermenüs sind ganze Seiten mit eigener Zurück-Navigation.
 
+Seit 1.1.6 gibt `MainActivity.openTab` die Position des Ausgangsreiters im Intent mit. Die Ziel-Activity setzt in `onCreate` über `overrideActivityTransition` den horizontalen Übergang zum Ziel und die umgekehrte Bewegung für den Rückweg. Jede besuchte Activity behält damit ihre eigene Rückrichtung, auch wenn derselbe Reiter mehrfach im Android-Verlauf liegt.
+
 `QueueDashboard` speichert den Filter unter `queueFilter` in den App-Einstellungen. Die Werte 0 bis 3 stehen in der Reihenfolge des Auswahlmenüs und sind Teil des Einstellungsbackups. Beim Rücksprung auf eine ältere Activity liest die Warteschlange den aktuellen Wert erneut. Leere Filter dürfen keine Listenposition auswählen. Das ist auf One UI auch bei Adaptern mit stabilen IDs erforderlich.
 
 ### Audioausgang im Listenplayer ab 1.1.1

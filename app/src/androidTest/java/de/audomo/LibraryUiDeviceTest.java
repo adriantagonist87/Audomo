@@ -211,6 +211,13 @@ public class LibraryUiDeviceTest {
             MainActivity again = swipeTab(queue, "Warteschlange", LibraryActivity.class, false, opened);
             MainActivity restored = openTab(again, "Warteschlange", QueueActivity.class, opened);
             await(() -> find(restored.getWindow().getDecorView(), Button.class, "Filter: Fehlerhafte Uploads") != null);
+            MainActivity direct = openTab(restored, "Aufnehmen", MainActivity.class, opened);
+            backTo(restored, "Filter: Fehlerhafte Uploads");
+            assertTrue(direct.isFinishing() || direct.isDestroyed());
+            backTo(again, "Aufnahmen sortieren");
+            backTo(queue, "Filter: Fehlerhafte Uploads");
+            backTo(library, "Aufnahmen sortieren");
+            backTo(recorder, "Aufnahme starten");
         } finally {
             Collections.reverse(opened);
             for (MainActivity item : opened) ui(item::finish);
