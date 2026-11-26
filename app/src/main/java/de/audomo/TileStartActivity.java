@@ -4,63 +4,72 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.view.Gravity;
-import android.widget.*;
+import android.view.View;
+import android.widget.Toast;
 
+/** User-initiated foreground entry for the microphone service, outside the dashboard task. */
 public final class TileStartActivity extends Activity {
+    static final String TOGGLE = "de.audomo.action.TOGGLE_RECORDING";
     private Audomo app;
-    private TextView message;
-    private boolean sent, resumed;
-    private final Runnable observe =
-            new Runnable() {
-                public void run() {
-                    if (!resumed || isFinishing()) return;
-                    if (!sent && app.ready() && hasWindowFocus()) {
-                        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-                                != PackageManager.PERMISSION_GRANTED) {
-                            Toast.makeText(
-                                            TileStartActivity.this,
-                                            "Mikrofon zuerst in Audomo freigeben",
-                                            Toast.LENGTH_LONG)
-                                    .show();
-                            app.vibrate("error");
-                            finishAndRemoveTask();
-                            return;
-                        }
-                        sent = true;
-                        app.command("START", null);
-                    } else if (app.active() || sent && app.state == Audomo.State.FAILED) {
-                        if (app.state == Audomo.State.FAILED)
-                            Toast.makeText(TileStartActivity.this, app.note, Toast.LENGTH_LONG)
-                                    .show();
-                        finishAndRemoveTask();
-                        return;
-                    }
-                    app.main.postDelayed(this, 60);
-                }
-            };
+    private boolean startSent;
+    private long previousStateSince;
+    private String previousToken;
 
-    @Override
-    public void onCreate(Bundle b) {
-        super.onCreate(b);
+    private final Runnable observe = new Runnable() {
+        @Override public void run() {
+            if (isFinishing()) return;
+            if (startSent) {
+                boolean processed = !app.token.equals(previousToken) || app.stateSince != previousStateSince;
+                if (processed && app.state == Audomo.State.FAILED) {
+                    toast(app.note);
+                    finishAndRemoveTask();
+                    return;
+                }
+                if (app.active() || processed && (app.state == Audomo.State.SAVED || app.state == Audomo.State.FINALIZING)) {
+                    finishAndRemoveTask();
+                    return;
+                }
+            } else if (hasWindowFocus() && app.state != Audomo.State.RECOVERING) {
+                if (!app.ready()) {
+                    if (app.active() && TOGGLE.equals(getIntent().getAction())) app.command("STOP", null);
+                    finishAndRemoveTask();
+                    return;
+                }
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    toast("Mikrofon zuerst in Audomo unter Berechtigungen freigeben");
+                    app.vibrate("error");
+                    finishAndRemoveTask();
+                    return;
+                }
+                startSent = true;
+                previousStateSince = app.stateSince;
+                previousToken = app.token;
+                app.command("START", null);
+            }
+            app.main.postDelayed(this, 60);
+        }
+    };
+
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
         app = (Audomo) getApplication();
-        message = new TextView(this);
-        message.setText("Audomo · Mikrofon wird geöffnet");
-        message.setGravity(Gravity.CENTER);
-        setContentView(message);
+        if (state != null) {
+            // Restoring Android's task is not another tap on the launcher shortcut.
+            finishAndRemoveTask();
+            return;
+        }
+        setContentView(new View(this));
     }
 
-    @Override
-    protected void onResume() {
+    @Override protected void onResume() {
         super.onResume();
-        resumed = true;
         app.main.post(observe);
     }
 
-    @Override
-    protected void onPause() {
-        resumed = false;
+    @Override protected void onPause() {
         app.main.removeCallbacks(observe);
         super.onPause();
     }
+
+    private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
 }

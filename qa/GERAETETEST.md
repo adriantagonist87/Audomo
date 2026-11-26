@@ -1,5 +1,11 @@
 # Audomo · Teststand vom 26.11.2026
 
+## Schnelleinstellungskachel und Startbildschirm mit Version 1.1.5
+
+Das Galaxy S24 Ultra meldete beim Antippen der bereits zugeordneten Kachel „Die Audomo-Kachel ist bereits in deinen Schnelleinstellungen“. Der eingestellte Standard-Launcher war Nova Launcher. Android meldete die Aufnahme-Verknüpfung als angeheftet. Die Aufnahmetests liefen auf einem separaten Android-14-Emulator.
+
+Im Systemdialog des Emulators wurden die Kachelanfrage abgelehnt, angenommen und bei schon vorhandener Kachel wiederholt. Der Launcher-Pindialog wurde abgebrochen und erneut zur Bestätigung geöffnet. Ohne Mikrofonfreigabe erzeugte ein Tipp auf das angeheftete Symbol keine Aufnahme. Mit Mikrofonfreigabe startete das echte Symbol aus dem beendeten App-Prozess den Mikrofon-Vordergrunddienst. Der zweite Tipp speicherte genau eine Ogg/Opus-Datei mit gültiger Endseite. Auch der Start über die Kachel und das Beenden derselben Sitzung über das Startbildschirm-Symbol wurden geprüft. Der Test für einen Launcher-Stopp während einer Pause und der lange Druck auf die Kachel bestanden. [Status im Menü](api34/schnellzugriff-1.1.5.webp) · [Bestätigung bei vorhandener Kachel](api34/kachel-bestaetigt-1.1.5.webp)
+
 ## Aufnahmeprofile und Berechtigungsfarben mit Version 1.1.4
 
 Auf dem Galaxy S24 Ultra wurde die Profilverwaltung direkt aus den Einstellungen geöffnet. Geprüft wurden das Dropdown, der Editor und der Rückweg. Das geöffnete Dropdown zeigte die Qualitätsangaben. Im Editor war für jeden der beiden Effekte genau eine der drei Tasten ausgewählt. Die gespeicherten Profile und die aktive Auswahl stimmten nach dem Update mit dem vorherigen Stand überein. Für alle vier Berechtigungen wurde die tatsächliche Textfarbe mit dem angezeigten Status verglichen.

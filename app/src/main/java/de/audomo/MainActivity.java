@@ -468,24 +468,6 @@ public class MainActivity extends Activity {
         name.setVisibility(View.VISIBLE);
     }
 
-    void addTile() {
-        getSystemService(StatusBarManager.class)
-                .requestAddTileService(
-                        new ComponentName(this, CaptureTile.class),
-                        "Audomo",
-                        android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_mic),
-                        getMainExecutor(),
-                        code -> {
-                            if (code != StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED
-                                    && code
-                                            != StatusBarManager
-                                                    .TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED)
-                                toast(
-                                        "Schnelleinstellungen öffnen, Bearbeiten wählen"
-                                                + " und Audomo hinzufügen.");
-                        });
-    }
-
     int dashboardIndex() {
         return library ? 1 : isQueuePage() ? 2 : 0;
     }

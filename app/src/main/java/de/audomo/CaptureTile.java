@@ -7,9 +7,20 @@ import android.service.quicksettings.*;
 public final class CaptureTile extends TileService {
     private final Runnable refresh = this::refreshTile;
 
+    @Override public void onTileAdded() {
+        super.onTileAdded();
+        QuickAccess.tilePresent(this, true);
+    }
+
+    @Override public void onTileRemoved() {
+        super.onTileRemoved();
+        QuickAccess.tilePresent(this, false);
+    }
+
     @Override
     public void onStartListening() {
         super.onStartListening();
+        if (getQsTile() != null) QuickAccess.tilePresent(this, true);
         ((Audomo) getApplication()).tileChanged = refresh;
         refreshTile();
     }

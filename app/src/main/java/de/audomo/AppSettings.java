@@ -245,8 +245,11 @@ final class AppSettings {
 
     private void shortcuts() {
         Page p = new Page("Schnellzugriff und Vibration");
+        QuickAccess quick = new QuickAccess(screen);
         p.liveRow(R.drawable.ic_vibration, "Vibration", () -> prefs.getBoolean("haptic", true) ? "Aktiv" : "Aus", screen::haptics);
-        p.row(R.drawable.ic_record, "Kachel hinzufügen", "Android-Schnelleinstellungen", screen::addTile);
+        p.liveRow(R.drawable.ic_record, "Kachel hinzufügen", quick::tileStatus, quick::addTile);
+        p.addRow(R.drawable.ic_home_shortcut, "Verknüpfung zum Startbildschirm hinzufügen",
+                quick::updateShortcutStatus, quick::addShortcut);
         p.dialog.show();
     }
 

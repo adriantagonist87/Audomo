@@ -102,4 +102,35 @@ public class CaptureControlDeviceTest {
                         && n.getSmallIcon().getResId() == R.drawable.ic_audomo_notification
                         && n.color == context.getColor(R.color.audomo_purple));
     }
+
+    @Test
+    public void launcherToggleStopsAPausedRecordingAndReturnsToPreviousTask() throws Exception {
+        var inst = InstrumentationRegistry.getInstrumentation();
+        Assume.assumeTrue(Build.MODEL.contains("sdk_gphone")
+                && "true".equals(InstrumentationRegistry.getArguments().getString("qaRecorder")));
+        Context ctx = inst.getTargetContext();
+        Audomo app = (Audomo) ctx.getApplicationContext();
+        MainActivity previous = (MainActivity) inst.startActivitySync(
+                new Intent(ctx, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        Intent toggle = new Intent(ctx, TileStartActivity.class).setAction(TileStartActivity.TOGGLE)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        try {
+            await(() -> app.ready() && previous.hasWindowFocus());
+            int before = app.sessions.list().size();
+            inst.runOnMainSync(() -> previous.startActivity(toggle));
+            await(() -> app.state == Audomo.State.RECORDING && previous.hasWindowFocus());
+            await(() -> app.frames > 0);
+            inst.runOnMainSync(() -> app.command("PAUSE", null));
+            await(() -> app.state == Audomo.State.PAUSED);
+            inst.runOnMainSync(() -> previous.startActivity(toggle));
+            await(() -> app.state == Audomo.State.SAVED && previous.hasWindowFocus());
+            assertEquals(before + 1, app.sessions.list().size());
+        } finally {
+            if (app.active()) {
+                inst.runOnMainSync(() -> app.command("STOP", null));
+                await(app::ready);
+            }
+            inst.runOnMainSync(previous::finish);
+        }
+    }
 }
