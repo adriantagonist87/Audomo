@@ -1,5 +1,9 @@
 # Audomo · Teststand vom 26.11.2026
 
+## Zentrale Berechtigungen mit Version 1.1.2
+
+Auf dem Galaxy S24 Ultra öffnete „Einstellungen“ → „Berechtigungen“ → „Nicht-stören-Zugriff“ die Samsung-Systemseite. Android-Zurück führte mit dem vorhandenen Freigabestatus in dieselbe Übersicht. Im Android-14-Emulator wurden der Kalenderzugriff direkt aus der Ersteinrichtung erteilt und der Nicht-stören-Zugriff auf der Systemseite erteilt und wieder entzogen. Nach der Rückkehr zeigte die Zeile jeweils „Erlaubt“ beziehungsweise „Zugriff einrichten“. [Ansicht der Berechtigungen](api34/berechtigungen-1.1.2.webp)
+
 ## Audioausgang im Player mit Version 1.1.1
 
 Auf dem Galaxy S24 Ultra meldete Android 14 das verbundene Bluetooth-Gerät als aktiven A2DP-Medienausgang. Der freigegebene Hörtest verwendete eine zwei Sekunden lange synthetische MP3 aus dem Testpaket. Im Modus „Nur Bluetooth“ blieb der Player bis zur Bestätigung des Ausgangs am eigenen AudioTrack stumm, gab den Ton frei und erreichte das Dateiende. Der Test stellte die vorherige Einstellung wieder her. Eine physische Trennung während der Wiedergabe wurde in diesem Lauf nicht gemessen.

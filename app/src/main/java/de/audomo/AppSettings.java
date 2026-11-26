@@ -120,13 +120,13 @@ final class AppSettings {
     private Page settingsHome() {
         Page p = new Page("Einstellungen");
         p.group("Besprechungen");
-        p.row(R.drawable.ic_mic, "Aufnahme und Klang", "Mikrofon, Aufnahmeprofile und Nicht stören", this::recording);
+        p.row(R.drawable.ic_mic, "Aufnahme und Klang", "Aufnahmeprofile, Mikrofonwahl und Audioqualität", this::recording);
         p.row(R.drawable.ic_play, "Wiedergabe", "Audioausgang, Tempo und Sprungintervall", this::playback);
         p.row(R.drawable.ic_calendar_day, "Kalender und Dateinamen", "Kalender auswählen, Dateinamen und Ordner festlegen", this::calendar);
         p.row(R.drawable.ic_folder, "Dateien und Ordner", "Speicherorte, Import und Papierkorb", () -> files(p, 0));
         p.row(R.drawable.ic_upload, "Cloud und Uploads", "Ziele, Automatik und Warteschlange", () -> cloud(p));
         p.group("App und System");
-        p.row(R.drawable.ic_shield, "Berechtigungen", "Mikrofon, Kalender und Benachrichtigungen", this::onboarding);
+        p.row(R.drawable.ic_shield, "Berechtigungen", "Mikrofon, Kalender, Benachrichtigungen und Nicht stören", this::onboarding);
         p.row(R.drawable.ic_vibration, "Schnellzugriff und Vibration", "Kachel und Vibrationsmuster", this::shortcuts);
         p.row(R.drawable.ic_backup, "Sicherung und Diagnose", "Einstellungen übertragen und Ereignisse ansehen", this::maintenance);
         return p;
@@ -136,10 +136,6 @@ final class AppSettings {
         Page p = new Page("Aufnahme und Klang");
         p.liveRow(R.drawable.ic_mic, "Aufnahmeprofile", () -> Profile.selected(screen).name() + " aktiv",
                 () -> new ProfileDialog(screen).choose());
-        p.liveRow(R.drawable.ic_bell, "Nicht-stören-Zugriff",
-                () -> screen.getSystemService(NotificationManager.class).isNotificationPolicyAccessGranted()
-                        ? "Erlaubt" : "Zugriff einrichten",
-                () -> screen.startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)));
         p.dialog.show();
     }
 
@@ -257,7 +253,7 @@ final class AppSettings {
         p.liveRow(R.drawable.ic_mic, "Mikrofon", () -> status(Manifest.permission.RECORD_AUDIO),
                 () -> permission(Manifest.permission.RECORD_AUDIO, 15));
         p.liveRow(R.drawable.ic_calendar_day, "Kalender", () -> status(Manifest.permission.READ_CALENDAR),
-                () -> screen.startActivity(new Intent(screen, CalendarSettings.class)));
+                () -> permission(Manifest.permission.READ_CALENDAR, 4));
         p.liveRow(R.drawable.ic_bell, "Benachrichtigungen", () -> status(Manifest.permission.POST_NOTIFICATIONS),
                 () -> {
                     if (screen.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
@@ -265,6 +261,10 @@ final class AppSettings {
                     else screen.startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, screen.getPackageName()));
                 });
+        p.liveRow(R.drawable.ic_bell, "Nicht-stören-Zugriff",
+                () -> screen.getSystemService(NotificationManager.class).isNotificationPolicyAccessGranted()
+                        ? "Erlaubt" : "Zugriff einrichten",
+                () -> screen.startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)));
         p.row(R.drawable.ic_settings, "Android-App-Einstellungen", "Berechtigungen des Geräts verwalten",
                 () -> screen.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + screen.getPackageName()))));
         p.dialog.show();
