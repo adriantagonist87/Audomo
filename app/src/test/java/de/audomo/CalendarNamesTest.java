@@ -43,6 +43,16 @@ public class CalendarNamesTest {
     }
 
     @Test
+    public void calendarAndAppointmentHaveDistinctFallbacksInSavedTemplates() {
+        var start = OffsetDateTime.parse("2026-11-27T10:28:28+01:00");
+        String template = "{datum}_{uhrzeit}__{kalender}_{termin}";
+        assertEquals("2026-11-27_10-28-28__-_Aufnahme.ogg", CalendarNames.name(template, start, null));
+        assertEquals("2026-11-27_10-28-28__Arbeit_Jetzt.ogg", CalendarNames.name(template, start, current));
+        var unnamedCalendar = new CalendarNames.Event(1, 3, "Planung", 190, 250, null);
+        assertEquals("-_Planung.ogg", CalendarNames.name("{kalender}_{termin}", start, unnamedCalendar));
+    }
+
+    @Test
     public void explicitAppointmentUsesTitleOnceAndKeepsRecordingTime() {
         var start = OffsetDateTime.parse("2026-11-23T08:25:16+01:00");
         assertEquals("2026-11-23_08-25-16_Jetzt.ogg",CalendarNames.chosenName(CalendarNames.DEFAULT,start,current));
@@ -66,7 +76,7 @@ public class CalendarNamesTest {
                 new CalendarNames.Event[] {
                     null, new CalendarNames.Event(2, 7, "Termintitel", 0, 1, "...")
                 }) {
-            assertEquals("Aufnahme.ogg", CalendarNames.name("{kalender}", time, missing));
+            assertEquals("-.ogg", CalendarNames.name("{kalender}", time, missing));
             assertEquals(
                     "Archiv",
                     CalendarNames.folder("Archiv", CalendarNames.FolderMode.CALENDAR, missing));

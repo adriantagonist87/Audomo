@@ -106,7 +106,7 @@ final class CalendarNames {
                     switch (tokens.group(1)) {
                         case "datum" -> time.toLocalDate().toString();
                         case "uhrzeit" -> time.format(DateTimeFormatter.ofPattern("HH-mm-ss"));
-                        case "kalender" -> calendar.isEmpty() ? "Aufnahme" : calendar;
+                        case "kalender" -> calendar.isEmpty() ? "-" : calendar;
                         default -> title.isEmpty() ? "Aufnahme" : title;
                     };
             tokens.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(value));
