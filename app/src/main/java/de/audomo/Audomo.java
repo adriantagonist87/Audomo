@@ -33,6 +33,7 @@ public final class Audomo extends Application {
     final ExecutorService libraryFiles = Executors.newSingleThreadExecutor();
     final ExecutorService uploadControls = Executors.newSingleThreadExecutor();
     final Handler main = new Handler(Looper.getMainLooper());
+    AppUpdates updates;
     AppLock appLock;
     SessionStore sessions;
     RecordingDraft draft;
@@ -43,6 +44,7 @@ public final class Audomo extends Application {
         appLock = new AppLock(this);
         sessions = new SessionStore(this);
         MigrationBackup.recover(this);
+        updates = new AppUpdates(this);
         draft = new RecordingDraft(this);
         worker.execute(() -> {
             RecordingQuietMode.update(this, false);

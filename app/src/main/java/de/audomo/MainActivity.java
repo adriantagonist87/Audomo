@@ -33,7 +33,12 @@ public class MainActivity extends ProtectedActivity {
     private int libraryRequest;
     private TextView name, timer, status, note, mic, format, recordTab, libraryTab, queueTab;
     private Wave wave;
-    private Button uploadAttention;
+    private Button uploadAttention, updateNotice;
+    private final Runnable updateChanged = () -> {
+        boolean show = app.updates.automatic() && app.updates.available();
+        updateNotice.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) updateNotice.setText("Update auf " + app.updates.latest.version() + " verfügbar");
+    };
     private long nextUploadCheck;
     private boolean checkingUploads;
     private QueueDashboard dashboard;
@@ -197,6 +202,9 @@ public class MainActivity extends ProtectedActivity {
         tabs.addView(queueTab, weight());
         DashboardPager.Strip indicator = new DashboardPager.Strip(this, recordTab, libraryTab, queueTab);
         chrome.addView(indicator, lp(-1, 3));
+        updateNotice = button("", v -> startActivity(new Intent(this, UpdateSettings.class)));
+        updateNotice.setVisibility(View.GONE);
+        chrome.addView(updateNotice);
         pager = new DashboardPager(this, indicator, activeTab, this::warmPages);
         root.addView(pager, new LinearLayout.LayoutParams(-1, 0, 1));
         if (state == null && "de.audomo.UPLOADS".equals(getIntent().getAction()) && activeTab == RECORD) {
@@ -972,6 +980,8 @@ public class MainActivity extends ProtectedActivity {
     @Override
     protected void resumeContent() {
         openingTab = false;
+        app.updates.subscribe(updateChanged);
+        updateChanged.run();
         if (prefs().contains("migrationCalendarSelection")) app.libraryFiles.execute(() -> BackupPreferences.resolveCalendars(this));
         app.draft.validate(this);
         if (activeTab == LIBRARY && pausedLibrary != null) {
@@ -986,6 +996,7 @@ public class MainActivity extends ProtectedActivity {
     @Override
     protected void onPause() {
         resumed = false;
+        if (app != null) app.updates.unsubscribe(updateChanged);
         if (hasContent() && activeTab == LIBRARY) pausedLibrary = libraryState();
         handler.removeCallbacks(refresh);
         super.onPause();

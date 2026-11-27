@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -25,6 +26,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name=".UpdateSettings" android:exported="false" />
         <activity android:name=".UnlockActivity" android:exported="false" android:enableOnBackInvokedCallback="false" />
         <activity android:name=".TileOpenActivity" android:exported="true"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"

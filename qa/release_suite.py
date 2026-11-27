@@ -33,7 +33,7 @@ device("shell", "wm", "dismiss-keyguard")
 device("shell", "am", "start", "-W", "-n", "de.audomo/.MainActivity")
 classes = [
     "CaptureControlDeviceTest", "CalendarProviderDeviceTest", "CalendarDayDeviceTest",
-    "LibraryDeviceTest", "LibraryUiDeviceTest", "OpusProfileDeviceTest", "ShareDeviceTest",
+    "LibraryDeviceTest", "LibraryUiDeviceTest", "OpusProfileDeviceTest", "ShareDeviceTest", "UpdateDeviceTest",
     "DropboxRequestDeviceTest", "DropboxLinkDeviceTest", "ProtocolDeviceTest",
     "UploadQueueDeviceTest", "CloudCatalogDeviceTest", "AutomaticUploadDeviceTest", "AppLockDeviceTest",
 ]

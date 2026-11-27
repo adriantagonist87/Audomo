@@ -31,4 +31,4 @@ Liegen eure Aufnahmen schon in Dropbox, öffnet „Einstellungen“ → „Cloud
 
 Beim Umzug auf ein neues Telefon könnt ihr nur eure Einstellungen mitnehmen, die Cloudverbindungen einschließen oder die ganze Bibliothek samt Papierkorb und Uploadverlauf übertragen. Die Sicherung hat ein eigenes Passwort. [Sicherung und Gerätewechsel](docs/BEDIENUNG.md#sicherung-und-gerätewechsel)
 
-Frühere offizielle Versionen lassen sich direkt mit der neuen APK aktualisieren. Wer eine debug-signierte Testfassung nutzt, sollte vor dem Wechsel die Aufnahmen sichern. Die stabile Ausgabe verwendet einen eigenen Signierschlüssel. [Anleitung für den Wechsel](docs/BEDIENUNG.md#wechsel-von-der-testversion)
+Ab Version 1.4.0 findet ihr neue stabile Ausgaben unter „Einstellungen“ → „Updates“. Dort könnt ihr die APK direkt laden und die Aktualisierung auf dem Telefon bestätigen. Frühere offizielle Versionen lassen sich mit der APK aus dem GitHub-Release aktualisieren. Wer eine debug-signierte Testfassung nutzt, sollte vor dem Wechsel die Aufnahmen sichern. Die stabile Ausgabe verwendet einen eigenen Signierschlüssel. [Anleitung für den Wechsel](docs/BEDIENUNG.md#wechsel-von-der-testversion)

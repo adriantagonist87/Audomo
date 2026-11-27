@@ -145,6 +145,14 @@ Jede übernommene Aufnahme erhält einen bestätigten Dropbox-Speicherort. An Gr
 
 Der Abruf verändert keine Dateien in Dropbox. Zusätzliche lokale Aufnahmen bleiben erhalten. Ohne vorhandenen Katalog übernimmt Audomo das in Dropbox gespeicherte Änderungsdatum. Für einen Umzug einschließlich Einstellungen, Aufnahmehistorie und Papierkorb verwende die [vollständige Migration](#sicherung-und-gerätewechsel).
 
+## Updates von GitHub
+
+Unter „Einstellungen“ → „Updates“ siehst du die installierte Version. „Jetzt prüfen“ fragt die neueste stabile Ausgabe im offiziellen GitHub-Repository ab. Das geht jederzeit, auch bei ausgeschalteter Automatik.
+
+„Beim Öffnen der App prüfen“ ist anfangs ausgeschaltet. Wenn du es einschaltest, prüft Audomo standardmäßig täglich beim nächsten Öffnen. Das Prüfintervall kannst du auf „Bei jedem Start“, „Wöchentlich“ oder „Monatlich“ ändern. Maßgeblich ist die letzte erfolgreiche Prüfung. Bei einer verfügbaren Aktualisierung erscheint ein Hinweis unter den Dashboard-Reitern. Antippen öffnet die Update-Seite.
+
+Tippe auf „Update herunterladen und installieren“. Audomo lädt die APK, prüft ihre Prüfsumme, Paketkennung, Version und Signatur und öffnet die Android-Installation. Beim ersten Mal kann Android die Erlaubnis „Aus dieser Quelle zulassen“ für Audomo verlangen. Kehre danach mit „Zurück“ zu Audomo zurück und bestätige „Aktualisieren“. Bei Abbruch kannst du die Installation aus demselben Menü erneut öffnen. Warte mit dem Installieren, bis eine laufende Aufnahme oder ein Upload abgeschlossen ist.
+
 ## Wechsel von der Testversion
 
 Ab 1.2.0 vor einem Signaturwechsel eine vollständige Migration exportieren und auf einem Testgerät prüfen. Für ältere Testfassungen mit JSON-Export gilt der folgende Ablauf.

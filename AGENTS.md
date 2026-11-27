@@ -6,7 +6,7 @@ Das Repository enthält die Android-App, Testwerkzeuge und die dokumentierten En
 
 1. In der [README](README.md) den vorgesehenen Bedienweg lesen. Das [Handbuch](docs/BEDIENUNG.md) erklärt die Aktionen und ihre Folgen für Nutzer.
 2. Den betroffenen Pfad in der [Entwicklungsübergabe](docs/ENTWICKLUNG.md) nachschlagen. Vor einer Änderung die aufrufende Activity, den schreibenden Dienst und die vorhandenen Tests zusammen lesen.
-3. Über die [Feature-IDs](qa/ANFORDERUNGSABGLEICH.md), den [Gestaltungsabgleich](qa/MOCKUPABGLEICH.md) und das [aktuelle Releaseprotokoll](qa/RELEASE-1.3.1.md) ermitteln, welche Entscheidung gilt und welches Verhalten tatsächlich geprüft wurde. Die historischen 0.2-Berichte behalten ihren Versionsbezug.
+3. Über die [Feature-IDs](qa/ANFORDERUNGSABGLEICH.md), den [Gestaltungsabgleich](qa/MOCKUPABGLEICH.md) und das [aktuelle Releaseprotokoll](qa/RELEASE-1.4.0.md) ermitteln, welche Entscheidung gilt und welches Verhalten tatsächlich geprüft wurde. Die historischen 0.2-Berichte behalten ihren Versionsbezug.
 4. Eine Änderung über den gewöhnlichen Einstieg der App und mit bereits gespeicherten Daten prüfen. [Testanleitung](docs/TESTEN.md)
 
 ## Updates auf dem persönlichen S24

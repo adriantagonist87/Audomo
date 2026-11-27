@@ -150,6 +150,8 @@ final class AppSettings {
         p.liveRow(R.drawable.ic_lock, "App-Sperre", () -> app.appLock.enabled() ? "Aktiv" : "Aus", this::appLock);
         p.row(R.drawable.ic_shield, "Berechtigungen", "App-Rechte, Nicht stören und Akkuoptimierung", this::onboarding);
         p.row(R.drawable.ic_vibration, "Schnellzugriff und Vibration", "Kachel und Vibrationsmuster", this::shortcuts);
+        p.row(R.drawable.ic_download, "Updates", "Stabile Versionen von GitHub",
+                () -> screen.startActivity(new Intent(screen, UpdateSettings.class)));
         p.row(R.drawable.ic_backup, "Sicherung und Diagnose", "Einstellungen übertragen und Ereignisse ansehen", this::maintenance);
         return p;
     }
