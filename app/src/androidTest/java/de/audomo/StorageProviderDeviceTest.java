@@ -82,6 +82,13 @@ public class StorageProviderDeviceTest {
             Uri first = Uri.parse(SessionStore.metadata(dir).getString("deliveredUri"));
             assertEquals(
                     hash, LibraryFiles.digest(ctx.getContentResolver().openInputStream(first)));
+            JSONObject detached = SessionStore.metadata(dir);
+            detached.remove("deliveredUri");
+            detached.remove("documentTree");
+            detached.put("previousDocumentStorage",new JSONObject().put("documentTree",selected));
+            SessionStore.storeMeta(dir,detached);
+            DocumentStorage.relink(store,tree);
+            assertFalse(SessionStore.metadata(dir).has("previousDocumentStorage"));
             DocumentStorage.deliver(individual, source);
             assertEquals(first.toString(), SessionStore.metadata(dir).getString("deliveredUri"));
             lib.rename(store.list().get(0), "Sicherung", true, List.of());

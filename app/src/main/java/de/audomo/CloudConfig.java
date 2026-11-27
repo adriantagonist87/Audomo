@@ -203,17 +203,20 @@ record CloudConfig(
         return (SecretKey) ks.getKey(alias, null);
     }
 
-    static void seal(Context c, String id, String value) throws Exception {
+    static String box(String id, String value) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, key());
         cipher.updateAAD(id.getBytes(StandardCharsets.UTF_8));
-        String boxed =
+        return
                 Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP)
                         + "."
                         + Base64.encodeToString(
                                 cipher.doFinal(value.getBytes(StandardCharsets.UTF_8)),
                                 Base64.NO_WRAP);
-        if (!c.getSharedPreferences("credentials", 0).edit().putString(id, boxed).commit())
+    }
+
+    static void seal(Context c, String id, String value) throws Exception {
+        if (!c.getSharedPreferences("credentials", 0).edit().putString(id, box(id, value)).commit())
             throw new IOException("Zugang nicht gesichert");
     }
 

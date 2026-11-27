@@ -13,7 +13,7 @@ Audomo ist eine native Android-Anwendung mit einem Gradle-Modul. Der Java-Code l
 | Ordner und externe Dokumente | `FolderManager`, `FolderSettings`, `DocumentStorage`, `DocumentReconcile` | Verschachtelte Pfade, ordnergebundene Einstellungen, entzogenes SAF-Recht, unterbrochener Umzug |
 | Zugang und Transport | `CloudScreen`, `CloudConfig`, `DropboxLinkDialog`, `DropboxFiles`, `RemoteFiles`, `UploadWorker` | OAuth-Rücksprung und Abbruch, Serveridentität, Hashkonflikt, Abbruch vor und während der Veröffentlichung |
 | Uploadplanung, Bedienung und Katalog | `ManualUploadDialog`, `UploadQueue`, `UploadDelay`, `UploadRetry`, `QueueActivity`, `QueueDashboard`, `QueueSwipeList`, `UploadDetailsDialog`, `CloudLibrary`, `CloudReconcile` | Doppelte Aufträge, zwei Dienste, Fälligkeit, Reihenfolge nach Neustart, Leeren mit erhaltener Cloudkopie |
-| Einstellungen und Backup | `AppSettings`, `PlaybackOptions`, `SettingsBackup` und die jeweilige Fachklasse | Alte Optionen, ungültiges Importformat, entkoppelte Konten und Android-Freigaben |
+| Einstellungen und Backup | `AppSettings`, `PlaybackOptions`, `BackupDialogs`, `MigrationBackup` und `SettingsBackup` für alte JSON-Dateien | Alte Optionen, ungültiges Importformat, entkoppelte Konten und Android-Freigaben |
 
 ## Vom Start bis zur gesicherten Aufnahme
 
@@ -106,3 +106,11 @@ Die Berechtigungszeilen in `AppSettings` lesen beim Zurückkehren in das Fenster
 Die Launcher-Verknüpfung hat die feste ID `capture-toggle`. Der Anheftstatus kommt von `ShortcutManager.getPinnedShortcuts`. Ein einmaliger PendingIntent meldet die Annahme der Anheftanfrage, nach einem Abbruch prüft Audomo den Status bei der Rückkehr. Die Anfrage und die Launcher-Abfragen laufen außerhalb des UI-Threads. [Android-Shortcut-API](https://developer.android.com/reference/android/content/pm/ShortcutManager)
 
 `TileStartActivity` ist der interne Einstieg für einen vom Nutzer ausgelösten Mikrofon-Vordergrunddienst. Ihr transparenter Task ist von der Dashboard-Navigation getrennt. Das Launcher-Intent mit der Aktion `TOGGLE_RECORDING` beendet auch eine pausierte Sitzung. Ein Start über die Kachel verwendet weiterhin den Startpfad. Bei einer Wiederherstellung der Activity wird kein neuer Steuerbefehl gesendet.
+
+## Migrationsformat ab 1.2.0
+
+`BackupDialogs` öffnet über den Android-Dokumentanbieter eine Datei mit der Endung `.audomo`. Der Formatkopf enthält die Kennung, Formatversion, Sicherungsstufe und ein zufälliges Salt. `BackupArchive` leitet aus dem Archivpasswort mit PBKDF2-HMAC-SHA256 und 600.000 Durchläufen den Schlüssel ab. Google Tink verschlüsselt und authentifiziert den Datenstrom mit AES-256-GCM-HKDF in Segmenten von 1 MiB. Der Kopf geht als authentifizierte Zusatzinformation ein. Die Eintragslänge umfasst 64 Bit. Auch ein Teilimport liest und authentifiziert das ganze Archiv bis zur Endmarke. [Tink Streaming AEAD](https://developers.google.com/tink/streaming-aead)
+
+`BackupPreferences` überträgt portable Einstellungen und löst Kalender über Konto und Kalenderbezeichnung neu auf. Bei fehlender Freigabe oder mehrdeutigen Kalendern bleibt die Zuordnung offen. Nur Stufe 2 und 3 enthalten Verbindungsdaten. Gespeicherte Zugangsdaten werden innerhalb des verschlüsselten Archivs transportiert und auf dem Zielgerät mit dessen Android-Keystore neu verschlüsselt. Schnellkachel-Status, Android-Berechtigungen und Schlüsselmaterial sind gerätegebunden.
+
+`MigrationBackup` reserviert den Leerlauf und erstellt eine Momentaufnahme. Fehlt Audio lokal, kann eine verifizierte Cloudkopie die Lücke schließen. `BackupDatabase` schreibt Bibliothekskatalog und Uploadaufträge zeilenweise mit Spaltennamen. Beim Import baut die App zuerst eine private SQLite-Datenbank und prüft die Sitzungsdateien. Der abschließende Tausch von Bibliothek, Einstellungen und Diagnose verwendet ein lokales Journal und eine SQLite-Commitmarke. Beim nächsten Prozessstart entscheidet diese Marke über Abschluss oder Rücknahme. Dieselbe Aufnahme behält dabei ihre UUID und die Beziehungen zu ihren Cloudkopien.

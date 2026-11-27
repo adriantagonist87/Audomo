@@ -67,3 +67,17 @@ with tempfile.TemporaryDirectory() as temp, ExitStack() as cleanup:
     counts = re.findall(r"^INSTRUMENTATION_STATUS_CODE: (-?\d+)\s*$", result, re.M)
     if not re.search(r"OK \(\d+ tests?\)", result) or not counts or set(counts) != {"0", "1"}:
         sys.exit("Instrumentierung fehlgeschlagen oder ein ausgewählter Test wurde übersprungen.")
+
+# The suite owns this fresh emulator installation. Migration tests deliberately replace its data.
+if device("shell", "pm", "clear", "de.audomo") != "Success":
+    sys.exit("Testinstallation für die Migrationsprüfung konnte nicht zurückgesetzt werden.")
+for permission in ("RECORD_AUDIO", "READ_CALENDAR", "POST_NOTIFICATIONS"):
+    device("shell","pm","grant","de.audomo","android.permission." + permission)
+device("shell","am","start","-W","-n","de.audomo/.MainActivity")
+migration = device("shell","am","instrument","-w","-r","-e","migrationQA","true",
+                   "-e","class","de.audomo.MigrationDeviceTest",
+                   "de.audomo.test/androidx.test.runner.AndroidJUnitRunner")
+print(migration)
+codes = re.findall(r"^INSTRUMENTATION_STATUS_CODE: (-?\d+)\s*$", migration, re.M)
+if not re.search(r"OK \(\d+ tests?\)",migration) or set(codes) != {"0","1"}:
+    sys.exit("Die Migrationsprüfung ist fehlgeschlagen oder unvollständig.")

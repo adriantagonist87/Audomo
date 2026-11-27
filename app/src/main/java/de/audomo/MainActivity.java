@@ -224,8 +224,13 @@ public class MainActivity extends ProtectedActivity {
     private TextView tab(String label, Runnable go) {
         TextView t = text(label, 15, DIM);
         t.setGravity(Gravity.CENTER);
-        t.setSingleLine();
-        t.setAutoSizeTextTypeUniformWithConfiguration(11, 15, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        t.setMaxLines(1);
+        t.setHorizontallyScrolling(false);
+        t.setPadding(dp(2), 0, dp(2), 0);
+        // Keep the tab reachable at large system font sizes and size it to the actual column.
+        int preferred = Math.round(t.getTextSize());
+        int minimum = Math.min(dp(10), preferred - 1);
+        t.setAutoSizeTextTypeUniformWithConfiguration(minimum, preferred, 1, android.util.TypedValue.COMPLEX_UNIT_PX);
         t.setMinHeight(dp(48));
         t.setOnClickListener(v -> go.run());
         return t;
@@ -961,6 +966,7 @@ public class MainActivity extends ProtectedActivity {
     @Override
     protected void resumeContent() {
         openingTab = false;
+        if (prefs().contains("migrationCalendarSelection")) app.libraryFiles.execute(() -> BackupPreferences.resolveCalendars(this));
         app.draft.validate(this);
         if (activeTab == LIBRARY && pausedLibrary != null) {
             renderLibrary(pausedLibrary);

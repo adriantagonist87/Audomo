@@ -175,6 +175,15 @@ public class CloudCatalogDeviceTest {
             }
             ftp.put(original, moved, false, null);
             CloudReconcile.run(store, t);
+            // A full backup must fetch the only remaining copy and verify it before reporting success.
+            char[] password = "emulator-sicherung".toCharArray();
+            java.io.ByteArrayOutputStream backup = new java.io.ByteArrayOutputStream();
+            MigrationBackup.export(app,backup,BackupArchive.Scope.FULL,password);
+            assertNull(store.byId(id));
+            MigrationBackup.restore(app,new java.io.ByteArrayInputStream(backup.toByteArray()),BackupArchive.Scope.FULL,password);
+            assertEquals(hash,LibraryFiles.digest(new FileInputStream(store.byId(id).file())));
+            folders.files.change(store.byId(id),null,ghost.folder(),true);
+            folders.files.purge(store.byId(id));
             catalog.restore(ghost, queue.job(id));
             assertEquals(hash, LibraryFiles.digest(new FileInputStream(store.byId(id).file())));
             assertEquals(1, catalog.library().stream().filter(e -> e.id().equals(id)).count());

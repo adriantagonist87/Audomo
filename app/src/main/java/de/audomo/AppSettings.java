@@ -216,7 +216,7 @@ final class AppSettings {
         p.group("Ablage und Import");
         p.row(R.drawable.ic_folder, "Ordner verwalten", "Ordner bearbeiten und Speicherorte abgleichen", () -> new FolderSettings(screen).show());
         p.liveRow(R.drawable.ic_folder, "Speicher und Import",
-                () -> prefs.contains("documentTree") ? "Android-Ordner gewählt" : "App-Speicher", this::storage);
+                () -> prefs.contains("documentTree") ? "Android-Ordner gewählt" : prefs.contains("migrationDocumentTree") ? "Gesicherten Android-Ordner erneut freigeben" : "App-Speicher", this::storage);
         p.row(R.drawable.ic_forward, "Aufnahmen importieren", "Audiodateien auswählen", screen::pickImport);
         p.dialog.show();
     }
@@ -319,11 +319,9 @@ final class AppSettings {
 
     private void maintenance() {
         Page p = new Page("Sicherung und Diagnose");
-        p.row(R.drawable.ic_backup, "Einstellungen exportieren", "JSON-Datei ohne Zugangsdaten",
-                () -> create(20, "Audomo-Einstellungen.json", "application/json"));
-        p.row(R.drawable.ic_folder, "Einstellungen importieren", "Profile und Regeln übernehmen",
-                () -> screen.startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
-                        .addCategory(Intent.CATEGORY_OPENABLE).setType("application/json"), 21));
+        BackupDialogs backups = new BackupDialogs(screen);
+        p.row(R.drawable.ic_backup, "Sicherung exportieren", "Einstellungen, Cloudzugänge oder vollständige Migration", backups::export);
+        p.row(R.drawable.ic_folder, "Sicherung importieren", "Sicherungsumfang auswählen oder früheren JSON-Export einlesen", backups::selectImport);
         p.row(R.drawable.ic_problem, "Diagnose", "Ereignisse, Audioeingang und Export", this::diagnostics);
         p.dialog.show();
     }
@@ -497,6 +495,7 @@ final class AppSettings {
 
     boolean result(int req, Intent data) {
         Uri uri = data.getData();
+        if (uri != null && new BackupDialogs(screen).result(req, uri)) return true;
         if (req < 20 || req > 24 || uri == null) return false;
         if (req == 24) {
             String target = prefs.getString("folder", "");
@@ -531,8 +530,11 @@ final class AppSettings {
                                 uri,
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION
                                         | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                DocumentStorage.select(screen, uri);
-                screen.toast("Aufnahmeordner gespeichert");
+                screen.runFiles(() -> {
+                    DocumentStorage.select(screen, uri);
+                    DocumentStorage.relink(app.sessions, uri);
+                    return "Aufnahmeordner gespeichert";
+                });
             } catch (Exception e) {
                 screen.toast(Audomo.cause(e));
             }

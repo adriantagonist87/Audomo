@@ -641,7 +641,7 @@ final class LibraryView {
                 !query.isEmpty()
                         ? "Keine passenden Aufnahmen"
                         : trash ? "Der Papierkorb ist leer" : "Keine Aufnahmen in diesem Ordner");
-        count.setText(visible.size() + " Aufnahmen");
+        count.setText(visible.size() == 1 ? "1 Aufnahme" : visible.size() + " Aufnahmen");
         folderButton.setText(folder().isEmpty() ? "Aufnahmen" : folder().replace("/", " › "));
         adapter.notifyDataSetChanged();
     }

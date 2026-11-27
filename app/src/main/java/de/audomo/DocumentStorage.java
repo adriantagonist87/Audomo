@@ -42,13 +42,36 @@ final class DocumentStorage {
         SharedPreferences prefs = Profile.prefs(c);
         String old = prefs.getString("documentTree", "");
         if (!old.equals(tree.toString())) leaveCurrent(c);
-        prefs.edit().putString("documentTree", tree.toString()).commit();
+        prefs.edit().putString("documentTree", tree.toString()).remove("migrationDocumentTree").commit();
+    }
+
+    static void relink(SessionStore store, Uri tree) throws Exception {
+        ContentResolver r = store.context.getContentResolver();
+        synchronized (store) {
+            for (SessionStore.Entry entry : store.list()) {
+                File dir = entry.file().getParentFile();
+                JSONObject meta = SessionStore.metadata(dir);
+                JSONObject previous = meta.optJSONObject("previousDocumentStorage");
+                if (previous == null || !tree.toString().equals(previous.optString("documentTree"))) continue;
+                // Resolve by name under the freshly granted root. Do not reuse old provider IDs.
+                Uri candidate = root(tree);
+                for (String part : entry.folder().split("/"))
+                    if (candidate != null && !part.isEmpty()) candidate = child(r,candidate,part);
+                if (candidate != null) candidate = child(r,candidate,entry.name());
+                if (candidate == null) continue;
+                String hash = LibraryFiles.digest(new FileInputStream(entry.file()));
+                if (!hash.equals(LibraryFiles.digest(r.openInputStream(candidate)))) continue;
+                meta.put("documentTree",tree.toString()).put("deliveredUri",candidate.toString()).put("deliveredHash",hash);
+                meta.remove("previousDocumentStorage");
+                SessionStore.storeMeta(dir,meta);
+            }
+        }
     }
 
     static void leaveCurrent(Context c) throws Exception {
         SharedPreferences settings = Profile.prefs(c);
         if (settings.contains("documentTree") && settings.contains("ownMarker")) hide(c, false);
-        settings.edit().remove("documentTree").remove("ownMarker").remove("hidden").commit();
+        settings.edit().remove("documentTree").remove("migrationDocumentTree").remove("ownMarker").remove("hidden").commit();
     }
 
     static void hide(Context c, boolean active) throws Exception {

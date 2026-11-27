@@ -13,8 +13,8 @@ android {
         minSdk = 34
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 35
-        versionName = "1.1.11"
+        versionCode = 36
+        versionName = "1.2.0"
         buildConfigField("String", "DROPBOX_APP_KEY", "\"$dropboxAppKey\"")
         manifestPlaceholders["dropboxScheme"] = "db-" + dropboxAppKey.ifEmpty { "audomo-unconfigured" }
         manifestPlaceholders["dropboxConfigured"] = dropboxAppKey.isNotEmpty().toString()
@@ -26,6 +26,7 @@ android {
     }
 }
 dependencies {
+    implementation("com.google.crypto.tink:tink-android:1.24.0")
     implementation("com.dropbox.core:dropbox-android-sdk:7.1.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("commons-net:commons-net:3.13.0")

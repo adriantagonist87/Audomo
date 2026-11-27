@@ -159,19 +159,19 @@ final class CloudLibrary {
             throw new IOException("Netzregel erlaubt keine Übertragung");
     }
 
-    void restore(SessionStore.Entry e, UploadQueue.Job j) throws Exception {
-        CloudConfig t = CloudConfig.byId(store.context, j.target());
+    void download(UploadQueue.Job job, File destination) throws Exception {
+        CloudConfig target = CloudConfig.byId(store.context, job.target());
         Network net = network(store.context);
+        try (RemoteFiles remote = RemoteFiles.open(target, CloudConfig.secret(store.context,target.id()), net,
+                bytes -> checkNetwork(store.context,net))) {
+            remote.downloadVerified(job.confirmedPath(),job.verified(),destination);
+        }
+    }
+
+    void restore(SessionStore.Entry e, UploadQueue.Job j) throws Exception {
         File temp = File.createTempFile("cloud-", ".part", store.context.getCacheDir());
         try {
-            try (RemoteFiles remote =
-                    RemoteFiles.open(
-                            t,
-                            CloudConfig.secret(store.context, t.id()),
-                            net,
-                            bytes -> checkNetwork(store.context, net))) {
-                remote.downloadVerified(j.confirmedPath(), j.verified(), temp);
-            }
+            download(j,temp);
             synchronized (store) {
                 if (!queue.jobs().contains(j))
                     throw new IOException("Cloudpfad inzwischen geändert");

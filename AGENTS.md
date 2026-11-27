@@ -6,8 +6,12 @@ Das Repository enthält die Android-App, Testwerkzeuge und die dokumentierten En
 
 1. In der [README](README.md) den vorgesehenen Bedienweg lesen. Das [Handbuch](docs/BEDIENUNG.md) erklärt die Aktionen und ihre Folgen für Nutzer.
 2. Den betroffenen Pfad in der [Entwicklungsübergabe](docs/ENTWICKLUNG.md) nachschlagen. Vor einer Änderung die aufrufende Activity, den schreibenden Dienst und die vorhandenen Tests zusammen lesen.
-3. Über die [Feature-IDs](qa/ANFORDERUNGSABGLEICH.md), den [Gestaltungsabgleich](qa/MOCKUPABGLEICH.md) und das [aktuelle Releaseprotokoll](qa/RELEASE-1.1.11.md) ermitteln, welche Entscheidung gilt und welches Verhalten tatsächlich geprüft wurde. Die historischen 0.2-Berichte behalten ihren Versionsbezug.
+3. Über die [Feature-IDs](qa/ANFORDERUNGSABGLEICH.md), den [Gestaltungsabgleich](qa/MOCKUPABGLEICH.md) und das [aktuelle Releaseprotokoll](qa/RELEASE-1.2.0.md) ermitteln, welche Entscheidung gilt und welches Verhalten tatsächlich geprüft wurde. Die historischen 0.2-Berichte behalten ihren Versionsbezug.
 4. Eine Änderung über den gewöhnlichen Einstieg der App und mit bereits gespeicherten Daten prüfen. [Testanleitung](docs/TESTEN.md)
+
+## Updates auf dem persönlichen S24
+
+Für dieses Gerät gilt die veröffentlichte, mit dem bisherigen Audomo-Release-Schlüssel signierte GitHub-APK als Updatekanal. Bei einer neuen Version den Versionscode erhöhen, das Update über die vorige offizielle APK mit bestehenden Daten prüfen und den SHA-256 auf GitHub und auf dem S24 vergleichen. Debug- und Instrumentierungsfassungen gehören auf gesonderte Testgeräte.
 
 ## Produkt und Daten
 

@@ -60,7 +60,23 @@ Eine bereits bestätigte Cloudkopie bleibt beim lokalen Löschen erhalten. Soll 
 
 Das Papierkorb-Symbol links neben der Lupe im Reiter „Wiedergeben“ öffnet die gelöschten Aufnahmen. Android-Zurück führt zur vorherigen Bibliotheksansicht. Unter „Einstellungen“ → „Papierkorb“ kannst du den Papierkorb öffnen, die automatische Bereinigung nach 30 Tagen einstellen und ihn jederzeit leeren. Vor dem endgültigen Löschen zeigt Audomo die Anzahl der betroffenen Aufnahmen und fragt nach deiner Bestätigung. [Papierkorb-Einstellungen](../qa/api34/papierkorb-einstellungen-1.1.11.webp) · [Symbol in der Wiedergabeliste](../qa/api34/papierkorb-schnellzugriff-1.1.11.webp)
 
-Beim Import werden Quelldateien unverändert kopiert. Der Einstellungs-Export enthält keine Audioinhalte, Zugangscodes oder Passwörter.
+Beim Audioimport kopiert Audomo die ausgewählten Dateien. Die Originale im Quellordner bleiben erhalten.
+
+## Sicherung und Gerätewechsel
+
+Öffne am Zahnrad „Sicherung und Diagnose“ und tippe auf „Sicherung exportieren“. Wähle den Umfang, den Speicherort und ein eigenes Sicherungspasswort. Bewahre dieses Passwort getrennt von der Datei auf. Zum Import brauchst du es auf dem Zielgerät wieder.
+
+| Auswahl | Inhalt und Verhalten beim Import |
+|---|---|
+| Alle Einstellungen | Übernimmt unter anderem Aufnahmeprofile, Dateinamenvorlage, Ordnerliste, Kalenderauswahl, Uploadregeln, Player, Haptik und Papierkorbeinstellungen. Bereits vorhandene Aufnahmen und Cloudverbindungen auf dem Zielgerät bleiben erhalten. |
+| Einstellungen und Cloudverbindungen | Ergänzt die Verbindungsprofile und die in Audomo gespeicherten Zugangsdaten, einschließlich einer bestehenden Dropbox-Autorisierung. Andere bereits eingerichtete Ziele auf dem Zielgerät bleiben erhalten. |
+| Vollständige Migration | Übernimmt zusätzlich die Audiodateien, den Papierkorb, Aufnahme-IDs, Dateinamen, Zeitpunkte, die Warteschlange samt Versuchen und Wartezeiten, bestätigte Cloudkopien und das Diagnoseprotokoll. „Bestand ersetzen“ ersetzt die Bibliothek des Zielgeräts. |
+
+Eine Vollsicherung holt auch die Aufnahmen, die ausschließlich in einer verbundenen Cloud liegen. Dazu muss das Ziel erreichbar sein. Audomo vergleicht den Inhalt mit der gespeicherten Prüfsumme. Kann es keine bestätigte Kopie laden, meldet es den fehlgeschlagenen Export. Auf dem Zielgerät sind diese Aufnahmen anschließend auch lokal verfügbar. Für große Bibliotheken wird vorübergehend zusätzlicher Speicher benötigt.
+
+Unter „Sicherung importieren“ kannst du aus einer Vollsicherung auch nur die Einstellungen oder zusätzlich die Verbindungen übernehmen. Audomo prüft die verschlüsselte Datei vor dem Ersetzen der Daten. Frühere JSON-Einstellungsexporte lassen sich weiterhin einlesen.
+
+Auf einem neuen Telefon vergibst du die Android-Berechtigungen erneut. Gib einen verwendeten Android-Dokumentordner unter „Dateien und Ordner“ wieder frei. Audomo erkennt darin vorhandene passende Aufnahmen am Namen, Ordner und Dateiinhalt. Für Kalender müssen dieselben Konten auf dem Gerät eingerichtet sein. Die App-Sperre verwendet die Gerätesperre des Zielgeräts. Schnellkachel und Startbildschirm-Verknüpfung fügst du bei Bedarf erneut hinzu. Hat ein Clouddienst die Freigabe inzwischen widerrufen, verbinde das Konto erneut.
 
 Unter „Einstellungen“ → „Dateien und Ordner“ → „Ordner verwalten“ lassen sich Ordner und Unterordner anlegen, umbenennen, verschieben oder löschen. Beim Löschen rückt der Inhalt in den übergeordneten Ordner. Die Auswahl für neue Aufnahmen und der Kalender-Basisordner folgen der Änderung. Vorhandene Cloudkopien werden auf Wunsch ebenfalls verschoben. Namenskollisionen werden vorab angezeigt.
 
@@ -118,6 +134,8 @@ Der öffentliche App-Key für Audomo ist im Standard-Build hinterlegt. Wer eine 
 Für eine eigene Ausgabe den öffentlichen Schlüssel als Gradle-Eigenschaft `audomoDropboxAppKey` oder Umgebungsvariable `AUDOMO_DROPBOX_APP_KEY` setzen. Derselbe Wert bestimmt die App-Kennung und das vom offiziellen SDK verwendete Android-Rücksprungschema. Ein Build ohne Schlüssel erklärt die fehlende Registrierung in der App. [Android-Integration des Dropbox-SDK](https://github.com/dropbox/dropbox-sdk-java/blob/v7.1.1/README.md)
 
 ## Wechsel von der Testversion
+
+Ab 1.2.0 vor einem Signaturwechsel eine vollständige Migration exportieren und auf einem Testgerät prüfen. Für ältere Testfassungen mit JSON-Export gilt der folgende Ablauf.
 
 1. Eine laufende Aufnahme beenden. In „Wiedergeben“ jede aufzubewahrende lokale Aufnahme in einen Android-Dokumentordner außerhalb der App exportieren. Eine repräsentative Datei mit einem anderen Player öffnen und für alle wichtigen Dateien Namen, Anzahl und Größen vergleichen.
 2. Bei Aufnahmen, die ausschließlich in der Cloud liegen, Dienst, Konto und Pfad festhalten. Die Datei beim Dienst prüfen oder über die Bibliothek eine lokale Kopie wiederherstellen und exportieren. Der Cloudkatalog gehört zum privaten App-Speicher.

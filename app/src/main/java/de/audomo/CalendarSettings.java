@@ -100,6 +100,8 @@ public final class CalendarSettings extends ProtectedActivity {
             return;
         }
         queries.execute(() -> {
+            boolean pending=Profile.prefs(this).contains("migrationCalendarSelection");
+            if (pending) BackupPreferences.resolveCalendars(this);
             Map<Long, String> names = new LinkedHashMap<>();
             try (Cursor c =
                     getContentResolver()
@@ -112,13 +114,14 @@ public final class CalendarSettings extends ProtectedActivity {
                 if (c != null) while (c.moveToNext()) names.put(c.getLong(0), c.getString(1));
                 runOnUiThread(() -> {
                     if (isDestroyed()) return;
+                    if (pending) { order.clear(); order.addAll(CalendarNames.ids(this)); }
                     available.clear();
                     available.putAll(names);
                     order.retainAll(names.keySet());
                     notice.setText(
                             names.isEmpty()
                                     ? "Keine Kalender auf diesem Gerät"
-                                    : "Aktive Kalender nach Priorität");
+                                    : Profile.prefs(this).contains("migrationCalendarSelection") ? "Kalenderzuordnung aus der Sicherung prüfen" : "Aktive Kalender nach Priorität");
                     render();
                 });
             } catch (RuntimeException e) {
@@ -186,6 +189,7 @@ public final class CalendarSettings extends ProtectedActivity {
             if (a < 0 || b < 0) throw new IllegalArgumentException();
             Profile.prefs(this)
                     .edit()
+                    .remove("migrationCalendarSelection")
                     .putString("calendars", android.text.TextUtils.join(",", order))
                     .putInt("before", a)
                     .putInt("after", b)

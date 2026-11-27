@@ -29,6 +29,8 @@ python3 tools/sign-release-macos.py /tmp/audomo-release/Audomo-1.0.0.apk
 5. Den eingebetteten Git-Commit mit `unzip -p DATEI.apk META-INF/version-control-info.textproto` prüfen. Einen annotierten Tag am getesteten Commit anlegen und mit dem Hauptzweig pushen. Einen GitHub-Release für exakt den vorhandenen Tag mit APK und `SHA256SUMS.txt` veröffentlichen. Bei einer offiziellen stabilen Version die Markierung „Latest“ setzen und die Felder Entwurf und Vorabversion kontrollieren. Bereits veröffentlichte Versionen behalten ihre ursprünglichen Assets. Eine Korrektur bekommt eine neue Versionsnummer.
 6. Über die GitHub-API Tag, Commit, Status und Assets prüfen. Die veröffentlichte APK und Prüfsumme aus einem neuen Verzeichnis herunterladen und gegen die lokal geprüften Werte vergleichen. Der APK-SHA-256 ist für jede Version neu. Der Fingerabdruck des Signaturzertifikats verbindet die Updates.
 
+Das persönliche Galaxy S24 Ultra verwendet diesen offiziellen Kanal. Neue Versionen dort als Update der bestehenden Installation mit der zurückgeladenen GitHub-APK installieren. Paket, Versionscode, Signatur, SHA-256 und Erhalt der Bibliothek prüfen. Für Entwicklung und Instrumentierung dienen separate Emulatoren.
+
 ## Aus Nutzersicht prüfen
 
 ```sh

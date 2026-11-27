@@ -27,7 +27,7 @@ public final class Audomo extends Application {
     volatile String note = "", route = "", activeName = "", audioDetails = "", eventText = "";
     volatile long frames, stateSince;
     volatile float peak;
-    volatile boolean spaceLow, quietRequested;
+    volatile boolean spaceLow, quietRequested, backupBusy;
     volatile String systemNote = "";
     final ExecutorService worker = Executors.newSingleThreadExecutor();
     final ExecutorService libraryFiles = Executors.newSingleThreadExecutor();
@@ -42,6 +42,7 @@ public final class Audomo extends Application {
         super.onCreate();
         appLock = new AppLock(this);
         sessions = new SessionStore(this);
+        MigrationBackup.recover(this);
         draft = new RecordingDraft(this);
         worker.execute(() -> {
             RecordingQuietMode.update(this, false);
@@ -80,7 +81,7 @@ public final class Audomo extends Application {
     }
 
     boolean ready() {
-        return state == State.READY || state == State.SAVED || state == State.FAILED;
+        return !backupBusy && (state == State.READY || state == State.SAVED || state == State.FAILED);
     }
 
     boolean active() {
@@ -97,7 +98,7 @@ public final class Audomo extends Application {
         if (tileChanged != null) tileChanged.run();
     }
 
-    void diagnostic(String event) {
+    synchronized void diagnostic(String event) {
         try (FileWriter log = new FileWriter(new File(getFilesDir(), "diagnose.txt"), true)) {
             log.write(Instant.now() + "  " + event + "\n");
         } catch (IOException ignored) {

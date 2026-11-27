@@ -53,7 +53,7 @@ final class UploadQueue extends SQLiteOpenHelper {
             "id,rec,target,path,state,progress,attempted,replacement,error,"
                 + "action,origin,verified,provider,availability,notBefore,attempts,lastAttempt,lastChecked";
 
-    private static void createJobs(SQLiteDatabase db) {
+    static void createJobs(SQLiteDatabase db) {
         db.execSQL(
                 "CREATE TABLE jobs(id INTEGER PRIMARY KEY AUTOINCREMENT,rec TEXT NOT NULL,target"
                     + " TEXT NOT NULL,path TEXT NOT NULL,state TEXT NOT NULL,progress INTEGER"
@@ -66,7 +66,7 @@ final class UploadQueue extends SQLiteOpenHelper {
                     + " DEFAULT 1,publicationHash TEXT DEFAULT '',UNIQUE(rec,target))");
     }
 
-    private static void createRecordings(SQLiteDatabase db) {
+    static void createRecordings(SQLiteDatabase db) {
         db.execSQL(
                 "CREATE TABLE recordings(rec TEXT PRIMARY KEY,name TEXT NOT NULL,folder TEXT NOT"
                     + " NULL,start TEXT NOT NULL,frames INTEGER NOT NULL,bytes INTEGER NOT NULL)");
@@ -536,7 +536,10 @@ final class UploadQueue extends SQLiteOpenHelper {
         return null;
     }
 
+    synchronized boolean transferring() { return !active.isEmpty(); }
+
     synchronized Attempt claim(Job job) {
+        if (((Audomo) context.getApplicationContext()).backupBusy) return null;
         if (active.containsKey(job.id) || !job.equals(byId(job.id))) return null;
         if (!List.of("Wartet", "Upload läuft", "Fehler").contains(job.state)
                 || job.notBefore > System.currentTimeMillis()) return null;

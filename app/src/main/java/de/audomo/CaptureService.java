@@ -51,7 +51,12 @@ public final class CaptureService extends Service {
             return START_NOT_STICKY;
         }
         String action = intent.getAction();
-        if ("START".equals(action) && !running && app.ready()) begin(intent.getStringExtra("name"));
+        if ("START".equals(action) && !running) {
+            synchronized (app) {
+                if (app.ready()) begin(intent.getStringExtra("name"));
+                else stopSelf(id);
+            }
+        }
         else if (running
                 && app.active()
                 && ("STOP".equals(action) || "PAUSE".equals(action) || "RESUME".equals(action))) {

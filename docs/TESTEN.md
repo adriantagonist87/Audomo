@@ -25,7 +25,7 @@ python3 -m venv /tmp/audomo-qa-venv
 /tmp/audomo-qa-venv/bin/python qa/release_suite.py emulator-5554
 ```
 
-Die [Suite](../qa/release_suite.py) führt 14 Instrumentierungsklassen aus. Die Protokoll-Fixtures vergeben eigene Ports, Testzugänge und Zertifikate. ADB leitet nur diese Ports weiter. Nach Ende werden Weiterleitungen, Cacheprofil und lokale Testserver entfernt. Die Testinstallation verbleibt zur Inspektion auf dem Emulator. Ein weiterer Lauf beginnt mit einem frischen Testgerät. Übersprungene Tests führen in dieser Kernprüfung zu einem Fehler.
+Die [Suite](../qa/release_suite.py) führt 14 Instrumentierungsklassen zur Kernfunktion und anschließend eine fünfzehnte zur Migration aus. Vor den Migrationstests setzt sie die von ihr angelegte Testinstallation zurück. Die Protokoll-Fixtures vergeben eigene Ports, Testzugänge und Zertifikate. ADB leitet nur diese Ports weiter. Nach Ende werden Weiterleitungen, Cacheprofil und lokale Testserver entfernt. Zum Schluss verbleibt der synthetische Migrationsbestand zur Inspektion auf dem Emulator. Ein weiterer Lauf beginnt mit einem frischen Testgerät. Übersprungene Tests führen in dieser Kernprüfung zu einem Fehler.
 
 | Bereich | Beispiele aus der Suite |
 |---|---|
@@ -33,6 +33,7 @@ Die [Suite](../qa/release_suite.py) führt 14 Instrumentierungsklassen aus. Die 
 | Bibliothek | 500 synthetische Einträge, Suche und Auswahl, Player, Dokumentaktionen und Freigaben |
 | Kalender | Testkalender, Tagesansicht, Terminabbruch, einmalige Auswahl für die nächste Aufnahme |
 | Warteschlange | Priorität, stabile IDs, Konflikt, Abbruch, Löschen, Katalog und mehrere Ziele |
+| Migration | Drei Umfänge, neue Keystore-Verschlüsselung, Cloud-only-Audio über FTP, UUIDs, Papierkorb, Auftragshistorie, beschädigte Datei und Rücknahme bei Datenbankfehler |
 | Transport | WebDAV, FTP, FTPS, SFTP mit lokalen Diensten; Dropbox-Kopplung und API-Anfragen mit simuliertem Transport |
 
 ## Gezielte Zusatzprüfungen
