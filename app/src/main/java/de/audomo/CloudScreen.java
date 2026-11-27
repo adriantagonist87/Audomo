@@ -108,10 +108,10 @@ final class CloudScreen {
             AlertDialog d = dialog("Uploadziele", page);
             String selected = p.getString("defaultTarget", "");
             for (CloudConfig t : configs) {
-                String label = t.label() + (t.id().equals(selected) ? " · Standard" : "");
+                String label = t.label() + (!t.protocol().equals("Dropbox") && t.id().equals(selected) ? " · Standard" : "");
                 button(page, label, () -> {
                     AlertDialog actions = choices(t.protocol(), new String[] {
-                        "Verbindung testen", "Als Standard verwenden", "Zugang bearbeiten", "Cloudpfade abgleichen"
+                        "Verbindung testen", t.id().equals(selected) ? "Standardziel für automatische Uploads" : "Als Standard verwenden", "Zugang bearbeiten", "Cloudpfade abgleichen"
                     });
                     actions.getListView().setOnItemClickListener((parent, view, index, id) -> {
                         if (index == 2) {

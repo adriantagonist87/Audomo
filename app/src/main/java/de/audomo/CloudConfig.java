@@ -49,7 +49,7 @@ record CloudConfig(
 
     String label() {
         if (protocol.equals("Dropbox"))
-            return "Dropbox · " + (base.equals("/") ? "App-Ordner" : base);
+            return "Dropbox" + base;
         return protocol + " · " + host;
     }
 

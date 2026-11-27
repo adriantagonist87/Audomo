@@ -10,6 +10,8 @@ Die drei Standardprofile verwenden Opus/Ogg, Mono, 48 kHz, +5 dB und 48, 80 oder
 
 Das Zahnrad oben rechts öffnet die Einstellungen. Unter „Berechtigungen“ stehen Mikrofon, Kalender, Benachrichtigungen und der optionale Nicht-stören-Zugriff zusammen. Ein Tipp auf „Nicht-stören-Zugriff“ öffnet die Android-Freigabe. Dort Audomo auswählen und den Zugriff erlauben. Beim Zurückkehren zeigt Audomo erteilte Rechte in Grün als „Erlaubt“ und fehlende Rechte in Rot als „Nicht erlaubt“. Der optionale Nicht-stören-Zugriff erlaubt Audomo die Steuerung einer eigenen Aufnahmeregel. [Berechtigungen in Audomo](../qa/api34/berechtigungen-1.1.4.webp)
 
+Für lange Aufnahmen lässt sich unter „Berechtigungen“ → „Akkuoptimierung“ eine Ausnahme für Audomo anfordern. Android fragt nach deiner Bestätigung. Zurück in Audomo zeigt „Für Audomo ausgeschaltet“ in Grün den aktuellen Systemstatus. Über denselben Eintrag kommst du wieder zu den Android-Einstellungen. [Akku-Ausnahme im Berechtigungsmenü](../qa/api34/berechtigungen-1.3.0.webp)
+
 Unter „Einstellungen“ → „Kalender und Dateinamen“ → „Dateiname und Ordner“ lassen sich Dateiname und Ablage für neue Aufnahmen unabhängig wählen. „Vorlagen“ → „Kalendername“ verwendet den Anzeigenamen des Kalenders. „Baustein einfügen“ kombiniert `{datum}`, `{uhrzeit}`, `{termin}` und `{kalender}` mit eigenem Text. Die Vorschau zeigt den Pfad mit und ohne passenden Termin. Über „Kalender auswählen“ lassen sich Kalender freigeben, aktivieren und priorisieren.
 
 „Unterordner je Kalender“ legt den Kalenderordner unter dem gewählten Basisordner an und verwendet ihn bei weiteren Aufnahmen erneut. Beim Kalender „Privat“ und der Vorlage „Kalendername“ entstehen etwa `Privat/Privat.ogg` und `Privat/Privat (2).ogg`. Ohne zugeordneten Termin landet die Datei direkt im Basisordner. Fehlende Kalender- oder Terminbausteine erhalten den Ersatztext „Aufnahme“. Ein direkt vor der Aufnahme eingegebener Name gilt auch bei automatischer Ordnerwahl. Als weitere Ablageoptionen stehen ein fester Ordner und der jeweils aktuelle Bibliotheksordner zur Verfügung. Bestehende Installationen behalten zunächst ihre bisherige Vorlage und die Ablage im aktuellen Bibliotheksordner.
@@ -23,6 +25,8 @@ Unter „Vibration“ hat jedes Ereignis eine Taste „Testen“. Ein langer Imp
 „Wiedergeben“ öffnet die lokale Liste. Über das Sortiersymbol lassen sich Feld und Reihenfolge direkt wählen, etwa „Datum“ und „Neueste zuerst“. Die beiden aktiven Einträge sind hervorgehoben. Einen Eintrag auswählen und anschließend Play drücken. Die Dateiaktionen ermöglichen Teilen, externes Öffnen und Exportieren über den Android-Dateidialog. Originale liegen im privaten dauerhaften App-Speicher. Eine Deinstallation entfernt diesen Speicher. Zum Aufbewahren außerhalb der App „Datei exportieren“ verwenden.
 
 ### Besprechungen mit Kopfhörern anhören
+
+Im Player stehen Rücksprung, Play/Pause und Vorsprung auf gleicher Höhe. Das Zahnrad rechts neben den Abspieltasten öffnet die Player-Einstellungen. Der Geschwindigkeitspfeil zeigt das eingestellte Tempo, etwa „1,25×“. Dort lassen sich auch „Stille überspringen“ und das Sprungintervall ändern. Dieselben Werte gelten unter „Einstellungen“ → „Wiedergabe“ und bei der nächsten Aufnahme, die du anhörst. Lange Dateinamen brechen in der Liste und im Player um. Im breiten Querformat stehen Bibliothek und Player nebeneinander. Bei großer Schrift lässt sich der Player separat scrollen. [Player im Querformat](../qa/api34/player-querformat-1.3.0.webp) · [Player-Einstellungen](../qa/api34/player-optionen-1.3.0.webp)
 
 Bei „Play“ prüft Audomo den Medienausgang. Über Bluetooth-Audio, kabelgebundene Kopfhörer und USB-Headsets beginnt die Wiedergabe direkt. Für den Handylautsprecher oder einen unbekannten Ausgang fragt Audomo „Ohne Kopfhörer abspielen?“. „Trotzdem abspielen“ gilt für diesen Start. „Abbrechen“, Android-Zurück und ein Tipp außerhalb lassen die Aufnahme stumm. Auch nach einer Pause wird der Ausgang erneut geprüft. [Rückfrage im Player](../qa/api34/kopfhoerer-rueckfrage-1.1.1.webp)
 
@@ -132,6 +136,14 @@ Um die Verbindung zu prüfen, unter „Uploadziele“ das gespeicherte Dropbox-Z
 Der öffentliche App-Key für Audomo ist im Standard-Build hinterlegt. Wer eine eigene Ausgabe veröffentlichen möchte, registriert diese einmalig bei Dropbox. In der App Console „Create app“, „Scoped access“ und „App folder“ wählen. Unter „Permissions“ die Rechte `files.metadata.read`, `files.content.read` und `files.content.write` aktivieren und speichern. Unter „Settings“ den öffentlichen „App key“ kopieren. [Dropbox App Console](https://www.dropbox.com/developers/apps) · [OAuth bei Dropbox](https://developers.dropbox.com/oauth-guide)
 
 Für eine eigene Ausgabe den öffentlichen Schlüssel als Gradle-Eigenschaft `audomoDropboxAppKey` oder Umgebungsvariable `AUDOMO_DROPBOX_APP_KEY` setzen. Derselbe Wert bestimmt die App-Kennung und das vom offiziellen SDK verwendete Android-Rücksprungschema. Ein Build ohne Schlüssel erklärt die fehlende Registrierung in der App. [Android-Integration des Dropbox-SDK](https://github.com/dropbox/dropbox-sdk-java/blob/v7.1.1/README.md)
+
+### Aufnahmen aus Dropbox zurückholen
+
+Öffne „Einstellungen“ → „Cloud und Uploads“ → „Aus Dropbox wiederherstellen“. Wähle bei mehreren Verbindungen die Quelle und tippe auf „Herunterladen“. `Dropbox/` bezeichnet den App-Ordner von Audomo. Bei einem konfigurierten Unterordner wie `Dropbox/Projekte` beginnt die Wiederherstellung dort. Audomo übernimmt die darin liegenden Audiodateien und ihre Unterordner auch auf einem frisch eingerichteten Gerät. Bei eingeschalteter WLAN-Regel wird WLAN benötigt.
+
+Jede übernommene Aufnahme erhält einen bestätigten Dropbox-Speicherort. An Größe und Prüfsumme erkennt Audomo identische lokale Dateien. Bei Namenskonflikten, abweichendem Inhalt oder einem offenen Cloudauftrag führt die Abschlussmeldung den betroffenen Pfad auf. Bereits heruntergeladene Dateien bleiben bei einem Abbruch erhalten. Du kannst den Abruf jederzeit erneut starten.
+
+Der Abruf verändert keine Dateien in Dropbox. Zusätzliche lokale Aufnahmen bleiben erhalten. Ohne vorhandenen Katalog übernimmt Audomo das in Dropbox gespeicherte Änderungsdatum. Für einen Umzug einschließlich Einstellungen, Aufnahmehistorie und Papierkorb verwende die [vollständige Migration](#sicherung-und-gerätewechsel).
 
 ## Wechsel von der Testversion
 

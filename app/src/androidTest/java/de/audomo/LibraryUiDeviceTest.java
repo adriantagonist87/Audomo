@@ -116,6 +116,14 @@ public class LibraryUiDeviceTest {
         throw new AssertionError("Dialog fehlt: " + label);
     }
 
+    private boolean fullyWrapped(TextView title) {
+        var layout = title.getLayout();
+        if (layout == null || layout.getLineCount() < 2) return false;
+        int last = layout.getLineCount() - 1;
+        return layout.getEllipsisCount(last) == 0 && layout.getLineEnd(last) == title.length()
+                && title.getHeight() >= layout.getLineBottom(last);
+    }
+
     private void assertSortMenu(String key, String direction) throws java.util.concurrent.TimeoutException {
         inst.waitForIdleSync();
         var automation = inst.getUiAutomation();
@@ -343,7 +351,8 @@ public class LibraryUiDeviceTest {
             assertQueueView(root, 2, "2 Aufträge");
             addQueueJob(queue, target, "Verworfen", "Abgebrochen", "");
             addQueueJob(queue, target, "Ausgelassen", "Ausgelassen", "");
-            long waiting = addQueueJob(queue, target, "Projektstart", "Wartet", "");
+            String queueTitle = "Projektstart_" + "Besprechung_".repeat(14);
+            long waiting = addQueueJob(queue, target, queueTitle, "Wartet", "");
             addQueueJob(queue, target, "Transfer", "Upload läuft", "");
             long failed = addQueueJob(queue, target, "Rückblick", "Fehler", "");
             addQueueJob(queue, target, "Namenskonflikt", "Konflikt", "");
@@ -361,6 +370,10 @@ public class LibraryUiDeviceTest {
             choice("Filter: Zu prüfen");
             choice("Wartend");
             assertQueueView(root, 1, "1 Auftrag");
+            await(() -> {
+                TextView title = find(root, TextView.class, queueTitle + ".ogg");
+                return title != null && fullyWrapped(title);
+            });
             choice("Warteschlange verwalten");
             assertTrue(windowWith("Uploadziele").findAccessibilityNodeInfosByText("Fehlgeschlagene erneut versuchen").isEmpty());
             inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
@@ -541,6 +554,7 @@ public class LibraryUiDeviceTest {
         try {
             for (int i = 0; i <= 500; i++) {
                 String name = String.format(Locale.ROOT, "Besprechung %03d.mp3", i);
+                if (i == 499) name = "Besprechung 499_" + "Arbeitspaket_".repeat(10) + ".mp3";
                 boolean ogg = i % 2 == 0;
                 if (ogg) name = name.replace(".mp3", ".ogg");
                 File dir = new File(fixtures.root, UUID.randomUUID().toString());
@@ -593,6 +607,8 @@ public class LibraryUiDeviceTest {
                 assertNotNull(state, label);
                 assertNotNull(label.getCompoundDrawables()[0]);
             }
+            TextView longTitle = find(root, TextView.class, ((SessionStore.Entry) list.getItemAtPosition(0)).name());
+            assertTrue(fullyWrapped(longTitle));
             shot(ctx, "liste-500");
             ui(() -> find(root, ImageButton.class, "Aufnahmen sortieren").performClick());
             assertSortMenu("Datum", "Neueste zuerst");
@@ -642,16 +658,27 @@ public class LibraryUiDeviceTest {
             assertTrue(strictWarning.findAccessibilityNodeInfosByText("Trotzdem abspielen").isEmpty());
             inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             await(activity::hasWindowFocus);
-            ui(() -> find(root, Button.class, "Sprung 5 s").performClick());
+            int[] jumpPosition = new int[2];
+            int[] playPosition = new int[2];
+            find(root, ImageButton.class, "Abspielen").getLocationOnScreen(playPosition);
+            for (String direction : List.of("5 Sekunden vor", "5 Sekunden zurück")) {
+                find(root, ImageButton.class, direction).getLocationOnScreen(jumpPosition);
+                assertEquals(playPosition[1], jumpPosition[1]);
+            }
+            choice("Player-Einstellungen");
+            choice("Sprungintervall");
             choice("15 Sekunden");
+            choice("Zurück");
             await(() -> find(root, ImageButton.class, "15 Sekunden vor") != null);
             ui(() -> find(root, ImageButton.class, "15 Sekunden vor").performClick());
             assertEquals(100000, find(root, SeekBar.class, null).getProgress());
             ui(() -> find(root, ImageButton.class, "15 Sekunden zurück").performClick());
             assertEquals(0, find(root, SeekBar.class, null).getProgress());
-            ui(() -> find(root, Button.class, "Tempo 1.0×").performClick());
+            choice("Player-Einstellungen");
+            choice("Wiedergabetempo 1×");
             choice("1,5×");
-            ui(() -> find(root, Switch.class, "Stille").setChecked(true));
+            choice("Stille überspringen");
+            choice("Zurück");
             assertEquals(1.5f, prefs.getFloat("speed", 1), 0);
             assertTrue(prefs.getBoolean("skipSilence", false));
             ui(() ->

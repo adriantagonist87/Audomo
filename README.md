@@ -18,7 +18,7 @@ Im Kalender „Werkstattumbau“ steht um zehn Uhr die „Planungsrunde“. Ist 
 <p>
   <a href="docs/bilder/tagesansicht.png"><img src="docs/bilder/tagesansicht.png" width="245" alt="Tagesansicht des Kalenders Werkstattumbau mit der Planungsrunde von 10:00 bis 10:50 Uhr"></a>
   <a href="docs/bilder/dateiname.png"><img src="docs/bilder/dateiname.png" width="245" alt="Vor dem Aufnahmestart stehen die aktuelle Planungsrunde und ihr Dateiname Planungsrunde.ogg schon fest"></a>
-  <a href="docs/bilder/wiedergabe.png"><img src="docs/bilder/wiedergabe.png" width="245" alt="Gespeicherte Planungsrunde.ogg im Ordner Werkstattumbau mit geöffnetem Player"></a>
+  <a href="qa/api34/player-1.3.0.webp"><img src="qa/api34/player-1.3.0.webp" width="245" alt="Geöffneter Player mit vollständig lesbarem Projektnamen und Zahnrad für die Wiedergabe"></a>
 </p>
 
 Wer für jedes Projekt einen Kalender führt, kann denselben Namen auch für den Aufnahmeordner nutzen. Öffnet dazu am Zahnrad „Kalender und Dateinamen“ → „Dateiname und Ordner“ und wählt die Option „Unterordner je Kalender“. Audomo legt den Ordner bei der ersten Aufnahme an. In diesem Beispiel findet ihr das Gespräch anschließend unter `Werkstattumbau/Planungsrunde.ogg`.
@@ -26,6 +26,8 @@ Wer für jedes Projekt einen Kalender führt, kann denselben Namen auch für den
 ## Nach der Besprechung
 
 Unter „Wiedergeben“ könnt ihr eine Passage noch einmal anhören, ein paar Sekunden zurückspringen oder das Abspieltempo ändern. Die Aufnahme wird zunächst auf dem Gerät gespeichert. Wenn ihr einen gemeinsamen Ablageort vereinbart habt, markiert die gewünschten Aufnahmen und wählt „Cloud Upload“. Für regelmäßige Runden lässt sich der Upload auch automatisch starten, auf Wunsch mit einigen Minuten Verzögerung. [Bedienungsanleitung und unterstützte Cloud-Dienste](docs/BEDIENUNG.md)
+
+Liegen eure Aufnahmen schon in Dropbox, öffnet „Einstellungen“ → „Cloud und Uploads“ → „Aus Dropbox wiederherstellen“. Damit könnt ihr den gewählten Dropbox-Ordner samt Unterordnern aufs Telefon holen. [Aufnahmen aus Dropbox zurückholen](docs/BEDIENUNG.md#aufnahmen-aus-dropbox-zurückholen)
 
 Beim Umzug auf ein neues Telefon könnt ihr nur eure Einstellungen mitnehmen, die Cloudverbindungen einschließen oder die ganze Bibliothek samt Papierkorb und Uploadverlauf übertragen. Die Sicherung hat ein eigenes Passwort. [Sicherung und Gerätewechsel](docs/BEDIENUNG.md#sicherung-und-gerätewechsel)
 

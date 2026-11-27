@@ -109,7 +109,9 @@ final class LibraryActions {
             try { provider = CloudConfig.byId(screen, job.target()).uploadLabel(); }
             catch (Exception missing) { /* Historical copies may outlive their connection. */ }
             String status = !job.availability().isEmpty() ? job.availability() : job.state();
-            choice.setText(provider + "\n" + job.confirmedPath() + (job.canRename()
+            String location = provider.startsWith("Dropbox/") || provider.equals("Dropbox")
+                    ? "Dropbox" + job.confirmedPath() : provider + "\n" + job.confirmedPath();
+            choice.setText(location + (job.canRename()
                     ? (job.knownCopy() ? "" : " · Geplanter Upload") : " · " + status));
             choice.setEnabled(job.canRename());
             choice.setChecked(job.canRename() && e.cloudOnly());

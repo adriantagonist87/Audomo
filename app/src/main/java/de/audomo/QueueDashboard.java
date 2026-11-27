@@ -436,8 +436,6 @@ final class QueueDashboard {
             setPadding(screen.dp(14), screen.dp(9), screen.dp(14), screen.dp(9));
             setBackground(screen.surface(MainActivity.PANEL, 12));
             name = screen.text("", 17, MainActivity.INK);
-            name.setMaxLines(2);
-            name.setEllipsize(android.text.TextUtils.TruncateAt.END);
             LinearLayout top = screen.row();
             check = new CheckBox(screen);
             check.setClickable(false);
@@ -467,7 +465,8 @@ final class QueueDashboard {
                             job.target(),
                             job.provider().isEmpty() ? "Unbekanntes Ziel" : job.provider());
             String folder = RemoteFiles.parent(job.path());
-            destination.setText(target + (folder.equals("/") ? "" : " · " + folder));
+            destination.setText(job.provider().equals("Dropbox") || target.startsWith("Dropbox/")
+                    ? "Dropbox" + folder : target + (folder.equals("/") ? "" : " · " + folder));
             boolean running = job.state().equals("Upload läuft");
             String message =
                     job.availability().isEmpty() || job.open()

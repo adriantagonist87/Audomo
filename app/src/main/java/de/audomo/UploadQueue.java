@@ -212,6 +212,16 @@ final class UploadQueue extends SQLiteOpenHelper {
         return result;
     }
 
+    synchronized List<Job> restoreCandidates(String target, String path, String rec) {
+        List<Job> result = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery(SELECT
+                + " WHERE target=? AND (rec=? OR path=? COLLATE NOCASE OR origin=? COLLATE NOCASE)"
+                + " AND state!='Cloudkopie gelöscht'", new String[]{target, rec, path, path})) {
+            while (c.moveToNext()) result.add(readJob(c));
+        }
+        return result;
+    }
+
     synchronized Job job(String rec) {
         for (Job j : jobs()) if (rec.equals(j.rec)) return j;
         return null;

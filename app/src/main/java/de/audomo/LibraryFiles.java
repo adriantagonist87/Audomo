@@ -413,7 +413,7 @@ final class LibraryFiles {
         }
     }
 
-    private static void removePrivateDirectory(File dir) throws IOException {
+    static void removePrivateDirectory(File dir) throws IOException {
         File[] children = dir.listFiles();
         if (children == null) throw new IOException("Arbeitsordner nicht lesbar");
         for (File child : children) Files.delete(child.toPath());

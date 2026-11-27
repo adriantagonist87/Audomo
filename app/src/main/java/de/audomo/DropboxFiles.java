@@ -160,20 +160,28 @@ final class DropboxFiles extends RemoteFiles {
 
     java.util.List<Child> children(String path) throws Exception {
         java.util.List<Child> list = new java.util.ArrayList<>();
+        list(path, false, item -> {
+            String kind = item.getString(".tag");
+            if (kind.equals("file") || kind.equals("folder"))
+                list.add(new Child(item.getString("name"), kind.equals("folder"), item.optLong("size", -1)));
+        });
+        return list;
+    }
+
+    interface Listing { void entry(JSONObject item) throws Exception; }
+
+    void list(String path, boolean recursive, Listing consumer) throws Exception {
         String method = "list_folder";
-        JSONObject args = new JSONObject().put("path", path.equals("/") ? "" : path);
+        JSONObject args = new JSONObject().put("path", path.equals("/") ? "" : path)
+                .put("recursive", recursive);
         while (true) {
+            progress.check(0);
             try (Response r = request(method, args, null)) {
                 requireDropbox(r);
                 JSONObject page = new JSONObject(r.body().string());
                 org.json.JSONArray entries = page.getJSONArray("entries");
-                for (int i = 0; i < entries.length(); i++) {
-                    JSONObject item = entries.getJSONObject(i);
-                    String kind = item.getString(".tag");
-                    if (kind.equals("file") || kind.equals("folder"))
-                        list.add(new Child(item.getString("name"), kind.equals("folder"), item.optLong("size", -1)));
-                }
-                if (!page.getBoolean("has_more")) return list;
+                for (int i = 0; i < entries.length(); i++) consumer.entry(entries.getJSONObject(i));
+                if (!page.getBoolean("has_more")) return;
                 method = "list_folder/continue";
                 args = new JSONObject().put("cursor", page.getString("cursor"));
             }

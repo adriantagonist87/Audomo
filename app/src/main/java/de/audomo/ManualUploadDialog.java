@@ -186,7 +186,7 @@ public final class ManualUploadDialog extends DialogFragment {
             String standard = Profile.prefs(screen).getString("defaultTarget", "");
             for (int i = 0; i < labels.length; i++) {
                 if (Collections.frequency(names, labels[i]) > 1) labels[i] += " · Ziel " + (i + 1);
-                if (configs.get(i).id().equals(standard)) labels[i] += " · Standard";
+                if (!configs.get(i).protocol().equals("Dropbox") && configs.get(i).id().equals(standard)) labels[i] += " · Standard";
             }
             choices = configs;
             if (configs.size() == 1)

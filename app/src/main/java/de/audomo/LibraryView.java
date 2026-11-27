@@ -98,8 +98,18 @@ final class LibraryView {
         actions = new LibraryActions(screen, new LibraryFiles(app.sessions));
         this.trash = trash;
         step = prefs.getInt("skipSeconds", 5);
+        var config = screen.getResources().getConfiguration();
+        boolean split = config.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                && config.screenWidthDp >= 560;
+        LinearLayout browser = split ? screen.column() : page;
+        LinearLayout panes = split ? screen.row() : page;
+        if (split) {
+            panes.setBaselineAligned(false);
+            page.addView(panes, new LinearLayout.LayoutParams(-1, -1));
+            panes.addView(browser, new LinearLayout.LayoutParams(0, -1, 1));
+        }
         LinearLayout heading = screen.row();
-        page.addView(heading);
+        browser.addView(heading);
         count = screen.text("", 14, MainActivity.DIM);
         LinearLayout titles = screen.column();
         titles.addView(screen.text(trash ? "Papierkorb" : "Aufnahmen", 21, MainActivity.INK));
@@ -132,7 +142,7 @@ final class LibraryView {
         folderButton.setPadding(screen.dp(12), 0, screen.dp(12), 0);
         folderButton.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_expand, 0);
         folderButton.setContentDescription("Ordner wählen");
-        if (!trash) page.addView(folderButton);
+        if (!trash) browser.addView(folderButton);
         allScope = new CheckBox(screen);
         allScope.setText("Alle Ordner");
         allScope.setVisibility(View.GONE);
@@ -144,8 +154,8 @@ final class LibraryView {
         field.setSingleLine();
         field.setHint("Aufnahmen suchen");
         field.setVisibility(View.GONE);
-        page.addView(field);
-        page.addView(allScope);
+        browser.addView(field);
+        browser.addView(allScope);
         search.setOnClickListener(v -> {
             if (field.getVisibility() == View.VISIBLE) {
                 closeSearch();
@@ -161,13 +171,34 @@ final class LibraryView {
         sort.setOnClickListener(v -> showSortMenu());
         list = new ListView(screen);
         list.setDividerHeight(screen.dp(1));
-        page.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
+        browser.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         empty = screen.text("", 16, MainActivity.DIM);
         empty.setGravity(Gravity.CENTER);
-        page.addView(empty, new LinearLayout.LayoutParams(-1, 0, 1));
+        browser.addView(empty, new LinearLayout.LayoutParams(-1, 0, 1));
         list.setEmptyView(empty);
         panel = screen.column();
-        page.addView(panel);
+        ScrollView panelScroll = split ? new ScrollView(screen) : new ScrollView(screen) {
+            @Override protected void onMeasure(int width, int height) {
+                // Leave room to select another recording even with large text or in landscape.
+                int available = MeasureSpec.getSize(height);
+                super.onMeasure(width, MeasureSpec.makeMeasureSpec(available * 2 / 3, MeasureSpec.AT_MOST));
+            }
+        };
+        panelScroll.addView(panel);
+        if (split) {
+            LinearLayout.LayoutParams side = new LinearLayout.LayoutParams(0, -1, 1);
+            side.setMarginStart(screen.dp(10));
+            panes.addView(panelScroll, side);
+            panelScroll.setVisibility(View.GONE);
+            panel.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener() {
+                @Override public void onChildViewAdded(View parent, View child) {
+                    panelScroll.setVisibility(View.VISIBLE);
+                }
+                @Override public void onChildViewRemoved(View parent, View child) {
+                    if (panel.getChildCount() == 0) panelScroll.setVisibility(View.GONE);
+                }
+            });
+        } else page.addView(panelScroll);
         adapter =
                 new BaseAdapter() {
                     public int getCount() {
@@ -191,8 +222,7 @@ final class LibraryView {
                             cell.setBackground(screen.surface(MainActivity.PANEL, 8));
                         LinearLayout top = screen.row();
                         TextView title = screen.text(e.name(), 15, MainActivity.INK);
-                        title.setSingleLine();
-                        title.setEllipsize(TextUtils.TruncateAt.END);
+                        title.setPadding(0, 0, screen.dp(8), 0);
                         if (selectionMode) {
                             RadioButton circle = new RadioButton(screen);
                             circle.setChecked(marked.contains(e.id()));
@@ -651,17 +681,7 @@ final class LibraryView {
         panel.setBackground(screen.surface(MainActivity.PANEL, 14));
         int pad = screen.dp(10);
         panel.setPadding(pad, pad, pad, pad);
-        LinearLayout title = screen.row();
-        TextView full = screen.text(selected.name(), 16, MainActivity.INK);
-        full.setMaxLines(2);
-        full.setEllipsize(TextUtils.TruncateAt.END);
-        title.addView(full, screen.weight());
-        ImageButton more =
-                screen.icon(
-                        "Dateiaktionen", R.drawable.ic_more, MainActivity.INK, MainActivity.PANEL);
-        more.setOnClickListener(v -> actions.more(more, List.of(selected)));
-        title.addView(more, screen.lp(48, 48));
-        panel.addView(title);
+        panel.addView(screen.text(selected.name(), 16, MainActivity.INK));
         elapsed = screen.text("", 14, MainActivity.DIM);
         panel.addView(elapsed);
         seek = new SeekBar(screen);
@@ -682,8 +702,14 @@ final class LibraryView {
                     public void onStopTrackingTouch(SeekBar s) {}
                 });
         LinearLayout controls = screen.row();
-        controls.setGravity(Gravity.CENTER);
-        panel.addView(controls);
+        controls.setBaselineAligned(false);
+        controls.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.TOP);
+        FrameLayout transport = new FrameLayout(screen);
+        panel.addView(transport);
+        transport.addView(controls, new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+        ImageButton settings = screen.toolbarIcon("Player-Einstellungen", R.drawable.ic_settings);
+        settings.setOnClickListener(v -> new AppSettings(screen).playerOptions());
+        transport.addView(settings, new FrameLayout.LayoutParams(screen.dp(48), screen.dp(48), Gravity.TOP | Gravity.END));
         back =
                 screen.icon(
                         "Zurückspringen", R.drawable.ic_back, MainActivity.INK, MainActivity.PANEL);
@@ -694,7 +720,10 @@ final class LibraryView {
         LinearLayout backGroup = screen.column(), forwardGroup = screen.column();
         controls.addView(backGroup);
         backGroup.addView(back, screen.lp(48, 48));
-        controls.addView(play, screen.lp(48, 48));
+        LinearLayout.LayoutParams playSize = screen.lp(48, 48);
+        playSize.setMarginStart(screen.dp(6));
+        playSize.setMarginEnd(screen.dp(6));
+        controls.addView(play, playSize);
         controls.addView(forwardGroup);
         forwardGroup.addView(forward, screen.lp(48, 48));
         leftStep = screen.text("", 12, MainActivity.DIM);
@@ -706,32 +735,17 @@ final class LibraryView {
         back.setOnClickListener(v -> jump(-step));
         forward.setOnClickListener(v -> jump(step));
         play.setOnClickListener(v -> toggle());
-        LinearLayout options = screen.row();
-        panel.addView(options);
-        Button speed = screen.button("Tempo " + prefs.getFloat("speed", 1f) + "×", null);
-        speed.setOnClickListener(v -> PlaybackOptions.speed(screen, value -> {
-            speed.setText("Tempo " + PlaybackOptions.speedLabel(prefs));
-            if (player != null) player.setPlaybackSpeed(value);
-        }));
-        Switch silence = new Switch(screen);
-        silence.setText("Stille");
-        silence.setContentDescription("Stille bei Wiedergabe überspringen");
-        silence.setChecked(prefs.getBoolean("skipSilence", false));
-        silence.setOnCheckedChangeListener((b, on) -> {
-            prefs.edit().putBoolean("skipSilence", on).apply();
-            if (player != null) player.setSkipSilenceEnabled(on);
-        });
-        Button interval = screen.button("Sprung " + step + " s", null);
-        interval.setOnClickListener(v -> PlaybackOptions.step(screen, value -> {
-            step = value;
-            interval.setText("Sprung " + step + " s");
-            directions();
-        }));
-        options.addView(speed, screen.weight());
-        options.addView(silence, screen.weight());
-        options.addView(interval, screen.weight());
         directions();
         time(0);
+    }
+
+    void applyPlaybackOptions() {
+        step = prefs.getInt("skipSeconds", 5);
+        if (back != null) directions();
+        if (player != null) {
+            player.setPlaybackSpeed(prefs.getFloat("speed", 1f));
+            player.setSkipSilenceEnabled(prefs.getBoolean("skipSilence", false));
+        }
     }
 
     private long durationMs() {

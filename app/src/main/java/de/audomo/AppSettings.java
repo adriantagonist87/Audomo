@@ -105,8 +105,8 @@ final class AppSettings {
             row.addView(symbol, screen.lp(23, 23));
             LinearLayout labels = screen.column();
             labels.setPadding(screen.dp(14), 0, screen.dp(8), 0);
-            labels.addView(screen.text(title, 16, MainActivity.INK));
-            TextView value = screen.text("", 13, MainActivity.DIM);
+            if (!title.isEmpty()) labels.addView(screen.text(title, 16, MainActivity.INK));
+            TextView value = screen.text("", title.isEmpty() ? 16 : 13, title.isEmpty() ? MainActivity.INK : MainActivity.DIM);
             update.accept(value);
             if (value.length() > 0) {
                 labels.addView(value);
@@ -148,7 +148,7 @@ final class AppSettings {
         p.row(R.drawable.ic_upload, "Cloud und Uploads", "Ziele, Automatik und Warteschlange", () -> cloud(p));
         p.group("App und System");
         p.liveRow(R.drawable.ic_lock, "App-Sperre", () -> app.appLock.enabled() ? "Aktiv" : "Aus", this::appLock);
-        p.row(R.drawable.ic_shield, "Berechtigungen", "Mikrofon, Kalender, Benachrichtigungen und Nicht stören", this::onboarding);
+        p.row(R.drawable.ic_shield, "Berechtigungen", "App-Rechte, Nicht stören und Akkuoptimierung", this::onboarding);
         p.row(R.drawable.ic_vibration, "Schnellzugriff und Vibration", "Kachel und Vibrationsmuster", this::shortcuts);
         p.row(R.drawable.ic_backup, "Sicherung und Diagnose", "Einstellungen übertragen und Ereignisse ansehen", this::maintenance);
         return p;
@@ -180,19 +180,39 @@ final class AppSettings {
                                     prefs.edit().putBoolean(PlaybackOutput.BLUETOOTH_ONLY, index == 1).apply();
                                     dialog.dismiss();
                                 }).setNegativeButton("Abbrechen", null).show());
-        p.liveRow(R.drawable.ic_play, "Wiedergabetempo", () -> PlaybackOptions.speedLabel(prefs),
-                () -> PlaybackOptions.speed(screen, speed -> {}));
+        playbackRows(p, false);
+        p.dialog.show();
+    }
+
+    void playerOptions() {
+        Page p = new Page("Player-Einstellungen");
+        playbackRows(p, true);
+        p.dialog.show();
+    }
+
+    private void playbackRows(Page p, boolean compact) {
+        if (compact) {
+            p.addRow(R.drawable.ic_speed, "", value -> {
+                value.setText(PlaybackOptions.speedLabel(prefs));
+                value.setContentDescription("Wiedergabetempo " + value.getText());
+            }, () -> PlaybackOptions.speed(screen, rate -> screen.applyPlaybackOptions()));
+        } else {
+            p.liveRow(R.drawable.ic_speed, "Wiedergabetempo", () -> PlaybackOptions.speedLabel(prefs),
+                    () -> PlaybackOptions.speed(screen, rate -> screen.applyPlaybackOptions()));
+        }
         p.liveRow(R.drawable.ic_forward, "Sprungintervall", () -> prefs.getInt("skipSeconds", 5) + " Sekunden",
-                () -> PlaybackOptions.step(screen, step -> {}));
+                () -> PlaybackOptions.step(screen, step -> screen.applyPlaybackOptions()));
         Switch silence = new Switch(screen);
-        silence.setText("Stille bei Wiedergabe überspringen");
+        silence.setText("Stille überspringen");
         silence.setTextColor(MainActivity.INK);
         silence.setMinHeight(screen.dp(54));
         silence.setPadding(screen.dp(14), 0, screen.dp(14), 0);
         silence.setChecked(prefs.getBoolean("skipSilence", false));
-        silence.setOnCheckedChangeListener((v, on) -> prefs.edit().putBoolean("skipSilence", on).apply());
+        silence.setOnCheckedChangeListener((v, on) -> {
+            prefs.edit().putBoolean("skipSilence", on).apply();
+            screen.applyPlaybackOptions();
+        });
         p.rows.addView(silence);
-        p.dialog.show();
     }
 
     private void calendar() {
@@ -298,6 +318,8 @@ final class AppSettings {
         Page p = new Page("Cloud und Uploads");
         p.row(R.drawable.ic_upload, "Uploadziele", "Dienste verbinden, Uploadregeln und Verzögerung einstellen", this::uploadTargets);
         p.row(R.drawable.ic_folder, "Bestehende Aufnahmen hochladen", "", () -> ManualUploadDialog.chooseRecordings(screen));
+        p.row(R.drawable.ic_download, "Aus Dropbox wiederherstellen", "Aufnahmen und Unterordner herunterladen",
+                () -> new DropboxRestoreDialog(screen).show());
         p.row(R.drawable.ic_wait, "Warteschlange öffnen", "", () -> {
             if (screen.dashboardIndex() == 2) {
                 p.dialog.dismiss();
@@ -342,9 +364,34 @@ final class AppSettings {
         p.permissionRow(R.drawable.ic_bell, "Nicht-stören-Zugriff",
                 () -> screen.getSystemService(NotificationManager.class).isNotificationPolicyAccessGranted(),
                 () -> screen.startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)));
+        p.addRow(R.drawable.ic_battery, "Akkuoptimierung", value -> {
+            boolean off = batteryExempt();
+            value.setText(off ? "Für Audomo ausgeschaltet" : "Aktiv · Ausnahme erlauben");
+            value.setTextColor(screen.getColor(off ? R.color.permission_granted : R.color.permission_missing));
+        }, this::batterySettings);
         p.row(R.drawable.ic_settings, "Android-App-Einstellungen", "Berechtigungen des Geräts verwalten",
                 () -> screen.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + screen.getPackageName()))));
         p.dialog.show();
+    }
+
+    private boolean batteryExempt() {
+        return screen.getSystemService(android.os.PowerManager.class)
+                .isIgnoringBatteryOptimizations(screen.getPackageName());
+    }
+
+    private void batterySettings() {
+        Uri appUri = Uri.parse("package:" + screen.getPackageName());
+        if (!batteryExempt()) {
+            try {
+                screen.startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, appUri));
+                return;
+            } catch (ActivityNotFoundException | SecurityException ignored) { }
+        }
+        try {
+            screen.startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+        } catch (ActivityNotFoundException | SecurityException unavailable) {
+            screen.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, appUri));
+        }
     }
 
     private void permission(String permission, int request) {

@@ -50,7 +50,7 @@ public final class DropboxLinkDialog extends DialogFragment {
         page.setPadding(screen.dp(20), screen.dp(8), screen.dp(20), screen.dp(8));
         status = screen.text(getString(R.string.dropbox_consent), 15, MainActivity.INK);
         page.addView(status);
-        TextView label = screen.text("Zielordner", 14, MainActivity.ACCENT);
+        TextView label = screen.text("Unterordner in Dropbox/ (Audomo-App-Ordner)", 14, MainActivity.ACCENT);
         page.addView(label);
         folder = new EditText(screen);
         folder.setId(android.view.View.generateViewId());

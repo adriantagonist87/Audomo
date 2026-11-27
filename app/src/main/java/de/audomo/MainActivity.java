@@ -296,7 +296,9 @@ public class MainActivity extends ProtectedActivity {
         name.setOnClickListener(v -> editName());
         content.addView(name);
         inlineName = new EditText(this);
-        inlineName.setSingleLine();
+        inlineName.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        inlineName.setHorizontallyScrolling(false);
         inlineName.setSelectAllOnFocus(true);
         inlineName.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
         inlineName.setVisibility(View.GONE);
@@ -459,7 +461,7 @@ public class MainActivity extends ProtectedActivity {
         if (!editing) return;
         editing = false;
         updateBackHandler();
-        app.draft.name(inlineName.getText().toString());
+        app.draft.name(inlineName.getText().toString().replace('\n', ' ').replace('\r', ' '));
         getSystemService(android.view.inputmethod.InputMethodManager.class)
                 .hideSoftInputFromWindow(inlineName.getWindowToken(), 0);
         inlineName.setVisibility(View.GONE);
@@ -839,6 +841,10 @@ public class MainActivity extends ProtectedActivity {
         ManualUploadDialog.chooseTarget(this, ids);
     }
 
+    void applyPlaybackOptions() {
+        if (recordings != null) recordings.applyPlaybackOptions();
+    }
+
     private void stopPlayer() {
         if (recordings != null) recordings.stop();
     }
@@ -993,7 +999,7 @@ public class MainActivity extends ProtectedActivity {
 
     @Override
     protected void saveContent(Bundle state) {
-        if (editing) app.draft.name(inlineName.getText().toString());
+        if (editing) app.draft.name(inlineName.getText().toString().replace('\n', ' ').replace('\r', ' '));
         if (activeTab == RECORD) state.putInt("recordScroll", recorderScroll.getScrollY());
         if (isQueuePage()) dashboard.save(state);
         state.putBoolean("trashView", trashView);

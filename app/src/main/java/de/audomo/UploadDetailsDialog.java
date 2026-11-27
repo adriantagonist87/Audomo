@@ -107,7 +107,8 @@ public final class UploadDetailsDialog extends DialogFragment {
             target = CloudConfig.byId(screen, job.target()).uploadLabel();
         } catch (Exception ignored) {
         }
-        page.addView(screen.text(target + "\n" + job.path(), 14, MainActivity.DIM));
+        page.addView(screen.text(target.startsWith("Dropbox/") || target.equals("Dropbox")
+                ? "Dropbox" + job.path() : target + "\n" + job.path(), 14, MainActivity.DIM));
         status = screen.text(state, 16, MainActivity.ACCENT);
         status.setPadding(0, screen.dp(8), 0, screen.dp(8));
         page.addView(status);
