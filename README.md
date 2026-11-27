@@ -2,7 +2,7 @@
 
 Audomo nimmt eure Projektbesprechungen auf und benennt die Audiodatei nach dem passenden Termin im Android-Kalender. So findet ihr auch Wochen später die Planungsrunde wieder, in der ihr eine Materialwahl oder einen Liefertermin vereinbart habt.
 
-[Audomo für Android herunterladen](https://github.com/adriantagonist87/Audomo/releases/latest) · Ab Android 14 · [Handbuch](docs/BEDIENUNG.md)
+[Audomo für Android herunterladen](https://github.com/adriantagonist87/Audomo/releases/latest) · Ab Android 14
 
 ## Besprechungen nur im gemeinsamen Einverständnis aufnehmen
 
@@ -22,54 +22,12 @@ Unter „Einstellungen“ → „Kalender und Dateinamen“ → „Dateiname und
   <a href="qa/api34/dateinamenvorschau-1.3.1.webp"><img src="qa/api34/dateinamenvorschau-1.3.1.webp" width="230" alt="Vorlage für den Dateinamen mit zwei Beispielen, einmal mit Termin und einmal ohne"></a>
 </p>
 
-## Aufnahme vom Startbildschirm
+## Nach der Besprechung
 
-Unter „Einstellungen“ → „Schnellzugriff und Vibration“ könnt ihr Audomo als Kachel in die Android-Schnelleinstellungen aufnehmen oder das Symbol „Aufnahme“ auf den Startbildschirm legen. Ein Tipp startet die Aufnahme, der nächste beendet und speichert sie. Android zeigt währenddessen die Aufnahmebenachrichtigung an. Ein langer Druck auf die Kachel öffnet Audomo. Im selben Menü könnt ihr die Vibrationsmuster ausprobieren.
+Unter „Wiedergeben“ könnt ihr eine Passage noch einmal anhören, ein paar Sekunden zurückspringen oder das Abspieltempo ändern. Die Aufnahme wird zunächst auf dem Gerät gespeichert. Wenn ihr einen gemeinsamen Ablageort vereinbart habt, markiert die gewünschten Aufnahmen und wählt „Cloud Upload“. Für regelmäßige Runden lässt sich der Upload auch automatisch starten, auf Wunsch mit einigen Minuten Verzögerung. [Bedienungsanleitung und unterstützte Cloud-Dienste](docs/BEDIENUNG.md)
 
-Unter „Einstellungen“ → „App-Sperre“ könnt ihr den Zugriff auf Audomo schützen. Beim Öffnen der App fragt Android nach eurem Fingerabdruck oder der eingerichteten Displaysperre (PIN, Muster oder Passwort). Über Kachel und Startbildschirm-Symbol könnt ihr weiterhin aufnehmen, während die Bibliothek gesperrt bleibt.
+Liegen eure Aufnahmen schon in Dropbox, öffnet „Einstellungen“ → „Cloud und Uploads“ → „Aus Dropbox wiederherstellen“. Damit könnt ihr den gewählten Dropbox-Ordner samt Unterordnern aufs Telefon holen. [Aufnahmen aus Dropbox zurückholen](docs/BEDIENUNG.md#aufnahmen-aus-dropbox-zurückholen)
 
-Wenn ihr für den großen Besprechungsraum andere Klangwerte braucht, speichert sie unter „Aufnahmeprofile“ als eigenes Profil. Dort könnt ihr es später umbenennen oder löschen. Unter „Berechtigungen“ findet ihr auch den Nicht-stören-Zugriff und die Ausnahme von der Akkuoptimierung für längere Aufnahmen. [Aufnahmeprofile im Bild](qa/api34/aufnahmeprofile-1.1.4.webp)
+Beim Umzug auf ein neues Telefon könnt ihr nur eure Einstellungen mitnehmen, die Cloudverbindungen einschließen oder die ganze Bibliothek samt Papierkorb und Uploadverlauf übertragen. Die Sicherung hat ein eigenes Passwort. [Sicherung und Gerätewechsel](docs/BEDIENUNG.md#sicherung-und-gerätewechsel)
 
-## Besprechungen noch einmal anhören
-
-Wischt von „Aufnehmen“ nach links zu „Wiedergeben“ und tippt auf eine Aufnahme. Lange Dateinamen stehen vollständig über mehrere Zeilen. Im Querformat ist auf breiten Displays neben der Liste Platz für den Player. Über sein Zahnrad könnt ihr das Tempo ändern, die Länge der Sprünge festlegen und „Stille überspringen“ einschalten. Der Player merkt sich die Auswahl. Android-Zurück schließt zuerst den Player und führt danach zur zuletzt besuchten Ansicht.
-
-Vor der Wiedergabe über den Handylautsprecher fragt Audomo nach. Wollt ihr ausschließlich über Bluetooth hören, wählt unter „Einstellungen“ → „Wiedergabe“ → „Audioausgang“ die Option „Nur Bluetooth“. Bricht die Verbindung während der Wiedergabe ab, pausiert der Player.
-
-<a href="qa/api34/player-querformat-1.3.0.webp"><img src="qa/api34/player-querformat-1.3.0.webp" width="640" alt="Wiedergabeliste links und Player rechts mit ausgeschriebenem Projektnamen, Sprungtasten und Zahnrad"></a>
-
-## Aufnahmen in die Projektcloud laden
-
-Audomo speichert die Aufnahme zuerst auf dem Telefon. Unter „Einstellungen“ → „Cloud und Uploads“ → „Uploadziele“ verbindet ihr Dropbox oder einen Server über WebDAV, SFTP, FTPS oder FTP. Soll Audomo nach der Besprechung automatisch hochladen, wählt ein Standardziel und schaltet den automatischen Upload ein. Die Wartezeit lässt sich in Minuten angeben. Bei `0,5` wartet Audomo mindestens 30 Sekunden. Schiebt ihr eine Testaufnahme in dieser Zeit in den Papierkorb, verschwinden auch ihre offenen Uploadaufträge.
-
-- Vorhandene Aufnahmen hochladen. Drückt unter „Wiedergeben“ lange auf eine Aufnahme, markiert bei Bedarf weitere und tippt auf „Cloud Upload“. Ihr könnt mehrere Ziele auswählen. Für jedes Ziel erscheint ein eigener Auftrag in der Warteschlange.
-- Einen Upload vorziehen oder wiederholen. Wischt einen wartenden Auftrag nach rechts, um ihn an die Spitze zu setzen. Nach links entfernt ihr ihn. Tippt auf einen fehlgeschlagenen Auftrag, um die Ursache zu sehen und ihn erneut zu versuchen. Über die Mehrfachauswahl könnt ihr mehrere Aufträge bearbeiten. Die Warteschlange merkt sich euren Filter. „Offene Aufträge“ zählt nur, was noch zu erledigen ist. [Warteschlange im Bild](qa/api34/warteschlange-pruefen-1.1.7.webp)
-- Namen und Speicherorte ändern. Haltet eine Aufnahme in „Wiedergeben“ gedrückt und wählt „Umbenennen“. Ihr entscheidet, ob der neue Name auf dem Telefon, für einzelne Cloudkopien oder überall gelten soll. Habt ihr außerhalb von Audomo einen Ordner verschoben, könnt ihr unter „Dateien und Ordner“ → „Ordner verwalten“ die Pfade abgleichen.
-- Platz auf dem Gerät schaffen. Der Papierkorb liegt in der Wiedergabeliste neben der Lupe. Löscht ihr nur die lokale Aufnahme, bleibt eine bestätigte Cloudkopie in der Bibliothek auffindbar. Über „Speicherorte“ → „Lokal wiederherstellen“ holt ihr sie zurück. Unter „Einstellungen“ → „Papierkorb“ könnt ihr die Bereinigung nach 30 Tagen einschalten.
-
-Für einen ganzen Dropbox-Ordner gibt es unter „Cloud und Uploads“ die Aktion „Aus Dropbox wiederherstellen“. Sie lädt die Aufnahmen samt Unterordnern aufs Telefon und erkennt bereits vorhandene, identische Dateien. `Dropbox/` steht für den App-Ordner, `Dropbox/Projekte` für einen von euch gewählten Unterordner. [Dropbox-Wiederherstellung im Handbuch](docs/BEDIENUNG.md#aufnahmen-aus-dropbox-zurückholen)
-
-## Auf ein neues Telefon umziehen
-
-Unter „Einstellungen“ → „Sicherung und Diagnose“ → „Sicherung exportieren“ wählt ihr, was mitkommt. Alle drei Sicherungen werden mit einem eigenen Passwort verschlüsselt. Dieses Passwort braucht ihr beim Import wieder.
-
-| Auswahl | Was auf das neue Telefon kommt |
-| --- | --- |
-| Alle Einstellungen | Unter anderem Aufnahmeprofile, Kalenderauswahl, Dateinamenvorlagen und Uploadregeln |
-| Einstellungen und Cloudverbindungen | Zusätzlich die eingerichteten Ziele und die gespeicherten Zugangsdaten |
-| Vollständige Migration | Zusätzlich alle Aufnahmen, Papierkorb, Uploadverlauf, bestätigte Cloudpfade und Diagnoseprotokoll |
-
-Die vollständige Migration braucht Zugriff auf Aufnahmen, die nur noch in der Cloud liegen. Beim Import ersetzt „Bestand ersetzen“ die bisherige Bibliothek auf dem Zielgerät. [Anleitung zum Gerätewechsel](docs/BEDIENUNG.md#sicherung-und-gerätewechsel)
-
-## Updates von GitHub
-
-Ab 1.4.0 zeigt „Einstellungen“ → „Updates“ die installierte Version. „Jetzt prüfen“ vergleicht sie mit dem neuesten stabilen GitHub-Release. Die automatische Prüfung ist anfangs ausgeschaltet. Aktiviert ihr sie, könnt ihr bei jedem Start, täglich, wöchentlich oder monatlich prüfen lassen.
-
-Ist ein Update verfügbar, könnt ihr die APK direkt in Audomo laden. Nach der Prüfung von Datei und Signatur öffnet Audomo den Android-Installer. Dort bestätigt ihr die Aktualisierung. Wer noch eine ältere offizielle Version nutzt, installiert die aktuelle APK einmal über die bestehende App. [Stabiles Release herunterladen](https://github.com/adriantagonist87/Audomo/releases/latest) · [Wechsel von einer Testversion](docs/BEDIENUNG.md#wechsel-von-der-testversion)
-
-<details>
-<summary>So sieht ein verfügbares Update in Audomo aus</summary>
-
-<a href="qa/api34/update-verfuegbar-1.4.0.webp"><img src="qa/api34/update-verfuegbar-1.4.0.webp" width="245" alt="Update auf Audomo 1.4.0 mit Downloadknopf und wöchentlichem Prüfintervall"></a>
-
-</details>
+Ab Version 1.4.0 findet ihr neue stabile Ausgaben unter „Einstellungen“ → „Updates“. Dort könnt ihr die APK direkt laden und die Aktualisierung auf dem Telefon bestätigen. Frühere offizielle Versionen lassen sich mit der APK aus dem GitHub-Release aktualisieren. Wer eine debug-signierte Testfassung nutzt, sollte vor dem Wechsel die Aufnahmen sichern. Die stabile Ausgabe verwendet einen eigenen Signierschlüssel. [Anleitung für den Wechsel](docs/BEDIENUNG.md#wechsel-von-der-testversion)
