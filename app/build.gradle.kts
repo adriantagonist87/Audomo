@@ -13,8 +13,8 @@ android {
         minSdk = 34
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 39
-        versionName = "1.4.0"
+        versionCode = 40
+        versionName = "1.4.1"
         val releaseCert = rootProject.file("docs/release-certificate.sha256").readText().trim()
         buildConfigField("String", "RELEASE_CERT_SHA256", "\"$releaseCert\"")
         buildConfigField("String", "DROPBOX_APP_KEY", "\"$dropboxAppKey\"")
